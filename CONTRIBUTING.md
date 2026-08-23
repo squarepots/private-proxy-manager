@@ -9,8 +9,7 @@ Read `AGENTS.md`, the repository Skill, `ARCHITECTURE.md`, `SECURITY.md`, and `d
 Contributions should preserve these boundaries:
 
 - natural-language intent is the user entry point;
-- `agent/route-steward-agent.ps1` is the sanitized machine contract;
-- MCP and runtime adapters delegate to that contract;
+- the native `route-steward` CLI and in-process MCP share one sanitized Go machine contract;
 - desired state and secrets remain local and ignored;
 - every mutation uses fail-closed preflight;
 - Providers remain optional;
@@ -46,19 +45,14 @@ Run the public-tree and secret checks before sharing a change.
 
 ## Validation
 
-Use:
+Run the native suite first:
 
-```powershell
-pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
+```text
+go test ./...
+go vet ./...
 ```
 
-Before merge or release, run the full validator:
-
-```powershell
-pwsh -NoProfile -File .\scripts\Validate-Local.ps1
-```
-
-The full suite covers PowerShell behavior, public-tree checks, rendering, drift, recovery, MCP, Worker, Bash, and ShellCheck when those toolchains are available. Public hosted PR CI supplies the independent Linux and Windows integration result.
+`scripts/Validate-Local.ps1` remains available to contributors for the complete public-tree, compatibility, Worker, Bash, and ShellCheck suite. Public hosted PR CI tests the Go engine on Linux, macOS, and Windows, cross-builds amd64/arm64 release targets, and validates the optional Worker independently.
 
 Add or update focused behavior tests with every contract change.
 
@@ -74,4 +68,4 @@ Release automation publishes the version already present on `main`. See `docs/RE
 
 Server-side service and path identifiers are deployed ABI. Check existing installations and uninstall behavior before changing them.
 
-Preserve license and notice files for vendored material. The QR generator retains its MIT notice under `client/vendor/`; RST itself remains AGPL-3.0-only.
+The Go MCP SDK is MIT-licensed and pinned in `go.mod`/`go.sum`; the optional Cloudflare Worker dependencies remain pinned by `package-lock.json`. Preserve license and notice files for vendored material. The QR generator retains its MIT notice under `client/vendor/`; RST itself remains AGPL-3.0-only.

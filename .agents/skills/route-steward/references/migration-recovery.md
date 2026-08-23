@@ -19,12 +19,12 @@ Migration is an overlap-first workflow:
 
 The encrypted recovery archive contains schema-1 desired state, secrets, and SSH material. Observed and render evidence can be regenerated.
 
-Use `scripts/Restore-RecoveryArchive.ps1` and a clean destination. The archive password is accepted only by the local 7-Zip prompt, never Agent/MCP JSON, process arguments, repository files, environment variables, or chat.
+Create an archive with `route-steward backup --private-dir <directory>`. Restore it into a clean destination with `route-steward recover --archive <path> --private-dir <directory>`. From a source checkout, replace `route-steward` with `go run ./cmd/route-steward`. The archive password is accepted only by the local 7-Zip prompt, never Agent/MCP JSON, process arguments, repository files, environment variables, or chat. The PowerShell recovery scripts remain compatibility entry points, not the canonical agent path.
 
 Recovery sequence:
 
 1. choose a clean private destination;
-2. invoke the restore script and enter the password in the local prompt;
+2. invoke `route-steward recover` and enter the password in the local prompt;
 3. verify manifest and path safety, relocate SSH/delivery paths, apply private permissions, validate inventory, and reset `observed.json`;
 4. inspect capabilities, context, and drift;
 5. audit existing Routes before any remote write;

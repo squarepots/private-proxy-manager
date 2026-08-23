@@ -1,66 +1,76 @@
 # Quickstart
 
-Route Steward helps an AI agent deploy, check, migrate, and recover networking on servers you manage. Give the repository to an agent that can read local files and run PowerShell, then describe the connection you want.
+Route Steward helps an AI agent deploy, check, migrate, and recover networking on servers you manage. The normal interface is one native executable for Linux, macOS, and Windows.
 
-## 1. Give the repository to an agent
+## 1. Install the executable
 
-Paste this into Codex or another tool-capable agent:
+Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases), verify it against `SHA256SUMS`, and place `route-steward` (or `route-steward.exe`) on your `PATH`.
+
+Developers can install from source with Go 1.27:
 
 ```text
-Open https://github.com/squarepots/route-steward and help me manage networking on my own servers. Clone it if needed. Read AGENTS.md and .agents/skills/route-steward/SKILL.md. Run capability discovery and quick local validation before using real infrastructure. Explain the dedicated-host requirements, host-wide effects, and operating boundary, collect the required facts, keep sensitive state under the ignored private directory, and make changes only after preflight reports ready=true.
+go install github.com/squarepots/route-steward/cmd/route-steward@latest
 ```
 
-The agent should run:
+Normal use does not require PowerShell or Node.js. Node.js is needed only for the optional Cloudflare Worker subscription publisher.
 
-```powershell
-pwsh -NoProfile -File .\agent\route-steward-agent.ps1 capabilities
-pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
+## 2. Give the repository to an agent
+
+Paste this into Codex or another agent that can read files and run local commands:
+
+```text
+Open https://github.com/squarepots/route-steward and help me manage networking on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use the release binary or build the Go CLI. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
 ```
 
-These commands inspect the repository and validate the local machine surface. Server deployment begins later through a scoped, ready preflight.
+The agent should begin with:
 
-## 2. Prepare the required inputs
+```text
+route-steward capabilities
+route-steward bootstrap --private-dir ./private
+route-steward context --private-dir ./private
+route-steward drift --private-dir ./private
+```
 
-For the first route, prepare:
+For a source checkout, the same interface is available as `go run ./cmd/route-steward <command>`.
 
-- a dedicated, rebuildable Ubuntu 24.04 amd64 VPS;
-- its public address;
-- a valid Unix SSH username and local private-key path;
-- the client you want to configure: Mihomo/Clash Verge-compatible software or Shadowrocket;
-- your desired direct or single-hop relay topology.
+## 3. Prepare the first route
 
-Use non-identifying IDs such as `entry-a`, `route-a`, and `desktop-a`.
+The agent will ask for the facts declared by capability discovery:
 
-Before accepting server details, the agent should explain the [host effects and privacy boundary](../README.md#host-effects-and-privacy).
+- one dedicated, rebuildable Ubuntu 24.04 amd64 VPS for a direct route, or two for a relay;
+- each server's public address, valid Unix SSH username, and local private-key path;
+- the desired direct or single-hop relay connection;
+- a Mihomo/Clash Verge-compatible or Shadowrocket client target.
 
-## 3. Let RST build the plan
+Use non-identifying IDs such as `entry-a`, `route-a`, and `desktop-a`. Route Steward stores real operational values only in the selected private directory.
 
-The normal machine workflow is:
+## 4. Let the agent operate the workflow
 
 ```text
 capabilities → bootstrap when absent → context and drift
-→ gather required facts → create desired objects
-→ preflight → execute → audit and render
+→ create desired Server / Link / Route / Profile / ClientTarget objects
+→ preflight → execute → audit → render
 ```
 
-Bootstrap creates neutral schema-1 state. Region, Provider, policy, Profile, client, delivery, and AI-vendor choices enter state only from established context.
+Preflight returns missing facts, conflicts, expected effects, and authorization class. Execution continues only when `ready=true`. A deployed route with unexpected or undetermined live state is not blindly overwritten.
 
-Preflight returns the exact missing context, conflicts, expected effects, and authorization class. The agent continues only when `ready=true`.
+## 5. Check the outcome
 
-## 4. Check the result
+A successful response identifies the route, live audit status, and private-root-relative client artifact, for example:
 
-A successful result identifies:
+```json
+{
+  "route": "route-a",
+  "state": "deployed",
+  "validation": { "status": "healthy", "category": "in-sync" },
+  "artifact": { "relative_path": "<private>/delivery/desktop-a.yaml" }
+}
+```
 
-- the Server and Route created;
-- the supported host/topology contract;
-- the remote audit status;
-- the ClientTarget and private-root-relative artifact, for example `<private>/delivery/desktop-a.yaml`;
-- any remaining drift or user decision.
+Returned data omits credentials, absolute home paths, Provider URLs, subscription tokens, live node URIs, and raw SSH output.
 
-The sanitized result uses private-root-relative artifacts and keeps absolute home paths, key contents, Provider URLs, delivery tokens, live node URIs, and raw SSH output within their designated private surfaces.
+## 6. Continue or recover
 
-## 5. Continue safely
+Ask the agent to run audit and drift before changing an existing route. Server replacement keeps the current route while replacement capacity is deployed and checked. Encrypted recovery uses `route-steward backup` and `route-steward recover`; enter the password only in the local 7-Zip prompt.
 
-Ask the agent to use read-only audit and drift before changing an existing route. For replacement, RST creates and validates new capacity while the current route remains available. For backup and recovery, enter the archive password only through the repository-owned local 7-Zip prompt.
-
-Read [Operating boundary](OPERATING-BOUNDARY.md) for deployment conditions, [Operations](../OPERATIONS.md) for machine semantics, [Compatibility](COMPATIBILITY.md) for implemented support, [Security](../SECURITY.md) for authority and secret handling, and the [FAQ](FAQ.md) for plain-language answers.
+Read [Compatibility](COMPATIBILITY.md), [Operations](../OPERATIONS.md), [Privacy](PRIVACY.md), [Security](../SECURITY.md), and the [operating boundary](OPERATING-BOUNDARY.md) before real deployment.

@@ -5,8 +5,8 @@ Route Steward (RST) is agent-native lifecycle software for self-hosted network p
 ## First actions
 
 1. Read `.agents/skills/route-steward/SKILL.md`.
-2. Inspect `agent/route-steward-agent.ps1 capabilities` before assuming support.
-3. Run `scripts/Validate-Local.ps1 -Quick` before using real infrastructure.
+2. Run `route-steward capabilities` before assuming support. In a source checkout, use `go run ./cmd/route-steward capabilities`.
+3. Run `go test ./...` before using a changed source checkout with real infrastructure.
 4. Establish the operating boundary from `docs/OPERATING-BOUNDARY.md` for the selected infrastructure and network resources.
 5. Bootstrap only when private state is absent.
 6. Read sanitized context and drift before changing an existing setup.
@@ -17,7 +17,7 @@ Runtime-specific instruction files must point here and to the repository Skill i
 
 ## Machine and object model
 
-`agent/route-steward-agent.ps1` is the canonical sanitized machine surface. `mcp/` is a thin local-stdio adapter. Lower-level PowerShell, render, deploy, audit, and Worker code are implementation surfaces for agents and contributors.
+The native `route-steward` executable is the canonical sanitized machine surface and includes the local stdio MCP server. Go owns state, preflight, rendering, deployment orchestration, drift, subscription, and recovery. Remote host changes remain in the embedded, audited `server/*.sh` payloads. `agent/route-steward-agent.ps1` is a compatibility forwarder for older callers.
 
 Keep the schema-1 object boundaries explicit:
 

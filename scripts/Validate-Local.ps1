@@ -23,6 +23,36 @@ function Test-CommandAvailable([string]$Name) {
 
 Push-Location $repo
 try {
+    $go = Get-Command go -ErrorAction SilentlyContinue
+    if (-not $go) {
+        $portableGo = Join-Path $repo '.tools\go\bin\go.exe'
+        if (Test-Path -LiteralPath $portableGo -PathType Leaf) { $go = [pscustomobject]@{ Source = $portableGo } }
+    }
+    if (-not $go) { throw 'Go 1.27 is required to validate a source checkout.' }
+    $gofmtName = 'gofmt'
+    if ($env:OS -eq 'Windows_NT') { $gofmtName = 'gofmt.exe' }
+    $gofmt = Join-Path (Split-Path -Parent $go.Source) $gofmtName
+    Invoke-ValidationStep 'Native Go formatting' {
+        $goFiles = @(Get-ChildItem -Path $repo -Recurse -Filter '*.go' -File | Where-Object { $_.FullName -notmatch '[\\/](?:\.tools|bin)[\\/]' } | ForEach-Object FullName)
+        $unformatted = @(& $gofmt -l @goFiles)
+        if ($LASTEXITCODE -ne 0 -or $unformatted.Count) { throw ('Go formatting failed: ' + ($unformatted -join ', ')) }
+    }
+    Invoke-ValidationStep 'Native Go module, tests and vet' {
+        & $go.Source mod verify
+        if ($LASTEXITCODE -ne 0) { throw 'go mod verify failed.' }
+        & $go.Source test ./...
+        if ($LASTEXITCODE -ne 0) { throw 'go test failed.' }
+        & $go.Source vet ./...
+        if ($LASTEXITCODE -ne 0) { throw 'go vet failed.' }
+    }
+    Invoke-ValidationStep 'Native executable' {
+        $binaryName = 'bin/route-steward'
+        if ($env:OS -eq 'Windows_NT') { $binaryName = 'bin\route-steward.exe' }
+        $binary = Join-Path $repo $binaryName
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $binary) | Out-Null
+        & $go.Source build -trimpath -o $binary ./cmd/route-steward
+        if ($LASTEXITCODE -ne 0) { throw 'Route Steward executable build failed.' }
+    }
     Invoke-ValidationStep 'Secret/generated-file scan' { & ./scripts/Check-NoSecrets.ps1 }
     Invoke-ValidationStep 'Architecture/public-tree contract' { & ./scripts/Test-Templates.ps1 }
     Invoke-ValidationStep 'Product version' { & ./tests/Test-Version.ps1 }
@@ -35,22 +65,7 @@ try {
     Invoke-ValidationStep 'Recovery core' { & ./tests/Test-RecoveryCore.ps1 }
 
     if (-not $Quick) {
-        if ((Test-CommandAvailable '7z') -or (Test-CommandAvailable '7zz') -or (Test-CommandAvailable '7z.exe')) {
-            Invoke-ValidationStep 'Encrypted recovery archive' { & ./tests/Test-Recovery.ps1 }
-        }
-        else { $skipped.Add('Encrypted recovery archive: 7-Zip is not installed.') }
-
         if (Test-CommandAvailable 'npm') {
-            Invoke-ValidationStep 'MCP locked install and typecheck' {
-                Push-Location (Join-Path $repo 'mcp')
-                try {
-                    & npm ci --ignore-scripts --no-audit --no-fund
-                    if ($LASTEXITCODE -ne 0) { throw 'MCP npm ci failed.' }
-                    & npm run typecheck
-                    if ($LASTEXITCODE -ne 0) { throw 'MCP typecheck failed.' }
-                }
-                finally { Pop-Location }
-            }
             Invoke-ValidationStep 'Worker locked install, test and dry-run' {
                 Push-Location (Join-Path $repo 'worker')
                 try {
@@ -70,7 +85,7 @@ try {
                 finally { Pop-Location }
             }
         }
-        else { $skipped.Add('MCP/Worker Node validation: npm is not installed.') }
+        else { $skipped.Add('Optional Worker validation: npm is not installed.') }
 
         if (Test-CommandAvailable 'bash') {
             Invoke-ValidationStep 'Server Bash syntax' {

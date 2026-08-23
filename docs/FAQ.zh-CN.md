@@ -6,7 +6,11 @@ Route Steward 帮你部署、检查、迁移和恢复所管理服务器上的网
 
 ## 开始前需要什么？
 
-你需要一台安装 PowerShell 7、可供 tool-capable AI agent 操作的本地电脑，一台具备 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS，以及 Mihomo/Clash Verge 兼容软件或 Shadowrocket。relay route 需要两台 VPS。
+你需要在 Linux、macOS 或 Windows 电脑上安装 Route Steward release binary，并使用具备工具能力的 AI agent；还需要一台具备 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS，以及 Mihomo/Clash Verge 兼容软件或 Shadowrocket。relay route 需要两台 VPS。正常使用不需要 PowerShell 或 Node.js。
+
+## 如何安装？
+
+从 [GitHub Releases](https://github.com/squarepots/route-steward/releases) 下载与你的操作系统和架构对应的压缩包，使用 `SHA256SUMS` 校验，再把程序放入 `PATH`。开发者可以使用 Go 1.27 运行 `go install github.com/squarepots/route-steward/cmd/route-steward@latest`。
 
 ## 为什么必须使用专用主机？
 
@@ -14,7 +18,7 @@ Route Steward 帮你部署、检查、迁移和恢复所管理服务器上的网
 
 ## 可以只把 GitHub 链接交给 AI agent 吗？
 
-可以。使用 [中文快速开始](QUICKSTART.zh-CN.md) 中的提示词。能够调用本地工具的 agent 可以 clone 仓库、阅读说明、检查机器可读 capabilities、运行本地验证、解释使用前提，然后只收集路线需要的最少信息。
+可以。使用 [中文快速开始](QUICKSTART.zh-CN.md) 中的提示词。能够调用本地工具的 agent 可以 clone 仓库、阅读说明、获取或构建程序、检查机器可读 capabilities、解释使用前提，然后只收集路线需要的最少信息。
 
 ## AI 模型会看到服务器信息吗？
 

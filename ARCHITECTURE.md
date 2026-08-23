@@ -14,8 +14,7 @@ Capable AI agent/runtime
           ↓
 Portable integration layer
   ├─ canonical Skill/instructions
-  ├─ agent/ machine surface
-  └─ optional local stdio MCP adapter
+  └─ native CLI + in-process local stdio MCP
           ↓
 Deterministic RST core
   ├─ desired state + secrets
@@ -53,7 +52,7 @@ These concepts make the core deterministic. They are not concepts the user must 
 <private>/recovery/         encrypted recovery artifacts
 ```
 
-`<private>` is the selected private instance root. It may be ignored local `private/` or an external directory supplied through `-PrivateDirectory`. Tracked product source contains none of the real values above.
+`<private>` is the selected private instance root. It may be ignored local `private/` or an external directory supplied through `--private-dir`. Tracked product source contains none of the real values above.
 
 Desired state is canonical. Observed state and render-manifest state are disposable evidence that can be recreated by read-only audit or deterministic rendering.
 
@@ -95,9 +94,9 @@ The gate is implemented in local core code and returns machine-readable missing 
 
 ## Agent interfaces
 
-`agent/route-steward-agent.ps1` is the canonical sanitized machine surface. It exposes capability discovery, neutral bootstrap, context, drift, preflight, and supported execution while suppressing raw secret-bearing diagnostics.
+The native Go `route-steward` executable is the canonical sanitized machine surface. It exposes capability discovery, neutral bootstrap, context, drift, preflight, supported execution, encrypted recovery, and an in-process **local stdio MCP** server while suppressing raw secret-bearing diagnostics.
 
-`mcp/` is a thin **local stdio** adapter over that surface. It does not own business logic, schemas, state, security policy, or renderers. Hosts without MCP can invoke the same machine surface directly.
+The executable is released for Linux, macOS, and Windows on amd64 and arm64. Go owns local state and orchestration; system OpenSSH performs transport, and the unchanged `server/*.sh` payloads remain the remote implementation embedded in the binary. The PowerShell agent entry point is a compatibility forwarder, not a runtime dependency.
 
 Guarded credential rotation is intentionally not part of generic MCP execute. Private structured context may be passed over stdin so sensitive infrastructure context need not appear in process arguments.
 

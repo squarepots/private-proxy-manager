@@ -17,8 +17,8 @@ When the user gives you the repository or asks to use RST:
 
 1. Open or safely clone the supplied repository.
 2. Read root `AGENTS.md` and this Skill.
-3. Run `agent/route-steward-agent.ps1 capabilities`; do not infer support from external product features.
-4. Run `scripts/Validate-Local.ps1 -Quick` before accepting real infrastructure context.
+3. Run `route-steward capabilities`; in a source checkout use `go run ./cmd/route-steward capabilities`. Do not infer support from external product features.
+4. Run `go test ./...` before accepting real infrastructure context from a changed source checkout.
 5. Bootstrap only if private state is absent.
 6. Inspect sanitized context and drift before changing existing state.
 7. Explain the dedicated-host prerequisites, host-wide effects, and operating boundary.

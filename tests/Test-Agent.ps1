@@ -12,6 +12,20 @@ $stage = Join-Path ([IO.Path]::GetTempPath()) ('rst-agent-test-' + [Guid]::NewGu
 $recoveryTarget = Join-Path ([IO.Path]::GetTempPath()) ('rst-agent-recovery-target-' + [Guid]::NewGuid().ToString('N'))
 $archiveFixture = Join-Path ([IO.Path]::GetTempPath()) ('rst-agent-recovery-fixture-' + [Guid]::NewGuid().ToString('N') + '.7z')
 try {
+    $go = Get-Command go -ErrorAction SilentlyContinue
+    if (-not $go) {
+        $portableGo = Join-Path $repo '.tools\go\bin\go.exe'
+        if (Test-Path -LiteralPath $portableGo -PathType Leaf) { $go = [pscustomobject]@{ Source = $portableGo } }
+    }
+    Assert-True ($null -ne $go) 'Go is unavailable for the source-checkout compatibility test.'
+    Push-Location $repo
+    try {
+        $sourceVersion = (& $go.Source run ./cmd/route-steward version | Out-String).Trim()
+        $sourceExit = $LASTEXITCODE
+    }
+    finally { Pop-Location }
+    Assert-True ($sourceExit -eq 0 -and $sourceVersion -eq ([IO.File]::ReadAllText((Join-Path $repo 'version.txt')).Trim())) 'The documented Go source-checkout invocation failed.'
+
     $bootstrap = & $agent bootstrap -PrivateDirectory $stage | ConvertFrom-Json
     Assert-True ($bootstrap.success -and $bootstrap.data.created) 'Clean agent bootstrap did not create private state.'
     Assert-True (Test-Path -LiteralPath (Join-Path $stage 'inventory.json')) 'Bootstrap did not create inventory.json.'
@@ -106,7 +120,7 @@ try {
     Assert-True ($recoverPreflight.data.executor -eq 'local-assisted' -and $recoverPreflight.data.requires_local_secret_prompt) 'Recovery preflight does not preserve the local secret prompt boundary.'
     $recoverExecute = & $agent execute -PrivateDirectory $recoveryTarget -Operation recover -ContextJson $recoveryContext | ConvertFrom-Json
     Assert-True (-not $recoverExecute.success -and $recoverExecute.code -eq 'local-assistance-required') 'Agent recovery incorrectly pretended to complete through a non-interactive model channel.'
-    Assert-True ($recoverExecute.data.result.repository_script -eq 'scripts/Restore-RecoveryArchive.ps1') 'Agent recovery did not delegate to the repository-owned secure restore workflow.'
+    Assert-True ($recoverExecute.data.result.command -match '^route-steward recover ') 'Agent recovery did not delegate to the native secure restore workflow.'
     $global:LASTEXITCODE = 0
 
     Write-Host 'Agent bootstrap, capability discovery, preflight, authorization, schema, legacy operator tolerance, and assisted recovery tests passed.'
