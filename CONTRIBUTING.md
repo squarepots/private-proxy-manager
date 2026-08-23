@@ -40,6 +40,10 @@ Generated client files, credentials, recovery archives, local inventory/observed
 
 Run the public-tree and secret checks before sharing a change.
 
+## Translations
+
+`README.md` is the canonical product and technical copy. Keep translated READMEs faithful to current behavior, preserve commands, paths, field names, and operation IDs exactly, and write natural prose for the target language. When adding a locale, update the language navigation in every root README.
+
 ## Validation
 
 Use:
