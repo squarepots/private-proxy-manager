@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">Route Steward social preview</title>
+  <desc id="desc">Use AI to manage networking on your own servers. Route Steward helps deploy, check, migrate, and recover network connections on servers you manage.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#061719"/>
+      <stop offset="0.58" stop-color="#0b2530"/>
+      <stop offset="1" stop-color="#0d1117"/>
+    </linearGradient>
+    <linearGradient id="steward" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#115e59"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#5eead4"/>
+    </marker>
+  </defs>
+  <rect width="1280" height="640" fill="url(#background)"/>
+  <circle cx="1160" cy="34" r="270" fill="#0f766e" opacity="0.16"/>
+  <circle cx="1050" cy="650" r="310" fill="#1f6feb" opacity="0.08"/>
+
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <text x="72" y="92" fill="#5eead4" font-size="20" font-weight="700" letter-spacing="2">AI-OPERATED SERVER NETWORKING</text>
+    <text x="72" y="170" fill="#f0f6fc" font-size="58" font-weight="760">Route Steward</text>
+    <text x="72" y="232" fill="#c9d1d9" font-size="29" font-weight="500">Use AI to manage networking</text>
+    <text x="72" y="272" fill="#c9d1d9" font-size="29" font-weight="500">on your own servers.</text>
+
+    <g transform="translate(72 330)">
+      <rect width="126" height="42" rx="21" fill="#0f766e" fill-opacity="0.30" stroke="#2dd4bf" stroke-opacity="0.58"/>
+      <text x="63" y="27" text-anchor="middle" fill="#5eead4" font-size="15" font-weight="650">LOCAL-FIRST</text>
+    </g>
+    <g transform="translate(212 330)">
+      <rect width="130" height="42" rx="21" fill="#1f6feb" fill-opacity="0.20" stroke="#388bfd" stroke-opacity="0.58"/>
+      <text x="65" y="27" text-anchor="middle" fill="#79c0ff" font-size="15" font-weight="650">PREFLIGHTED</text>
+    </g>
+    <g transform="translate(356 330)">
+      <rect width="136" height="42" rx="21" fill="#8957e5" fill-opacity="0.18" stroke="#a371f7" stroke-opacity="0.55"/>
+      <text x="68" y="27" text-anchor="middle" fill="#d2a8ff" font-size="15" font-weight="650">RECOVERABLE</text>
+    </g>
+
+    <g transform="translate(626 106)">
+      <rect width="582" height="402" rx="24" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+      <text x="32" y="46" fill="#8b949e" font-size="13" font-weight="700" letter-spacing="1.5">CONTROL</text>
+      <g transform="translate(32 68)">
+        <rect width="130" height="54" rx="13" fill="#10233f" stroke="#2f81f7"/>
+        <text x="65" y="33" text-anchor="middle" fill="#79c0ff" font-size="15" font-weight="700">AI agent</text>
+      </g>
+      <line x1="174" y1="95" x2="218" y2="95" stroke="#5eead4" stroke-width="3" marker-end="url(#arrow)"/>
+      <g transform="translate(232 60)">
+        <rect width="180" height="70" rx="15" fill="url(#steward)" stroke="#5eead4"/>
+        <text x="90" y="31" text-anchor="middle" fill="#ecfeff" font-size="17" font-weight="750">Route Steward</text>
+        <text x="90" y="52" text-anchor="middle" fill="#b9f7ee" font-size="11">desired + observed</text>
+      </g>
+      <line x1="424" y1="95" x2="468" y2="95" stroke="#5eead4" stroke-width="3" marker-end="url(#arrow)"/>
+      <g transform="translate(482 68)">
+        <rect width="68" height="54" rx="13" fill="#18251d" stroke="#2ea043"/>
+        <text x="34" y="33" text-anchor="middle" fill="#56d364" font-size="13" font-weight="700">audit</text>
+      </g>
+
+      <line x1="32" y1="154" x2="550" y2="154" stroke="#21262d"/>
+      <text x="32" y="185" fill="#8b949e" font-size="13" font-weight="700" letter-spacing="1.5">SUPPORTED PATHS</text>
+
+      <text x="32" y="234" fill="#5eead4" font-size="12" font-weight="700">DIRECT</text>
+      <g transform="translate(102 207)" font-size="13" font-weight="700" text-anchor="middle">
+        <rect width="104" height="50" rx="12" fill="#161b22" stroke="#3d444d"/>
+        <text x="52" y="31" fill="#c9d1d9">desktop-a</text>
+        <line x1="115" y1="25" x2="164" y2="25" stroke="#5eead4" stroke-width="3" marker-end="url(#arrow)"/>
+        <rect x="177" width="104" height="50" rx="12" fill="#0f2c31" stroke="#2dd4bf"/>
+        <text x="229" y="31" fill="#ecfeff">Entry-A</text>
+        <line x1="292" y1="25" x2="341" y2="25" stroke="#8b949e" stroke-width="3"/>
+        <rect x="354" width="104" height="50" rx="12" fill="#161b22" stroke="#3d444d"/>
+        <text x="406" y="31" fill="#c9d1d9">Internet</text>
+      </g>
+
+      <text x="32" y="314" fill="#d2a8ff" font-size="12" font-weight="700">RELAY</text>
+      <g transform="translate(102 287)" font-size="13" font-weight="700" text-anchor="middle">
+        <rect width="86" height="50" rx="12" fill="#161b22" stroke="#3d444d"/>
+        <text x="43" y="31" fill="#c9d1d9">desktop-a</text>
+        <line x1="96" y1="25" x2="126" y2="25" stroke="#5eead4" stroke-width="3" marker-end="url(#arrow)"/>
+        <rect x="138" width="86" height="50" rx="12" fill="#0f2c31" stroke="#2dd4bf"/>
+        <text x="181" y="31" fill="#ecfeff">Entry-A</text>
+        <line x1="234" y1="25" x2="264" y2="25" stroke="#a371f7" stroke-width="3" marker-end="url(#arrow)"/>
+        <rect x="276" width="86" height="50" rx="12" fill="#221a33" stroke="#8957e5"/>
+        <text x="319" y="31" fill="#f3e8ff">Relay-A</text>
+        <line x1="372" y1="25" x2="402" y2="25" stroke="#8b949e" stroke-width="3"/>
+        <rect x="414" width="86" height="50" rx="12" fill="#161b22" stroke="#3d444d"/>
+        <text x="457" y="31" fill="#c9d1d9">Internet</text>
+      </g>
+
+      <text x="32" y="378" fill="#8b949e" font-size="13">Hysteria2 ingress · optional WireGuard relay · synthetic IDs</text>
+    </g>
+
+    <text x="72" y="542" fill="#f0f6fc" font-size="19" font-weight="600">Give the repository URL to a capable AI agent.</text>
+    <text x="72" y="586" fill="#8b949e" font-size="17">github.com/squarepots/route-steward</text>
+  </g>
+</svg>

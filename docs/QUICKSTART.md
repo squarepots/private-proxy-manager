@@ -1,12 +1,14 @@
 # Quickstart
 
-Route Steward is designed for an AI agent that can open a repository, read local files, and run PowerShell. You describe the self-hosted network path you want; the agent discovers the supported workflow and uses Route Steward's deterministic operations.
+Route Steward helps an AI agent deploy, check, migrate, and recover networking on servers you manage. Give the repository to an agent that can read local files and run PowerShell, then describe the connection you want.
 
 ## 1. Give the repository to an agent
 
 Paste this into Codex or another tool-capable agent:
 
-> Open <https://github.com/squarepots/route-steward> and help me create my first self-hosted network path. Clone it when needed. Read AGENTS.md and .agents/skills/route-steward/SKILL.md. Run capability discovery and quick local validation before using real infrastructure. Explain the prerequisites and host-wide effects, collect the required facts, keep sensitive state under the ignored private directory, and execute mutations after preflight reports `ready=true`.
+```text
+Open https://github.com/squarepots/route-steward and help me manage networking on my own servers. Clone it if needed. Read AGENTS.md and .agents/skills/route-steward/SKILL.md. Run capability discovery and quick local validation before using real infrastructure. Explain the dedicated-host requirements, host-wide effects, and operating boundary, collect the required facts, keep sensitive state under the ignored private directory, and make changes only after preflight reports ready=true.
+```
 
 The agent should run:
 
@@ -29,7 +31,7 @@ For the first route, prepare:
 
 Use non-identifying IDs such as `entry-a`, `route-a`, and `desktop-a`.
 
-Before accepting server details, the agent should explain the host effects in the [README](../README.md#host-effects).
+Before accepting server details, the agent should explain the [host effects and privacy boundary](../README.md#host-effects-and-privacy).
 
 ## 3. Let RST build the plan
 

@@ -1,12 +1,14 @@
 # 快速开始
 
-Route Steward 面向能够打开仓库、读取本地文件并运行 PowerShell 的 AI agent。你描述希望建立的自托管网络路径，agent 读取仓库中的能力与安全契约，再调用 Route Steward 的确定性操作。
+Route Steward 帮助 AI agent 部署、检查、迁移和恢复你所管理服务器上的网络连接。把仓库交给能够读取本地文件并运行 PowerShell 的 agent，再说明你希望建立的连接。
 
 ## 1. 把仓库交给 agent
 
 把下面的提示词粘贴到 Codex 或其他 tool-capable agent：
 
-> 打开 <https://github.com/squarepots/route-steward>，帮我建立第一条自托管网络路径；需要时先 clone。阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md。在使用真实基础设施前运行 capability discovery 和快速本地验证。向我解释使用条件和主机级影响，收集操作必需的事实，把敏感状态保存在被忽略的 private 目录，并在 preflight 返回 `ready=true` 后执行 mutation。
+```text
+打开 https://github.com/squarepots/route-steward 并帮我用 AI 管理自己的服务器网络。需要时先 clone。阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md。在使用真实基础设施前运行 capability discovery 和快速本地验证。先解释专用主机要求、主机级影响和运行边界，再收集操作必需的事实；把敏感状态保存在被忽略的 private 目录；仅在 preflight 返回 ready=true 后修改。
+```
 
 agent 应运行：
 
@@ -29,7 +31,7 @@ pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
 
 建议使用 `entry-a`、`route-a`、`desktop-a` 这类不识别个人信息的 ID。
 
-在接收服务器信息前，agent 应先解释 [README](../README.zh-CN.md#对主机的影响) 中的整机影响。
+在接收服务器信息前，agent 应先解释 README 中的[主机影响与隐私边界](../README.zh-CN.md#主机影响与隐私)。
 
 ## 3. 让 RST 建立计划
 

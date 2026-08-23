@@ -1,8 +1,8 @@
 # FAQ
 
-## What problem does RST solve?
+## What does Route Steward do?
 
-Route Steward turns SSH-accessible servers into repeatable self-hosted network paths. It keeps topology, credentials, client output, remote audit, drift, migration, and recovery aligned through one declarative lifecycle.
+Route Steward helps you deploy, check, migrate, and recover network connections on servers you manage. A capable AI agent follows the repository's validated workflow while the technical details remain explicit and reviewable.
 
 ## What do I need before I start?
 

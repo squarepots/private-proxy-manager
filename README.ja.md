@@ -6,43 +6,44 @@
 
 [![Validation](https://github.com/squarepots/route-steward/actions/workflows/ci.yml/badge.svg)](https://github.com/squarepots/route-steward/actions/workflows/ci.yml)
 
-**AI にネットワークパスの運用方針を伝えると、Route Steward が継続的に管理します。**
+**AI を使って、自分のサーバーのネットワークを管理する。**
 
-Route Steward は、セルフホスト型ネットワークパスのライフサイクルを管理する local-first ツールです。ツールを利用できる AI agent が、オペレーター管理下のインフラに対する接続要件を、検証済み状態、サーバーデプロイ、クライアント設定、監査、drift 検出、移行、復旧へ変換します。
+Route Steward は、管理するサーバー上のネットワーク接続をデプロイ、点検、移行、復旧できるようにします。サーバー、アカウント、管理権限は利用者が用意し、Route Steward はツールを使える AI agent に、ローカル PC から反復可能で検証済みの操作手順を提供します。
 
-選択したエンドポイント間の Internet 到達性を前提とします。Internet が転送を担い、利用者がサーバー、アカウント、ネットワークリソースの利用権限を用意し、Route Steward が再現可能な運用レイヤーを提供します。
+![AI が操作するコントロールプレーンと、Entry-A および任意の Relay-A を通る direct/relay トラフィックパスを分けて示した synthetic Route Steward 図。](docs/assets/network-path-lifecycle.svg)
 
 ## AI agent から始める
 
-リポジトリ URL を Codex などのローカルファイルと PowerShell を扱える agent に渡し、次のように依頼します。
+次の prompt を、ファイルを読んで PowerShell を実行できる Codex などの agent に貼り付けます。
 
-> Open <https://github.com/squarepots/route-steward> and operate Route Steward for me. Read AGENTS.md and the repository Skill, inspect capabilities, run quick local validation, explain the requirements for my first self-hosted network path, keep sensitive state in the private directory, run preflight before changes, and return sanitized results.
+```text
+https://github.com/squarepots/route-steward を開き、AI を使って自分のサーバーのネットワークを管理してください。必要なら clone し、AGENTS.md と repository Skill を読み、capabilities を確認して quick local validation を実行してください。インフラ情報を尋ねる前に、専用ホストの要件、ホスト全体への影響、運用境界を説明してください。機密状態は private ディレクトリに保持し、変更前に preflight を実行し、機密情報を除いた結果だけを返してください。
+```
 
 ```powershell
 pwsh -NoProfile -File .\agent\route-steward-agent.ps1 capabilities
 pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
 ```
 
-## 用意するもの
+## 必要なもの
 
 - PowerShell 7 と tool-capable AI agent を利用できるローカル PC
 - 専用で再構築可能な Ubuntu 24.04 amd64 サーバー 1 台または 2 台
-- 正当な管理権限に基づく SSH アクセス
+- 正当な管理権限に基づく SSH アクセス、Unix username、private-key path
 - Mihomo/Clash Verge 互換ソフトウェアまたは Shadowrocket
 
-## 管理対象
+Route Steward はホスト全体を準備するため、管理対象サーバーはこのネットワーク設定専用である必要があります。
 
-- direct Hysteria2 path と single-hop WireGuard relay path
-- Server、Link、Route、Provider、Profile、ClientTarget の desired state
-- Mihomo/Clash 互換ファイルと Shadowrocket import
-- ClientTarget ごとに分離された任意の設定配信
-- remote audit、typed drift、overlap-first migration
-- 暗号化された recovery archive
+## Route Steward が行うこと
 
-## 運用条件
+サーバーとクライアントの設定を作成・検証し、稼働状態を点検し、既存接続を先に失わずにインフラを置き換え、暗号化された復旧アーカイブを作成します。
 
-Route Steward は、オペレーターが所有するか、管理権限を与えられたサーバー、アカウント、ネットワークリソースを対象とします。各デプロイは、適用される法令、通信事業者の要件、クラウド事業者の利用条件、組織のポリシーに従って構成します。詳細は [Operating boundary](docs/OPERATING-BOUNDARY.md) を参照してください。
+[Compatibility](docs/COMPATIBILITY.md) に、現在対応するホスト、プロトコル、クライアント、トポロジー、任意の Cloudflare 配信を記載しています。
 
-実装済みのホスト、プロトコル、renderer、Provider は [Compatibility](docs/COMPATIBILITY.md) と capability discovery に記載されています。プライバシーと権限の境界は [Privacy](docs/PRIVACY.md)、[Security](SECURITY.md)、[Threat model](docs/THREAT-MODEL.md) を参照してください。
+## ホストへの影響とプライバシー
 
-Route Steward は [AGPL-3.0-only](LICENSE) で提供されます。
+セットアップは、ホスト全体の firewall、swap、SSH、system、logging、update、monitoring 設定を変更します。機密状態と生成ファイルは選択したローカル private ディレクトリに保存し、変更前に ready な preflight が必要です。[Operations](OPERATIONS.md)、[Privacy](docs/PRIVACY.md)、[Security](SECURITY.md) を確認してください。
+
+所有するか管理を許可されたサーバー、アカウント、ネットワークリソースだけを使用してください。詳細は [Operating boundary](docs/OPERATING-BOUNDARY.md) にあります。
+
+Route Steward は [AGPL-3.0-only](LICENSE) で提供されます。Vendored QR generator の MIT 表示は [client/vendor/NOTICE.md](client/vendor/NOTICE.md) にあります。
