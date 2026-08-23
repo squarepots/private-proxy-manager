@@ -4,9 +4,7 @@ This document describes RST's **internal machine-operation contract for agents a
 
 ## Canonical machine surface
 
-`agent/route-steward-agent.ps1` is the stable local machine interface. It emits sanitized JSON envelopes and operates against the selected private instance root (`-PrivateDirectory`, defaulting to ignored local `private/`).
-
-Hosts with local MCP support may use `mcp/`, which is a thin stdio adapter over the same surface. MCP does not duplicate state, business logic, renderers, or authorization.
+The native `route-steward` executable is the stable local machine interface. It emits sanitized JSON envelopes and operates against the selected private instance root (`--private-dir`, defaulting to ignored local `private/`). `route-steward mcp` exposes the same Go engine over local stdio; it does not duplicate state, business logic, renderers, or authorization.
 
 The normal sequence is:
 
@@ -194,6 +192,6 @@ Recovery is local-first: restore to a clean private root, verify the SHA-256 man
 
 ## Contributor/debug interfaces
 
-Lower-level PowerShell/scripts remain available for tests, debugging, and implementation work. They are not a second product UI and should not be documented as something normal users must learn.
+The PowerShell libraries and entry point remain compatibility and regression surfaces for existing callers. They are not a runtime dependency or a second product UI. Remote Bash payloads remain the deployed host implementation and are embedded in the native executable.
 
 When a capability is missing, extend the deterministic core and its behavior tests rather than teaching users a manual shell/SSH workaround.

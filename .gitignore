@@ -46,12 +46,12 @@ Thumbs.db
 .idea/
 .vscode/
 
-# MCP local dependencies and build output
-mcp/node_modules/
-mcp/dist/
+# Local Go toolchain and compiled binaries
+.tools/
+bin/
 
 # Cloudflare Worker local dependencies and state
-worker/node_modules/
+node_modules/
 worker/dist/
 worker/.wrangler/
 worker/worker-configuration.d.ts

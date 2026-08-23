@@ -1,6 +1,6 @@
 # RST machine operations
 
-`agent/route-steward-agent.ps1` is the canonical local machine surface. These calls are for the operating agent/runtime.
+The native `route-steward` executable is the canonical local machine surface. It provides both CLI JSON and the in-process local stdio MCP server. These calls are for the operating agent/runtime.
 
 ## Discovery
 
@@ -15,7 +15,16 @@ Inventory schema `1` is the first public desired-state contract.
 
 Call `preflight` with the operation, optional target, and structured context before every mutation. Inspect `context_complete`, `authorized`, `ready`, `missing_context`, `conflicts`, `user_decisions`, `expected_effects`, and `authorization_class`.
 
-Execute only when `ready=true`. Prefer JSON over stdin so private context does not need to appear in process arguments. Pass local secret references or paths, never secret contents.
+Execute only when `ready=true`. Prefer structured context over stdin so private values do not appear in process arguments. Pass local secret references or paths, never secret contents.
+
+Representative calls:
+
+```text
+route-steward capabilities
+route-steward preflight --private-dir ./private --operation add-server --context-stdin
+route-steward execute --private-dir ./private --operation add-server --context-stdin
+route-steward mcp --private-dir ./private
+```
 
 ## Implemented operations
 

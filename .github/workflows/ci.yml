@@ -13,10 +13,39 @@ permissions:
   contents: read
 
 jobs:
+  go:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: 1.27.0
+          cache: true
+      - name: Verify module graph
+        run: go mod verify
+      - name: Test native control plane
+        run: go test ./...
+      - name: Vet native control plane
+        run: go vet ./...
+      - name: Check Go formatting
+        if: runner.os == 'Linux'
+        shell: bash
+        run: test -z "$(gofmt -l .)"
+
   static:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: 1.27.0
+          cache: true
+      - name: Build native executable
+        run: mkdir -p bin && go build -trimpath -o bin/route-steward ./cmd/route-steward
       - name: Secret and generated-file scan
         shell: pwsh
         run: ./scripts/Check-NoSecrets.ps1
@@ -26,24 +55,9 @@ jobs:
       - name: Product version behavior
         shell: pwsh
         run: ./tests/Test-Version.ps1
-      - name: Agent bootstrap, capability discovery, preflight and authorization
+      - name: Compatibility machine surface
         shell: pwsh
         run: ./tests/Test-Agent.ps1
-      - name: Generic Provider lifecycle
-        shell: pwsh
-        run: ./tests/Test-Providers.ps1
-      - name: Agent-native ClientTarget rendering
-        shell: pwsh
-        run: ./tests/Test-ClientTargets.ps1
-      - name: Observed state and drift
-        shell: pwsh
-        run: ./tests/Test-Observed.ps1
-      - name: Generic subscription state and export
-        shell: pwsh
-        run: ./tests/Test-Subscription.ps1
-      - name: Deterministic recovery restore core
-        shell: pwsh
-        run: ./tests/Test-RecoveryCore.ps1
       - name: Bash syntax
         shell: bash
         run: find server -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
@@ -51,30 +65,35 @@ jobs:
         shell: bash
         run: shellcheck server/*.sh
 
-  windows:
+  windows-validation:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v7
-      - name: Full local validation on Windows
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: 1.27.0
+          cache: true
+      - name: Full local validation
         shell: pwsh
         run: ./scripts/Validate-Local.ps1
 
-  mcp:
+  release-candidate:
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: mcp
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: mcp/package-lock.json
-      - name: Install locked MCP dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      - name: Type check local stdio adapter
-        run: npm run typecheck
+          go-version: 1.27.0
+          cache: true
+      - name: Build and verify all release archives
+        shell: bash
+        run: bash ./scripts/Build-ReleaseArtifacts.sh
+      - name: Run the installed journey against the archived native binary
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/route-steward-release"
+          tar -xzf "dist/route-steward_$(tr -d '\r\n' < version.txt)_linux_amd64.tar.gz" -C "$RUNNER_TEMP/route-steward-release"
+          ROUTE_STEWARD_BINARY="$RUNNER_TEMP/route-steward-release/route-steward" go test ./tests/userjourney
 
   worker:
     runs-on: ubuntu-24.04
@@ -82,8 +101,8 @@ jobs:
       run:
         working-directory: worker
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           cache: npm

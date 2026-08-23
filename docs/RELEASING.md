@@ -31,7 +31,8 @@ The workflow:
 - validates plain SemVer from `version.txt`;
 - treats an already-published version as a no-op;
 - rejects a version lower than or equal to the latest release when no matching tag exists;
-- creates an annotated `vX.Y.Z` tag on the existing `main` commit and a GitHub Release with generated notes;
+- builds Linux, macOS, and Windows binaries for amd64 and arm64 from that exact commit;
+- creates an annotated `vX.Y.Z` tag on the existing `main` commit and a GitHub Release with archives, `SHA256SUMS`, the AGPL license, and the bundled dependency notices;
 - never calls the bump script, edits `version.txt`, creates a release commit, or opens a release PR.
 
 The repository `GITHUB_TOKEN` is the release credential. No long-lived release token is part of the normal contract.
@@ -48,7 +49,8 @@ When no `v*` SemVer tag exists, automatic publication from a `version.txt` push 
 
 Before publishing any release:
 
-- run the repository secret/public-tree checks and applicable PowerShell, shell, MCP, and Worker tests;
-- confirm `agent/route-steward-agent.ps1 capabilities` reports the same product version as `version.txt`;
+- run `go test ./...`, `go vet ./...`, the repository secret/public-tree checks, shell tests, and optional Worker tests;
+- confirm `route-steward capabilities` reports the same product version as `version.txt`;
+- confirm all six release targets cross-build from the candidate commit;
 - confirm `docs/COMPATIBILITY.md` matches the shipped capability boundary;
 - keep all real operational state outside Git.

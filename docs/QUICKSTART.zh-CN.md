@@ -1,66 +1,76 @@
 # 快速开始
 
-Route Steward 帮助 AI agent 部署、检查、迁移和恢复你所管理服务器上的网络连接。把仓库交给能够读取本地文件并运行 PowerShell 的 agent，再说明你希望建立的连接。
+Route Steward 帮助 AI agent 部署、检查、迁移和恢复你所管理服务器上的网络连接。正常入口是一个可运行于 Linux、macOS 和 Windows 的原生程序。
 
-## 1. 把仓库交给 agent
+## 1. 安装程序
 
-把下面的提示词粘贴到 Codex 或其他 tool-capable agent：
+从 [GitHub Releases](https://github.com/squarepots/route-steward/releases) 下载与你的操作系统和架构对应的压缩包，使用 `SHA256SUMS` 校验，然后把 `route-steward`（Windows 为 `route-steward.exe`）放入 `PATH`。
+
+开发者也可以使用 Go 1.27 从源码安装：
 
 ```text
-打开 https://github.com/squarepots/route-steward 并帮我用 AI 管理自己的服务器网络。需要时先 clone。阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md。在使用真实基础设施前运行 capability discovery 和快速本地验证。先解释专用主机要求、主机级影响和运行边界，再收集操作必需的事实；把敏感状态保存在被忽略的 private 目录；仅在 preflight 返回 ready=true 后修改。
+go install github.com/squarepots/route-steward/cmd/route-steward@latest
 ```
 
-agent 应运行：
+正常使用不需要 PowerShell 或 Node.js。只有选择可选的 Cloudflare Worker 订阅发布时才需要 Node.js。
 
-```powershell
-pwsh -NoProfile -File .\agent\route-steward-agent.ps1 capabilities
-pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
+## 2. 把仓库交给 agent
+
+把下面的提示词粘贴到 Codex 或其他能够读取文件并运行本地命令的 agent：
+
+```text
+打开 https://github.com/squarepots/route-steward 并帮我用 AI 管理自己的服务器网络。需要时先 clone；阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md，然后使用 release binary 或构建 Go CLI。先运行 capabilities，再向我询问基础设施信息。解释专用主机要求和整机影响；把运行状态保存在 private 目录；每次修改前运行 preflight；只返回脱敏结果。
 ```
 
-这两个命令检查仓库并验证本地 machine surface。服务器部署在 scoped preflight ready 后开始。
+agent 应从以下命令开始：
 
-## 2. 准备必要信息
+```text
+route-steward capabilities
+route-steward bootstrap --private-dir ./private
+route-steward context --private-dir ./private
+route-steward drift --private-dir ./private
+```
 
-第一条路线需要：
+在源码目录中，也可以使用 `go run ./cmd/route-steward <command>` 调用同一接口。
 
-- 一台专用、可重建的 Ubuntu 24.04 amd64 VPS；
-- 服务器公网地址；
-- 有效的 Unix SSH 用户名和本地私钥路径；
-- 想配置的客户端：Mihomo/Clash Verge 兼容软件或 Shadowrocket；
-- direct 或 single-hop relay topology。
+## 3. 准备第一条 Route
 
-建议使用 `entry-a`、`route-a`、`desktop-a` 这类不识别个人信息的 ID。
+agent 会按照 capability discovery 声明的字段询问：
 
-在接收服务器信息前，agent 应先解释 README 中的[主机影响与隐私边界](../README.zh-CN.md#主机影响与隐私)。
+- direct route 需要一台专用、可重建的 Ubuntu 24.04 amd64 VPS；relay 需要两台；
+- 每台服务器的公网地址、有效 Unix SSH 用户名和本地 private-key path；
+- 希望使用 direct 还是单跳 relay 连接；
+- Mihomo/Clash Verge 兼容或 Shadowrocket ClientTarget。
 
-## 3. 让 RST 建立计划
+使用 `entry-a`、`route-a`、`desktop-a` 这类不识别个人信息的 ID。真实运行值只保存在你选择的 private 目录。
 
-正常 machine workflow 是：
+## 4. 让 agent 完成流程
 
 ```text
 capabilities → 状态不存在时 bootstrap → context 和 drift
-→ 收集必要事实 → 创建 desired objects
-→ preflight → execute → audit 和 render
+→ 创建 Server / Link / Route / Profile / ClientTarget desired objects
+→ preflight → execute → audit → render
 ```
 
-bootstrap 创建中性的 schema-1 状态。地区、Provider、策略、Profile、客户端、交付方式和 AI 厂商选择只从已建立的上下文进入状态。
+preflight 会返回缺少的事实、conflicts、expected effects 和 authorization class。只有 `ready=true` 时才执行。已部署 Route 的线上状态出现异常或无法确定时，不会被盲目覆盖。
 
-preflight 返回准确的 missing context、conflicts、expected effects 和 authorization class。只有 `ready=true` 时 agent 才继续。
+## 5. 检查结果
 
-## 4. 检查结果
+成功结果会说明 Route、线上审计状态，以及 private-root-relative 客户端文件，例如：
 
-成功结果应说明：
+```json
+{
+  "route": "route-a",
+  "state": "deployed",
+  "validation": { "status": "healthy", "category": "in-sync" },
+  "artifact": { "relative_path": "<private>/delivery/desktop-a.yaml" }
+}
+```
 
-- 创建了哪个 Server 和 Route；
-- 使用了哪种受支持的主机与 topology 契约；
-- remote audit 状态；
-- ClientTarget 和私有根相对 artifact，例如 `<private>/delivery/desktop-a.yaml`；
-- 是否还有 drift 或需要用户决定的事项。
+返回数据不会包含凭据、绝对用户目录、Provider URL、subscription token、完整 node URI 或原始 SSH 输出。
 
-脱敏结果使用 private-root-relative artifact，并将绝对用户目录、key 内容、Provider URL、交付 token、完整 live node URI 和原始 SSH 输出保留在各自的私有边界中。
+## 6. 继续使用或恢复
 
-## 5. 安全地继续
+修改现有 Route 前先让 agent 运行 audit 和 drift。替换服务器时，会在保留当前 Route 的同时部署并验证替代容量。加密恢复使用 `route-steward backup` 和 `route-steward recover`；密码只输入本地 7-Zip prompt。
 
-修改已有路线前，让 agent 先做只读 audit 和 drift。替换服务器时，RST 会在旧路线仍可用时创建并验证新容量。备份与恢复通过仓库自己的本地 7-Zip prompt 输入 archive password。
-
-部署条件见[运行边界](OPERATING-BOUNDARY.md)，机器语义见 [Operations](../OPERATIONS.md)，已实现支持见 [Compatibility](COMPATIBILITY.md)，授权与 secret 处理见 [Security](../SECURITY.md)，通俗问答见 [中文 FAQ](FAQ.zh-CN.md)。
+真实部署前请阅读 [Compatibility](COMPATIBILITY.md)、[Operations](../OPERATIONS.md)、[Privacy](PRIVACY.md)、[Security](../SECURITY.md) 和[运行边界](OPERATING-BOUNDARY.md)。

@@ -52,6 +52,9 @@ Require-Text 'worker/wrangler.jsonc' '"enabled": false' 'Worker observability mu
 Require-Text 'worker/src/index.ts' 'timingSafeEqual' 'Worker token comparison is not timing safe.'
 Require-Text 'worker/src/index.ts' 'private, no-store, max-age=0' 'Worker responses must not be cached.'
 Reject-Text 'worker/src/index.ts' 'console\.(?:log|debug|info|warn|error)' 'Worker must not log private subscription requests.'
+Require-Text 'internal/steward/subscription.go' '"ci", "--ignore-scripts", "--no-audit", "--no-fund"' 'Standalone publication does not install the embedded Worker lockfile.'
+Require-Text 'internal/steward/subscription.go' '"--no-install", "wrangler"' 'Standalone publication may resolve an unpinned transient Wrangler tree.'
+Reject-Text 'internal/steward/subscription.go' 'wrangler@|--yes' 'Standalone publication must not bypass the embedded Worker lockfile.'
 
 # Standard hosted CI is PR/manual only. Dependency installation remains reproducible.
 Require-Text '.github/workflows/ci.yml' '(?m)^\s*pull_request:\s*$' 'Standard CI is missing the PR validation boundary.'
@@ -59,7 +62,10 @@ Require-Text '.github/workflows/ci.yml' 'types:\s*\[opened, reopened, synchroniz
 Require-Text '.github/workflows/ci.yml' '(?m)^\s*workflow_dispatch:\s*$' 'Manual validation trigger is missing.'
 Reject-Text '.github/workflows/ci.yml' '(?m)^\s*push:\s*$' 'Standard CI must not run on push.'
 Require-Text '.github/workflows/ci.yml' 'cancel-in-progress:\s*true' 'Superseded validation runs are not cancelled.'
-Require-Text '.github/workflows/ci.yml' 'npm ci --ignore-scripts' 'MCP dependencies are not installed reproducibly from the lockfile.'
+Require-Text '.github/workflows/ci.yml' 'go test ./\.\.\.' 'The native Go control plane is not tested.'
+Require-Text '.github/workflows/ci.yml' 'Build-ReleaseArtifacts\.sh' 'The real release archives are not validated in CI.'
+Require-Text '.github/workflows/release.yml' 'Build-ReleaseArtifacts\.sh' 'The release workflow does not use the validated archive builder.'
+Require-Text 'scripts/Build-ReleaseArtifacts.sh' 'linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64' 'The six supported release targets are incomplete.'
 Require-Text '.github/workflows/release.yml' 'ref:\s*\$\{\{ github\.sha \}\}' 'Release checkout is not pinned to the workflow event SHA.'
 Require-Text '.github/workflows/release.yml' 'git tag -a "\$tag" -m "\$tag" "\$EVENT_SHA"' 'Release tag is not created from the immutable workflow event SHA.'
 Reject-Text '.github/workflows/release.yml' 'git pull' 'Release workflow must not replace the event source with moving branch state.'
@@ -70,30 +76,9 @@ Require-Text 'README.md' 'Route Steward helps you deploy, check, migrate, and re
 Require-Text 'README.zh-CN.md' '用 AI 管理自己的服务器网络。' 'The canonical Chinese product statement is missing.'
 Require-Text 'README.zh-CN.md' 'Route Steward 帮你部署、检查、迁移和恢复所管理服务器上的网络连接。' 'The canonical Chinese product definition is missing.'
 Require-Text 'docs/OPERATING-BOUNDARY.md' 'owned by the operator or administered with the resource owner''s authorization' 'The authorized-infrastructure operating boundary is missing.'
-Require-Text 'agent/route-steward-agent.ps1' "product = 'route-steward'" 'The machine surface product identity is incorrect.'
-
-$retiredIdentityPattern = '(?i)' +
-    'private[ -]proxy' + ' manager|' +
-    'private-proxy-' + 'manager|' +
-    'private' + 'proxymanager|' +
-    '\b' + 'p' + 'pm' + '\b|' +
-    'p' + 'pm-agent|' +
-    'p' + 'pm_|' +
-    'private ' + 'proxy|' +
-    '私人' + '代理|' +
-    '代理' + '路线'
-$trackedFiles = @(& git -C $repo ls-files)
-if ($LASTEXITCODE -ne 0) { $failures.Add('Unable to enumerate tracked files for product-identity validation.') }
-foreach ($relativePath in $trackedFiles) {
-    $path = Join-Path $repo $relativePath
-    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
-    try { $text = [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8) }
-    catch { continue }
-    if ($text.IndexOf([char]0) -ge 0) { continue }
-    if ($text -match $retiredIdentityPattern) {
-        $failures.Add("${relativePath}: retired product identity or positioning is present.")
-    }
-}
+Require-Text 'internal/steward/engine.go' '"interface":\s*"agent-machine-surface"' 'The native machine surface product identity is incorrect.'
+Reject-Text 'agent/route-steward-agent.ps1' "'run', './cmd/route-steward', '--'" 'The Go source fallback must not pass a fake -- command.'
+Reject-Text '.agents/skills/route-steward/SKILL.md' 'go run ./cmd/route-steward --' 'The repository-URL workflow must use the real Go CLI command shape.'
 
 # GFM treats CJK text immediately after a bare URL as part of the link target.
 $unsafeCjkAutolinkPattern = 'https?://[A-Za-z0-9._~:/?#\[\]@!$&''()*+,;=%-]+(?=[\p{IsCJKUnifiedIdeographs}\u3000-\u303F\uFF00-\uFFEF])'
@@ -134,4 +119,4 @@ if ($failures.Count) {
     $failures | Sort-Object -Unique | ForEach-Object { Write-Error $_ }
     exit 1
 }
-Write-Host 'Static server ownership/safety, Worker privacy, CI trigger, documentation, portability, and PowerShell validation passed.'
+Write-Host 'Static server ownership/safety, Worker privacy, CI trigger, documentation, portability, and compatibility validation passed.'

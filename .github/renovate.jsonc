@@ -2,7 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Conservative dependency update intake for Route Steward.",
   "extends": ["config:recommended"],
-  "enabledManagers": ["npm", "github-actions"],
+  "enabledManagers": ["gomod", "npm", "github-actions"],
   "dependencyDashboard": true,
   "automerge": false,
   "platformAutomerge": false,
@@ -35,22 +35,6 @@
       "matchUpdateTypes": ["major"],
       "groupName": null,
       "prPriority": -10
-    },
-    {
-      "description": "MCP runtime packages are reviewed as one compatibility unit.",
-      "matchFileNames": ["mcp/package.json"],
-      "matchPackageNames": ["@modelcontextprotocol/server", "zod"],
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "groupName": "MCP runtime",
-      "groupSlug": "mcp-runtime"
-    },
-    {
-      "description": "MCP TypeScript tooling is separate from runtime dependencies.",
-      "matchFileNames": ["mcp/package.json"],
-      "matchPackageNames": ["typescript", "@types/node"],
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "groupName": "MCP tooling",
-      "groupSlug": "mcp-tooling"
     },
     {
       "description": "Cloudflare Worker tooling shares one runtime validation boundary.",

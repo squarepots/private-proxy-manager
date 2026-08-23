@@ -6,7 +6,11 @@ Route Steward helps you deploy, check, migrate, and recover network connections 
 
 ## What do I need before I start?
 
-You need a local computer with PowerShell 7 and a tool-capable AI agent, a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access, and either Mihomo/Clash Verge-compatible software or Shadowrocket. A relay route uses two VPS hosts.
+You need the Route Steward release binary on a Linux, macOS, or Windows computer with a tool-capable AI agent, a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access, and either Mihomo/Clash Verge-compatible software or Shadowrocket. A relay route uses two VPS hosts. PowerShell and Node.js are not required for normal use.
+
+## How do I install it?
+
+Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases), verify it with `SHA256SUMS`, and place the executable on your `PATH`. Developers can use `go install github.com/squarepots/route-steward/cmd/route-steward@latest` with Go 1.27.
 
 ## Why must the server be dedicated?
 
@@ -14,7 +18,7 @@ Initial setup prepares the whole host. It changes UFW defaults, swap/fstab, SSH,
 
 ## Can I start by giving the GitHub link to an AI agent?
 
-Yes. Use the prompt in the [Quickstart](QUICKSTART.md). A capable agent can clone the repository, read its instructions, inspect machine-readable capabilities, run local validation, explain prerequisites, and then gather the minimum context for your route.
+Yes. Use the prompt in the [Quickstart](QUICKSTART.md). A capable agent can clone the repository, read its instructions, obtain or build the executable, inspect machine-readable capabilities, explain prerequisites, and then gather the minimum context for your route.
 
 ## Will the AI model see my server details?
 

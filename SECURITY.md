@@ -109,6 +109,6 @@ Observed state stores bounded audit evidence rather than traffic history. Drift 
 
 ## Supply chain and public checks
 
-Node components use committed lockfiles and `npm ci`. Security-sensitive server binaries are pinned by exact version and checksum. Vendored licenses and notices remain with the source.
+The native Go module graph is pinned by `go.mod`/`go.sum` and verified in CI. The MCP server uses the official MIT-licensed Go SDK in-process. The optional Worker uses a committed npm lockfile; its runtime tooling is pinned. Security-sensitive server binaries are pinned by exact version and checksum. Vendored licenses and notices remain with the source.
 
 Local and hosted checks scan public candidate files for secrets, generated runtime artifacts, unexpected infrastructure literals, and maintainer home paths. Use synthetic addresses and IDs in every public reproduction.

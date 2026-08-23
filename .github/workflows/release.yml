@@ -17,14 +17,18 @@ concurrency:
 jobs:
   release:
     if: ${{ github.event.repository.private == false }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: 1.27.0
+          cache: true
 
-      - name: Publish prepared version
+      - name: Build and publish prepared version
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
@@ -34,13 +38,13 @@ jobs:
           set -euo pipefail
           checked_out_sha="$(git rev-parse HEAD)"
           if [[ "$checked_out_sha" != "$EVENT_SHA" ]]; then
-            echo "Checkout does not match the workflow event SHA." >&2
+            echo 'Checkout does not match the workflow event SHA.' >&2
             exit 1
           fi
           git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
           main_sha="$(git rev-parse refs/remotes/origin/main)"
           if [[ "$main_sha" != "$EVENT_SHA" ]]; then
-            echo "The workflow event SHA is no longer the current main head; start a new release run." >&2
+            echo 'The workflow event SHA is no longer the current main head; start a new release run.' >&2
             exit 1
           fi
 
@@ -49,7 +53,6 @@ jobs:
             echo "version.txt is not plain SemVer X.Y.Z: $version" >&2
             exit 1
           fi
-
           tag="v$version"
           if git show-ref --tags --verify --quiet "refs/tags/$tag"; then
             tag_sha="$(git rev-list -n 1 "$tag")"
@@ -57,31 +60,49 @@ jobs:
               echo "$tag already points to a different source commit." >&2
               exit 1
             fi
-            if gh release view "$tag" >/dev/null 2>&1; then
-              echo "$tag is already published; nothing to do."
-            else
-              gh release create "$tag" --verify-tag --generate-notes --title "$tag"
-            fi
-            exit 0
-          fi
-
-          latest_version="$(git tag --list 'v[0-9]*' | sed -nE 's/^v([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' | sort -V | tail -n 1)"
-
-          if [[ -z "$latest_version" ]]; then
-            if [[ "$EVENT_NAME" != "workflow_dispatch" ]]; then
-              echo "The first release must be started manually after validation."
+            if release_json="$(gh release view "$tag" --json isDraft,assets 2>/dev/null)"; then
+              expected_assets=(
+                SHA256SUMS
+                "route-steward_${version}_darwin_amd64.tar.gz"
+                "route-steward_${version}_darwin_arm64.tar.gz"
+                "route-steward_${version}_linux_amd64.tar.gz"
+                "route-steward_${version}_linux_arm64.tar.gz"
+                "route-steward_${version}_windows_amd64.zip"
+                "route-steward_${version}_windows_arm64.zip"
+              )
+              if [[ "$(jq -r '.isDraft' <<<"$release_json")" != false ]] || ! diff -u \
+                <(printf '%s\n' "${expected_assets[@]}" | sort) \
+                <(jq -r '.assets[].name' <<<"$release_json" | sort); then
+                echo "$tag exists as a draft or has an incomplete asset set. Remove the incomplete release and rerun this workflow." >&2
+                exit 1
+              fi
+              echo "$tag is already published with the complete asset set; nothing to do."
               exit 0
             fi
           else
-            highest="$(printf '%s\n%s\n' "$latest_version" "$version" | sort -V | tail -n 1)"
-            if [[ "$highest" != "$version" || "$version" == "$latest_version" ]]; then
-              echo "version.txt ($version) does not advance the latest release version ($latest_version)." >&2
-              exit 1
+            latest_version="$(git tag --list 'v[0-9]*' | sed -nE 's/^v([0-9]+\.[0-9]+\.[0-9]+)$/\1/p' | sort -V | tail -n 1)"
+            if [[ -z "$latest_version" ]]; then
+              if [[ "$EVENT_NAME" != workflow_dispatch ]]; then
+                echo 'The first release must be started manually after validation.'
+                exit 0
+              fi
+            else
+              highest="$(printf '%s\n%s\n' "$latest_version" "$version" | sort -V | tail -n 1)"
+              if [[ "$highest" != "$version" || "$version" == "$latest_version" ]]; then
+                echo "version.txt ($version) does not advance the latest release version ($latest_version)." >&2
+                exit 1
+              fi
             fi
           fi
 
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git tag -a "$tag" -m "$tag" "$EVENT_SHA"
-          git push origin "refs/tags/$tag"
-          gh release create "$tag" --verify-tag --generate-notes --title "$tag"
+          go mod verify
+          go test ./...
+          bash ./scripts/Build-ReleaseArtifacts.sh
+
+          if ! git show-ref --tags --verify --quiet "refs/tags/$tag"; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git tag -a "$tag" -m "$tag" "$EVENT_SHA"
+            git push origin "refs/tags/$tag"
+          fi
+          gh release create "$tag" dist/* --verify-tag --generate-notes --title "$tag"

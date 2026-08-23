@@ -1,6 +1,6 @@
 # Compatibility
 
-This page lists the capability set implemented and tested by the current release. The machine-readable response from `agent/route-steward-agent.ps1 capabilities` is the runtime source of truth. Anything absent from both surfaces is outside the current support contract.
+This page lists the capability set implemented and tested by the current release. The machine-readable response from `route-steward capabilities` is the runtime source of truth. Anything absent from both surfaces is outside the current support contract.
 
 ## Host and compute
 
@@ -60,8 +60,9 @@ The optional `mihomo-http` Provider accepts an HTTP or HTTPS source URL stored i
 | Interface | Supported contract |
 | --- | --- |
 | Repository Skill | Canonical model-neutral operating instructions |
-| `agent/route-steward-agent.ps1` | Canonical sanitized JSON machine surface |
-| Local stdio MCP | Thin adapter over the same machine surface |
+| `route-steward` | Native sanitized JSON CLI for Linux, macOS, and Windows on amd64/arm64 |
+| `route-steward mcp` | In-process local stdio MCP over the same Go engine |
+| `agent/route-steward-agent.ps1` | Compatibility forwarder for older callers |
 | AI runtime | Any capable runtime that can read the repository and invoke the local machine surface without changing core behavior |
 
 ## Audit, drift, migration, and recovery

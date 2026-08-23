@@ -2,48 +2,54 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português (Brasil)](README.pt-BR.md)
 
-[Quickstart](docs/QUICKSTART.md) · [FAQ](docs/FAQ.md) · [Compatibility](docs/COMPATIBILITY.md) · [Operating boundary](docs/OPERATING-BOUNDARY.md) · [Security](SECURITY.md) · [AGPL-3.0-only](LICENSE)
+[Quickstart](docs/QUICKSTART.md) · [FAQ](docs/FAQ.md) · [Compatibility](docs/COMPATIBILITY.md) · [Operating boundary](docs/OPERATING-BOUNDARY.md) · [Security](SECURITY.md) · [Releases](https://github.com/squarepots/route-steward/releases)
 
 [![Validation](https://github.com/squarepots/route-steward/actions/workflows/ci.yml/badge.svg)](https://github.com/squarepots/route-steward/actions/workflows/ci.yml)
 
 **Use AI to manage networking on your own servers.**
 
-Route Steward helps you deploy, check, migrate, and recover network connections on servers you manage. You provide the servers, accounts, and authorization; Route Steward gives a capable AI agent a repeatable, validated way to operate them from your local computer.
+Route Steward helps you deploy, check, migrate, and recover network connections on servers you manage. Give its GitHub URL to a capable AI agent: the agent can inspect supported operations, build a plan, run preflight, operate through the native `route-steward` executable, and return results without exposing credentials or local paths.
 
-![Synthetic Route Steward diagram separating the AI-operated control plane from direct and optional WireGuard relay traffic paths through Entry-A and Relay-A.](docs/assets/network-path-lifecycle.svg)
+![Route Steward turns an AI request into validated state, a direct or relay server connection, a live audit, and private Mihomo or Shadowrocket output.](docs/assets/network-path-lifecycle.svg)
 
-## Start with an AI agent
+## Give the URL to an AI agent
 
-Paste this prompt into Codex or another agent that can read files and run PowerShell:
+Paste this prompt into Codex or another agent that can read files and run local commands:
 
 ```text
-Open https://github.com/squarepots/route-steward and help me manage networking on my own servers. Clone it if needed, read AGENTS.md and the repository Skill, inspect capabilities, and run quick local validation. Before asking for infrastructure details, explain the dedicated-host requirements, host-wide effects, and operating boundary. Keep sensitive state private, run preflight before changes, and return sanitized results.
+Open https://github.com/squarepots/route-steward and help me manage networking on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use the release binary or build the Go CLI. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
 ```
 
-```powershell
-pwsh -NoProfile -File .\agent\route-steward-agent.ps1 capabilities
-pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
+The agent starts with:
+
+```text
+route-steward capabilities
+route-steward bootstrap --private-dir ./private
+route-steward context --private-dir ./private
 ```
 
-## What you need
+No PowerShell or Node.js is required for normal use. Download a verified binary for Linux, macOS, or Windows from [Releases](https://github.com/squarepots/route-steward/releases), or build from source with Go 1.27:
 
-- a local computer with PowerShell 7 and a tool-capable AI agent;
-- one or two dedicated, rebuildable Ubuntu 24.04 amd64 servers;
-- authorized SSH access with a Unix username and private-key path;
-- Mihomo/Clash Verge-compatible software or Shadowrocket.
+```text
+go install github.com/squarepots/route-steward/cmd/route-steward@latest
+```
 
-Route Steward prepares the whole server, so each managed host must be dedicated to this networking setup.
+Node.js is used only when you choose the optional Cloudflare Worker subscription delivery.
 
-## What Route Steward does
+## What it gives you
 
-It creates validated server and client configuration, checks the live setup, helps replace infrastructure without discarding the working connection first, and produces encrypted recovery archives.
+- a validated direct route through one server, or a single-hop WireGuard relay through two;
+- generated Hysteria2 server state and private Mihomo or Shadowrocket client output;
+- read-only live audit and typed drift instead of blind overwrite;
+- overlap-first server replacement and encrypted local recovery;
+- one machine-readable interface for command-line and local stdio MCP use.
 
-[Compatibility](docs/COMPATIBILITY.md) lists the exact hosts, protocols, clients, topology, and optional Cloudflare delivery currently supported.
+The current server baseline is a dedicated, rebuildable Ubuntu 24.04 amd64 VPS with authorized SSH key access. Exact protocols, clients, topology, and optional delivery are listed in [Compatibility](docs/COMPATIBILITY.md).
 
 ## Host effects and privacy
 
-Setup changes host-wide firewall, swap, SSH, system, logging, update, and monitoring settings. Sensitive state and generated files stay in the selected local private directory; every change requires a ready preflight. Read [Operations](OPERATIONS.md), [Privacy](docs/PRIVACY.md), and [Security](SECURITY.md) before deployment.
+Initial setup prepares the whole host, including firewall, swap, SSH, sysctl, logging, updates, packages, and monitoring. Operational state, keys, generated client files, and recovery archives stay in the private directory you select and are excluded from Git. A cloud AI runtime may still process the server address, SSH username, key path, and IDs supplied as operation inputs; use an offline runtime when those inputs must remain local.
 
-Use only servers, accounts, and network resources you own or are authorized to administer. The full policy is in [Operating boundary](docs/OPERATING-BOUNDARY.md).
+Use only servers, accounts, and network resources you own or are authorized to administer. Read [Operations](OPERATIONS.md), [Privacy](docs/PRIVACY.md), and [Security](SECURITY.md) before deployment.
 
-Route Steward is licensed under [AGPL-3.0-only](LICENSE). The vendored QR generator retains its MIT attribution in [client/vendor/NOTICE.md](client/vendor/NOTICE.md).
+Route Steward is [AGPL-3.0-only](LICENSE). The vendored QR generator retains its MIT attribution in [client/vendor/NOTICE.md](client/vendor/NOTICE.md).
