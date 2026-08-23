@@ -12,7 +12,7 @@ For concrete compromise cases and blast-radius guidance, see [`docs/THREAT-MODEL
 
 Do not post credentials, live infrastructure details, private subscription material, or exploit details that would endanger users in a public issue.
 
-Prefer GitHub private vulnerability reporting / Security Advisories when available. If no private reporting channel is available, open only a minimal public issue asking the maintainer for a private contact path; do not include sensitive reproduction data until a private channel exists.
+Report sensitive vulnerabilities through [GitHub private vulnerability reporting](https://github.com/squarepots/private-proxy-manager/security/advisories/new). Do not include sensitive reproduction data in a public issue.
 
 A public issue is appropriate for non-sensitive hardening ideas, documentation problems, and ordinary bugs that do not require disclosing secrets or a usable exploit.
 
