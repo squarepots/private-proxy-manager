@@ -1,0 +1,28 @@
+name: Feature request
+description: Propose a focused product improvement
+title: ""
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the user problem first. A useful proposal connects one clear outcome to RST's deterministic capability, privacy, compatibility, and validation boundaries.
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: Who is blocked, and what decision or workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Explain the smallest useful behavior, how an agent would discover/use it, and any compatibility or privacy impact.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

@@ -1,0 +1,155 @@
+{
+  "schema": 1,
+  "metadata": {
+    "id": "route-steward",
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-01-01T00:00:00Z"
+  },
+  "delivery": {
+    "directory": "<private>/delivery",
+    "recovery_directory": "<private>/recovery"
+  },
+  "servers": [
+    {
+      "id": "entry-a",
+      "provider": "byo",
+      "account_label": "personal",
+      "instance_name": "entry-a",
+      "region": "example-region-a",
+      "zone": "",
+      "os": "ubuntu-24.04",
+      "architecture": "x86_64",
+      "roles": ["entry", "exit"],
+      "compute": { "driver": "byo-ssh", "host_ownership": "dedicated" },
+      "network": {
+        "public_ipv4": "192.0.2.10",
+        "public_ipv6": "2001:db8::10",
+        "expected_egress_ipv4": "192.0.2.10"
+      },
+      "ssh": {
+        "user": "ubuntu",
+        "key_path": "<private>/ssh/entry-a/id_ed25519",
+        "allowed_sources": ["trusted"]
+      },
+      "firewall": {
+        "profile": "example",
+        "rules": [
+          { "family": "dual", "protocol": "tcp", "port": 22, "source": "trusted" },
+          { "family": "dual", "protocol": "udp", "port": 443, "source": "any" },
+          { "family": "dual", "protocol": "udp", "port": 8443, "source": "any" }
+        ]
+      }
+    },
+    {
+      "id": "exit-b",
+      "provider": "byo",
+      "account_label": "personal",
+      "instance_name": "exit-b",
+      "region": "example-region-b",
+      "zone": "",
+      "os": "ubuntu-24.04",
+      "architecture": "x86_64",
+      "roles": ["exit"],
+      "compute": { "driver": "byo-ssh", "host_ownership": "dedicated" },
+      "network": {
+        "public_ipv4": "198.51.100.20",
+        "expected_egress_ipv4": "198.51.100.20"
+      },
+      "ssh": {
+        "user": "ubuntu",
+        "key_path": "<private>/ssh/exit-b/id_ed25519",
+        "allowed_sources": ["trusted"]
+      },
+      "firewall": {
+        "profile": "example",
+        "rules": [
+          { "family": "dual", "protocol": "tcp", "port": 22, "source": "trusted" },
+          { "family": "ipv4", "protocol": "udp", "port": 51820, "source_server": "entry-a" }
+        ]
+      }
+    }
+  ],
+  "links": [
+    {
+      "id": "relay-a",
+      "type": "wireguard",
+      "driver": "wireguard",
+      "entry_server": "entry-a",
+      "exit_server": "exit-b",
+      "interface": "wg-rst01",
+      "listen_port": 51820,
+      "subnet": "10.77.1.0/30",
+      "entry_address": "10.77.1.1/30",
+      "exit_address": "10.77.1.2/30",
+      "secret_ref": "link-key:relay-a",
+      "enabled": true
+    }
+  ],
+  "routes": [
+    {
+      "id": "direct-a",
+      "display_name": "Direct-A",
+      "kind": "direct",
+      "entry_server": "entry-a",
+      "exit_server": "entry-a",
+      "listen_port": 443,
+      "order": 1,
+      "enabled": true,
+      "state": "deployed",
+      "ingress": { "driver": "hysteria2" },
+      "credential_secret_ref": "route-credential:direct-a",
+      "payload_secret_ref": "route-payload:direct-a"
+    },
+    {
+      "id": "relay-route-a",
+      "display_name": "Relay-A",
+      "kind": "relay",
+      "entry_server": "entry-a",
+      "exit_server": "exit-b",
+      "link": "relay-a",
+      "listen_port": 8443,
+      "order": 2,
+      "enabled": false,
+      "state": "pending",
+      "ingress": { "driver": "hysteria2" },
+      "credential_secret_ref": "route-credential:relay-route-a",
+      "payload_secret_ref": "route-payload:relay-route-a"
+    }
+  ],
+  "providers": [],
+  "policies": [
+    {
+      "id": "privacy",
+      "description": "Ordinary DNS follows the selected route; domestic CDN performance may be lower.",
+      "dns_mode": "privacy"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "primary",
+      "policy": "privacy",
+      "include_routes": ["*"],
+      "include_providers": []
+    }
+  ],
+  "client_targets": [
+    {
+      "id": "desktop",
+      "profile": "primary",
+      "renderer": "mihomo",
+      "delivery": "file"
+    },
+    {
+      "id": "mobile",
+      "profile": "primary",
+      "renderer": "shadowrocket",
+      "delivery": "nodes",
+      "qr": {
+        "default_mode": "batch",
+        "target_utf8_bytes": 2400,
+        "size_px": 220,
+        "max_viewport_height": 40
+      }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+# Canonical private state and generated client files
+private/
+exports/
+delivery/
+.cache/
+.playwright-cli/
+output/
+**/private/
+**/exports/
+**/delivery/
+*-client.yaml
+*-nodes.txt
+*-import.html
+*-subscription.txt
+payload.yaml
+
+# Keys, certificates, archives, logs and runtime output
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.zip
+*.7z
+*.log
+*.decrypted.yaml
+*.runtime.yaml
+
+# Client and cloud state
+AppData/
+clash-verge*.yaml
+cache.db
+profiles.yaml
+*.clash-backup/
+.ssh/
+credentials*
+*.tfstate*
+.env
+.env.*
+!.env.example
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# MCP local dependencies and build output
+mcp/node_modules/
+mcp/dist/
+
+# Cloudflare Worker local dependencies and state
+worker/node_modules/
+worker/dist/
+worker/.wrangler/
+worker/worker-configuration.d.ts
+worker/.dev.vars
+worker/.dev.vars.*

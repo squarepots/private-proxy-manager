@@ -1,0 +1,14 @@
+schema: 1
+name: 'Entry-A'
+proxies:
+  - name: Entry-A-HY2-v4
+    type: hysteria2
+    server: '192.0.2.10'
+    port: 443
+    password: 'fixture-auth'
+    sni: '192.0.2.10'
+    skip-cert-verify: true
+    fingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
+    alpn: [h3]
+    obfs: salamander
+    obfs-password: 'fixture-obfs'
