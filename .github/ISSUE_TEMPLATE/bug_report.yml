@@ -1,0 +1,35 @@
+name: Bug report
+description: Report a reproducible product problem
+title: ""
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include real server addresses, hostnames, subscription URLs, tokens, SSH paths or keys, certificates, generated client payloads, recovery archives, financial data, or private state. Use synthetic values.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and the behavior you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Synthetic reproduction
+      description: Include the smallest safe steps, inputs, and output. Replace all real infrastructure with documentation addresses and synthetic IDs.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: PPM version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Safe logs
+      description: Paste only redacted, non-secret output. Never paste raw SSH or Worker diagnostics.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Private Proxy Manager"
+  short_description: "Let an AI safely operate your private proxy infrastructure"
+  default_prompt: "Use $private-proxy-manager to learn this repository, gather the context needed for my goal, and operate the project safely. Ask me only for decisions or access you cannot safely infer."

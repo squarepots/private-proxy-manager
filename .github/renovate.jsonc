@@ -1,0 +1,64 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Conservative dependency update intake for Private Proxy Manager.",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["npm", "github-actions"],
+  "dependencyDashboard": true,
+  "automerge": false,
+  "platformAutomerge": false,
+  "schedule": ["* 2-5 * * 1"],
+  "prConcurrentLimit": 4,
+  "branchConcurrentLimit": 4,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "separateMajorMinor": true,
+  "separateMultipleMajor": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 2-5 * * 1"]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "vulnerabilityFixStrategy": "lowest"
+  },
+  "packageRules": [
+    {
+      "description": "Let normal npm releases age out of the unpublish window.",
+      "matchDatasources": ["npm"],
+      "minimumReleaseAge": "3 days",
+      "prCreation": "not-pending",
+      "internalChecksFilter": "strict"
+    },
+    {
+      "description": "Keep major updates isolated for review.",
+      "matchUpdateTypes": ["major"],
+      "groupName": null,
+      "prPriority": -10
+    },
+    {
+      "description": "MCP runtime packages are reviewed as one compatibility unit.",
+      "matchFileNames": ["mcp/package.json"],
+      "matchPackageNames": ["@modelcontextprotocol/server", "zod"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "MCP runtime",
+      "groupSlug": "mcp-runtime"
+    },
+    {
+      "description": "MCP TypeScript tooling is separate from runtime dependencies.",
+      "matchFileNames": ["mcp/package.json"],
+      "matchPackageNames": ["typescript", "@types/node"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "MCP tooling",
+      "groupSlug": "mcp-tooling"
+    },
+    {
+      "description": "Cloudflare Worker tooling shares one runtime validation boundary.",
+      "matchFileNames": ["worker/package.json"],
+      "matchPackageNames": ["wrangler", "vitest", "@cloudflare/vitest-pool-workers", "typescript", "@types/node"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "Worker tooling",
+      "groupSlug": "worker-tooling"
+    }
+  ]
+}

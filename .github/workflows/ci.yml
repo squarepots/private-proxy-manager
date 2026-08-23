@@ -1,0 +1,102 @@
+name: validation
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
+
+concurrency:
+  group: validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Secret and generated-file scan
+        shell: pwsh
+        run: ./scripts/Check-NoSecrets.ps1
+      - name: Static safety and public-tree validation
+        shell: pwsh
+        run: ./scripts/Test-Templates.ps1
+      - name: Product version behavior
+        shell: pwsh
+        run: ./tests/Test-Version.ps1
+      - name: Agent bootstrap, capability discovery, context gate and Steward Mode
+        shell: pwsh
+        run: ./tests/Test-Agent.ps1
+      - name: Generic Provider lifecycle
+        shell: pwsh
+        run: ./tests/Test-Providers.ps1
+      - name: Agent-native ClientTarget rendering
+        shell: pwsh
+        run: ./tests/Test-ClientTargets.ps1
+      - name: Observed state and drift
+        shell: pwsh
+        run: ./tests/Test-Observed.ps1
+      - name: Generic subscription state and export
+        shell: pwsh
+        run: ./tests/Test-Subscription.ps1
+      - name: Deterministic recovery restore core
+        shell: pwsh
+        run: ./tests/Test-RecoveryCore.ps1
+      - name: Bash syntax
+        shell: bash
+        run: find server -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
+      - name: ShellCheck
+        shell: bash
+        run: shellcheck server/*.sh
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Full local validation on Windows
+        shell: pwsh
+        run: ./scripts/Validate-Local.ps1
+
+  mcp:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+      - name: Install locked MCP dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Type check local stdio adapter
+        run: npm run typecheck
+
+  worker:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Install pinned Worker dependencies
+        run: npm ci
+      - name: Generate Cloudflare runtime types
+        run: npm run types
+      - name: Type check
+        run: npm run typecheck
+      - name: Cloudflare runtime tests
+        run: npm test
+      - name: Wrangler dry run
+        run: npm run deploy:dry-run
+      - name: Dependency audit
+        run: npm audit --audit-level=low

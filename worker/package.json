@@ -1,0 +1,21 @@
+{
+  "name": "private-proxy-manager-subscription-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types",
+    "deploy:dry-run": "wrangler deploy --dry-run --outdir dist"
+  },
+  "overrides": {
+    "nanoid": "3.3.18",
+    "postcss": "8.5.23"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "0.22.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.10",
+    "wrangler": "4.125.0"
+  }
+}
