@@ -12,7 +12,7 @@ Private Proxy Manager（PPM）帮助 AI agent 在你控制的服务器上建立�
 
 把这个仓库链接交给 Codex 或其他能够读取本地文件、运行 PowerShell 的 agent，然后使用下面的提示词：
 
-> 打开 https://github.com/squarepots/private-proxy-manager 并替我操作 PPM。如果本地没有仓库，先 clone。执行前阅读 AGENTS.md 和 repository Skill，检查 capability surface，并运行快速本地验证。然后先解释第一条路线需要哪些条件、会对主机产生哪些整机影响，再向我索取真实服务器信息。凭据和生成的客户端文件必须留在被忽略的 private 目录；每次修改前运行 preflight；只向我返回脱敏结果。
+> 打开 <https://github.com/squarepots/private-proxy-manager> 并替我操作 PPM。如果本地没有仓库，先 clone。执行前阅读 AGENTS.md 和 repository Skill，检查 capability surface，并运行快速本地验证。然后先解释第一条路线需要哪些条件、会对主机产生哪些整机影响，再向我索取真实服务器信息。凭据和生成的客户端文件必须留在被忽略的 private 目录；每次修改前运行 preflight；只向我返回脱敏结果。
 
 agent 最先运行的安全检查是：
 

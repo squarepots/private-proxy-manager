@@ -6,7 +6,7 @@ PPM is designed for an AI agent that can open a repository, read local files, an
 
 Paste this into Codex or another tool-capable agent:
 
-> Open https://github.com/squarepots/private-proxy-manager and help me create my first private proxy route. Clone it if needed. Read AGENTS.md and .agents/skills/private-proxy-manager/SKILL.md. Run capability discovery and the quick local validation before using any real infrastructure. Explain the prerequisites and host-wide effects, collect only the required facts, keep all private state under the ignored private directory, and do not execute a mutation until preflight is ready.
+> Open <https://github.com/squarepots/private-proxy-manager> and help me create my first private proxy route. Clone it if needed. Read AGENTS.md and .agents/skills/private-proxy-manager/SKILL.md. Run capability discovery and the quick local validation before using any real infrastructure. Explain the prerequisites and host-wide effects, collect only the required facts, keep all private state under the ignored private directory, and do not execute a mutation until preflight is ready.
 
 The agent should run:
 

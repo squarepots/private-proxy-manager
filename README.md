@@ -12,7 +12,7 @@ You provide the servers, SSH access, and a supported proxy client. PPM provides 
 
 Give this repository URL to Codex or another agent that can read local files and run PowerShell, then use this prompt:
 
-> Open https://github.com/squarepots/private-proxy-manager and operate PPM for me. If it is not local, clone it first. Read AGENTS.md and the repository Skill before acting. Inspect the capability surface and run the quick local validation. Then explain what I need for my first route and the host-wide effects before asking for any real server details. Keep credentials and generated client files in the ignored private directory, run preflight before every change, and show me only sanitized results.
+> Open <https://github.com/squarepots/private-proxy-manager> and operate PPM for me. If it is not local, clone it first. Read AGENTS.md and the repository Skill before acting. Inspect the capability surface and run the quick local validation. Then explain what I need for my first route and the host-wide effects before asking for any real server details. Keep credentials and generated client files in the ignored private directory, run preflight before every change, and show me only sanitized results.
 
 The agent's first safe checks are:
 

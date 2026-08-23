@@ -6,7 +6,7 @@ PPM 面向能够打开仓库、读取本地文件并运行 PowerShell 的 AI age
 
 把下面的提示词粘贴到 Codex 或其他 tool-capable agent：
 
-> 打开 https://github.com/squarepots/private-proxy-manager，帮我建立第一条私人代理路线；需要时先 clone。阅读 AGENTS.md 和 .agents/skills/private-proxy-manager/SKILL.md。在接触任何真实基础设施前，先运行 capability discovery 和快速本地验证。向我解释使用前提和主机级影响，只收集操作必需的事实，把全部私有状态留在被忽略的 private 目录，并且只有 preflight ready 后才执行 mutation。
+> 打开 <https://github.com/squarepots/private-proxy-manager>，帮我建立第一条私人代理路线；需要时先 clone。阅读 AGENTS.md 和 .agents/skills/private-proxy-manager/SKILL.md。在接触任何真实基础设施前，先运行 capability discovery 和快速本地验证。向我解释使用前提和主机级影响，只收集操作必需的事实，把全部私有状态留在被忽略的 private 目录，并且只有 preflight ready 后才执行 mutation。
 
 agent 应运行：
 
