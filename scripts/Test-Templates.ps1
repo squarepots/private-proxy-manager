@@ -64,6 +64,19 @@ Require-Text '.github/workflows/release.yml' 'ref:\s*\$\{\{ github\.sha \}\}' 'R
 Require-Text '.github/workflows/release.yml' 'git tag -a "\$tag" -m "\$tag" "\$EVENT_SHA"' 'Release tag is not created from the immutable workflow event SHA.'
 Reject-Text '.github/workflows/release.yml' 'git pull' 'Release workflow must not replace the event source with moving branch state.'
 
+# GFM treats CJK text immediately after a bare URL as part of the link target.
+$unsafeCjkAutolinkPattern = 'https?://[A-Za-z0-9._~:/?#\[\]@!$&''()*+,;=%-]+(?=[\p{IsCJKUnifiedIdeographs}\u3000-\u303F\uFF00-\uFFEF])'
+$markdownFiles = @(& git -C $repo ls-files -- '*.md')
+if ($LASTEXITCODE -ne 0) { $failures.Add('Unable to enumerate tracked Markdown files.') }
+foreach ($relativePath in $markdownFiles) {
+    $lines = [IO.File]::ReadAllLines((Join-Path $repo $relativePath), [Text.Encoding]::UTF8)
+    for ($lineIndex = 0; $lineIndex -lt $lines.Count; $lineIndex++) {
+        if ($lines[$lineIndex] -match $unsafeCjkAutolinkPattern) {
+            $failures.Add("${relativePath}:$($lineIndex + 1): bare URL runs into CJK text.")
+        }
+    }
+}
+
 $examplePath = Join-Path $repo 'examples/inventory.example.json'
 if (Test-Path -LiteralPath $examplePath -PathType Leaf) {
     try {
@@ -90,4 +103,4 @@ if ($failures.Count) {
     $failures | Sort-Object -Unique | ForEach-Object { Write-Error $_ }
     exit 1
 }
-Write-Host 'Static server ownership/safety, Worker privacy, CI trigger, portability, and PowerShell validation passed.'
+Write-Host 'Static server ownership/safety, Worker privacy, CI trigger, documentation, portability, and PowerShell validation passed.'
