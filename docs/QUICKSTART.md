@@ -1,42 +1,64 @@
 # Quickstart
 
-This is a short orientation for a first local setup. PPM is operated through a capable local-file/tool agent; the commands below are validation and inspection aids, not a second end-user interface.
+PPM is designed for an AI agent that can open a repository, read local files, and run PowerShell. You describe the route you want; the agent discovers the supported workflow and uses PPM's deterministic operations.
 
-## Requirements
+## 1. Give the repository to an agent
 
-- a rebuildable, dedicated Ubuntu 24.04 amd64 VPS;
-- SSH access with a valid Unix username and key;
-- a local PowerShell 7 runtime for the PPM machine surface;
-- a supported Mihomo/Clash-compatible client or Shadowrocket if you want rendered client output;
-- Node.js and Wrangler only when using the optional subscription Worker;
-- 7-Zip only when creating or restoring encrypted recovery archives.
+Paste this into Codex or another tool-capable agent:
 
-Read the [host effects](../README.md#before-you-start-host-effects) before connecting a server. Do not use a shared production host.
+> Open https://github.com/squarepots/private-proxy-manager and help me create my first private proxy route. Clone it if needed. Read AGENTS.md and .agents/skills/private-proxy-manager/SKILL.md. Run capability discovery and the quick local validation before using any real infrastructure. Explain the prerequisites and host-wide effects, collect only the required facts, keep all private state under the ignored private directory, and do not execute a mutation until preflight is ready.
 
-## Let the agent inspect first
+The agent should run:
 
-Ask your local tool-capable agent:
-
-> Inspect PPM capabilities and current private state. I want a direct or single-hop relay route on my dedicated Ubuntu 24.04 amd64 host. Explain missing context, host-wide effects, and authorization before making any mutation.
-
-The agent should use the canonical `agent/ppm-agent.ps1` surface, bootstrap only when private state is absent, and refuse a mutation until scoped preflight reports `ready=true`.
-
-## The normal sequence
-
-```text
-capabilities → bootstrap (if needed) → context/drift
-→ gather server/client facts → create desired objects
-→ preflight → execute → audit/render → explain result
+```powershell
+pwsh -NoProfile -File .\agent\ppm-agent.ps1 capabilities
+pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
 ```
 
-Use stable non-identifying IDs such as `entry-a`, `route-a`, and `mobile-a`. Do not use a city, employer, customer, home network, or other private context as an ID.
+These commands inspect the repository and validate the local machine surface. They do not deploy a server.
 
-## What success looks like
+## 2. Prepare the required inputs
 
-The result should identify the supported server contract, the selected Route and ClientTarget, the audit status, and private-root-relative artifact names such as `<private>/delivery/mobile.html`. It must not return a Windows drive path, SSH key contents, subscription token, Provider URL, or raw remote diagnostics.
+For the first route, prepare:
 
-## If something is wrong
+- a dedicated, rebuildable Ubuntu 24.04 amd64 VPS;
+- its public address;
+- a valid Unix SSH username and local private-key path;
+- the client you want to configure: Mihomo/Clash Verge-compatible software or Shadowrocket;
+- your desired direct or single-hop relay topology.
 
-Stop at the typed drift or preflight result. Drift is evidence, not permission for automatic repair. Ask the agent to diagnose the named category and propose the smallest supported operation. Migration keeps the old route available until replacement access and rendering are verified.
+Use non-identifying IDs such as `entry-a`, `route-a`, and `desktop-a`. Keep cities, employers, customers, and home-network names out of IDs.
 
-For recovery, restore into a clean private directory, use the repository recovery workflow, and treat the archive plus its password as a single sensitive bundle. See [Operations](../OPERATIONS.md), [Security](../SECURITY.md), and [FAQ](FAQ.md).
+Before accepting server details, the agent should explain the host effects in the [README](../README.md#host-effects).
+
+## 3. Let PPM build the plan
+
+The normal machine workflow is:
+
+```text
+capabilities → bootstrap when absent → context and drift
+→ gather required facts → create desired objects
+→ preflight → execute → audit and render
+```
+
+Bootstrap creates neutral schema-1 state. It does not select a region, Provider, policy, Profile, client, subscription, or AI vendor.
+
+Preflight returns the exact missing context, conflicts, expected effects, and authorization class. The agent continues only when `ready=true`.
+
+## 4. Check the result
+
+A successful result identifies:
+
+- the Server and Route created;
+- the supported host/topology contract;
+- the remote audit status;
+- the ClientTarget and private-root-relative artifact, for example `<private>/delivery/desktop-a.yaml`;
+- any remaining drift or user decision.
+
+The result must not contain an absolute home path, key contents, Provider URL, subscription token, live node URI, or raw SSH output.
+
+## 5. Continue safely
+
+Ask the agent to use read-only audit and drift before changing an existing route. For replacement, PPM creates and validates new capacity while the current route remains available. For backup and recovery, use the repository-owned 7-Zip prompt and never put the archive password in chat or command arguments.
+
+Read [Operations](../OPERATIONS.md) for machine semantics, [Compatibility](COMPATIBILITY.md) for implemented support, [Security](../SECURITY.md) for authority and secret handling, and the [FAQ](FAQ.md) for plain-language answers.

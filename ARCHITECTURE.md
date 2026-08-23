@@ -39,7 +39,6 @@ The core never branches on model/vendor identity. Runtime-specific files delegat
 - **Policy** — reusable client routing/DNS behavior where a renderer needs it.
 - **Profile** — reusable selection of Routes, optional Providers, and Policy. It is not a renderer or device identity.
 - **ClientTarget** — concrete renderer/delivery identity referencing a Profile. Initial renderers: `mihomo` and `shadowrocket`.
-- **Operator context** — local collaborative vs Steward Mode. It does not grant destructive authority.
 - **Private subscription** — optional target-scoped delivery state for one Shadowrocket ClientTarget.
 
 These concepts make the core deterministic. They are not concepts the user must learn before using the product.
@@ -49,7 +48,6 @@ These concepts make the core deterministic. They are not concepts the user must 
 ```text
 <private>/inventory.json    canonical desired infrastructure/client state
 <private>/secrets/          canonical secret material and secret index
-<private>/operator.json     collaborative / steward operating mode
 <private>/observed.json     disposable sanitized remote audit evidence
 <private>/delivery/         generated private client artifacts + hash-only render manifest
 <private>/recovery/         encrypted recovery artifacts
@@ -69,11 +67,11 @@ Product SemVer is a separate compatibility domain and is owned by `version.txt`.
 
 ## Neutral bootstrap
 
-Clean bootstrap creates valid empty schema-1 desired state, an empty secret index/observed state, collaborative operator mode, and private delivery/recovery locations. It does **not** choose a Server/provider/region, routing policy, Profile, client application/device target, subscription identity, or AI vendor.
+Clean bootstrap creates valid empty schema-1 desired state, an empty secret index/observed state, and private delivery/recovery locations. It does **not** choose a Server/provider/region, routing policy, Profile, client application/device target, subscription identity, or AI vendor.
 
 The host agent gathers the user's actual context and then creates the required Profile/ClientTarget objects explicitly.
 
-## Context Completeness Gate
+## Preflight contract
 
 Mutation is a two-part contract:
 
@@ -97,7 +95,7 @@ The gate is implemented in local core code and returns machine-readable missing 
 
 ## Agent interfaces
 
-`agent/ppm-agent.ps1` is the canonical sanitized machine surface. It exposes capability discovery, neutral bootstrap, context, drift, preflight, operating mode, and supported execution while suppressing raw secret-bearing diagnostics.
+`agent/ppm-agent.ps1` is the canonical sanitized machine surface. It exposes capability discovery, neutral bootstrap, context, drift, preflight, and supported execution while suppressing raw secret-bearing diagnostics.
 
 `mcp/` is a thin **local stdio** adapter over that surface. It does not own business logic, schemas, state, security policy, or renderers. Hosts without MCP can invoke the same machine surface directly.
 
@@ -144,7 +142,7 @@ Subscription state belongs to one ClientTarget. Different subscription-backed Cl
 
 Token rotation is target-scoped and crash-recoverable. Route credentials and other ClientTarget credentials remain unchanged.
 
-The Worker has no user database, management panel, KV requirement, traffic analytics, proxy forwarding, or PPM control-plane authority.
+The Worker stores one subscription body and token hash as secrets and serves that private configuration from a non-cacheable HTTPS endpoint. Local inventory remains the source of truth.
 
 ## Desired / observed / drift
 

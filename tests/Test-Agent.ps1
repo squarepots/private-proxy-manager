@@ -16,14 +16,18 @@ try {
     Assert-True ($bootstrap.success -and $bootstrap.data.created) 'Clean agent bootstrap did not create private state.'
     Assert-True (Test-Path -LiteralPath (Join-Path $stage 'inventory.json')) 'Bootstrap did not create inventory.json.'
     Assert-True (Test-Path -LiteralPath (Join-Path $stage 'secrets\index.json')) 'Bootstrap did not create secret index.'
-    Assert-True (Test-Path -LiteralPath (Join-Path $stage 'operator.json')) 'Bootstrap did not create operator context.'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $stage 'operator.json'))) 'Bootstrap created deprecated operator state.'
     Assert-True ($bootstrap.data.context.inventory_schema -eq 1) 'Clean bootstrap did not create public inventory schema 1.'
     Assert-True ($bootstrap.data.context.counts.providers -eq 0) 'Clean bootstrap unexpectedly requires a Provider.'
     Assert-True (@($bootstrap.data.context.profiles).Count -eq 0) 'Clean bootstrap must not assume a Profile or geographic policy.'
     Assert-True (@($bootstrap.data.context.client_targets).Count -eq 0) 'Clean bootstrap must not assume devices or client apps.'
 
-    $operator = [IO.File]::ReadAllText((Join-Path $stage 'operator.json'), [Text.Encoding]::UTF8) | ConvertFrom-Json
-    Assert-True (@($operator.PSObject.Properties).Count -eq 2 -and -not $operator.PSObject.Properties['preferences'] -and -not $operator.PSObject.Properties['explanation']) 'Operator state retained unused preference/explanation baggage.'
+    $legacyOperatorPath = Join-Path $stage 'operator.json'
+    $legacyOperator = '{"schema":1,"mode":"steward"}'
+    [IO.File]::WriteAllText($legacyOperatorPath, $legacyOperator, [Text.UTF8Encoding]::new($false))
+    $bootstrapAgain = & $agent bootstrap -PrivateDirectory $stage | ConvertFrom-Json
+    Assert-True (-not $bootstrapAgain.data.created) 'Bootstrap did not recognize complete existing state.'
+    Assert-True ([IO.File]::ReadAllText($legacyOperatorPath, [Text.Encoding]::UTF8) -eq $legacyOperator) 'Deprecated operator state was changed instead of ignored.'
 
     $capabilities = & $agent capabilities -PrivateDirectory $stage | ConvertFrom-Json
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'add-server').Count -eq 1) 'Agent capability discovery is missing add-server.'
@@ -34,6 +38,9 @@ try {
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'migrate-route').executor -eq 'workflow') 'Migration is not exposed as an overlap-first workflow.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'backup').executor -eq 'local-assisted') 'Backup does not declare the local secure-prompt boundary.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'recover').requires_local_secret_prompt) 'Recovery does not declare its local password prompt.'
+    foreach ($removedCapability in 'set-mode','rotate-credential','delete-server','purchase-resource') {
+        Assert-True (@($capabilities.data.capabilities | Where-Object id -eq $removedCapability).Count -eq 0) "Non-executable capability '$removedCapability' is still advertised."
+    }
     $addServerCapability = @($capabilities.data.capabilities | Where-Object id -eq 'add-server')[0]
     Assert-True (@($addServerCapability.required_context | Where-Object name -eq 'host_ownership').Count -eq 1) 'add-server capability metadata does not declare host_ownership.'
     Assert-True (@($addServerCapability.required_context | Where-Object name -eq 'host_ownership')[0].type -eq 'dedicated') 'add-server capability metadata does not describe the dedicated-host type.'
@@ -55,9 +62,6 @@ try {
         $badPreflight = & $agent preflight -PrivateDirectory $stage -Operation add-server -ContextJson $badContext | ConvertFrom-Json
         Assert-True (-not $badPreflight.data.ready -and @($badPreflight.data.conflicts) -contains 'ssh-user-invalid') "Unsafe SSH user '$badUser' passed preflight."
     }
-
-    $mode = & $agent mode -PrivateDirectory $stage -Mode steward | ConvertFrom-Json
-    Assert-True ($mode.data.mode -eq 'steward') 'Steward Mode was not persisted.'
 
     $keyPath = Join-Path $stage 'fixture.pem'
     [IO.File]::WriteAllText($keyPath, 'fixture', [Text.UTF8Encoding]::new($false))
@@ -90,13 +94,9 @@ try {
     $deployPreflight = & $agent preflight -PrivateDirectory $stage -Operation deploy-route -Target direct-a | ConvertFrom-Json
     Assert-True ($deployPreflight.data.ready) 'A fully prepared local Route did not pass deploy preflight.'
 
-    $deleteBlocked = & $agent preflight -PrivateDirectory $stage -Operation delete-server -Target entry-a | ConvertFrom-Json
-    Assert-True (-not $deleteBlocked.data.ready) 'Steward Mode bypassed destructive authorization/dependency checks.'
-    Assert-True ($deleteBlocked.data.authorization_class -eq 'destructive') 'Destructive authorization class is missing.'
-
     $context = & $agent context -PrivateDirectory $stage | ConvertFrom-Json
     $contextText = $context | ConvertTo-Json -Depth 20
-    Assert-True ($context.data.mode -eq 'steward' -and $context.data.inventory_schema -eq 1) 'Sanitized context did not preserve operator/schema state.'
+    Assert-True ($context.data.inventory_schema -eq 1 -and -not $context.data.PSObject.Properties['mode']) 'Sanitized context did not preserve schema state or still exposed a deprecated mode.'
     Assert-True (-not ($contextText -match '192\.0\.2\.10|fixture\.pem|2001:db8')) 'Agent context leaked private infrastructure data.'
 
     [IO.File]::WriteAllText($archiveFixture, 'fixture-only-for-preflight', [Text.UTF8Encoding]::new($false))
@@ -109,7 +109,7 @@ try {
     Assert-True ($recoverExecute.data.result.repository_script -eq 'scripts/Restore-RecoveryArchive.ps1') 'Agent recovery did not delegate to the repository-owned secure restore workflow.'
     $global:LASTEXITCODE = 0
 
-    Write-Host 'Agent bootstrap, capability discovery, context gate, Steward Mode, authorization, schema, and assisted recovery tests passed.'
+    Write-Host 'Agent bootstrap, capability discovery, preflight, authorization, schema, legacy operator tolerance, and assisted recovery tests passed.'
 }
 finally {
     foreach ($path in @($stage, $recoveryTarget)) { if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force } }

@@ -79,9 +79,8 @@ try {
         Assert-True $oversizeBlocked 'A subscription payload larger than 5120 UTF-8 bytes was not rejected with the stable error code.'
     }
 
-    $null = & $agent mode -PrivateDirectory $stage -Mode steward | ConvertFrom-Json
     $rotationBlocked = & $agent preflight -PrivateDirectory $stage -Operation rotate-subscription-token -Target mobile | ConvertFrom-Json
-    Assert-True (-not $rotationBlocked.data.ready -and -not $rotationBlocked.data.authorized) 'Steward Mode incorrectly authorized subscription token rotation.'
+    Assert-True (-not $rotationBlocked.data.ready -and -not $rotationBlocked.data.authorized) 'Subscription token rotation was authorized without explicit current approval.'
     Assert-True ($rotationBlocked.data.authorization_class -eq 'credential-change') 'Subscription token rotation is not classified as a credential change.'
     $rotationReady = & $agent preflight -PrivateDirectory $stage -Operation rotate-subscription-token -Target mobile -Approved | ConvertFrom-Json
     Assert-True ($rotationReady.data.ready -and $rotationReady.data.authorized) 'Explicitly authorized target-scoped token rotation did not pass preflight.'

@@ -1,12 +1,11 @@
 [CmdletBinding()]
 param(
-    [Parameter(Position = 0)][ValidateSet('capabilities','bootstrap','context','drift','preflight','execute','mode')][string]$Command = 'context',
+    [Parameter(Position = 0)][ValidateSet('capabilities','bootstrap','context','drift','preflight','execute')][string]$Command = 'context',
     [string]$Operation,
     [string]$Target,
     [string]$ContextJson,
     [switch]$ContextStdin,
     [string]$PrivateDirectory,
-    [ValidateSet('collaborative','steward')][string]$Mode,
     [switch]$Approved
 )
 
@@ -45,8 +44,7 @@ function Read-AgentContext {
 function Read-AgentState {
     if (-not (Test-Path -LiteralPath $inventoryPath -PathType Leaf)) { throw 'Private state is not initialized. Run bootstrap first.' }
     $inventory = Read-PPMStateInventory -Path $inventoryPath
-    $operator = Read-PPMOperatorContext -PrivateDirectory $PrivateDirectory -AllowMissing
-    return [pscustomobject]@{ Inventory = $inventory; Operator = $operator }
+    return [pscustomobject]@{ Inventory = $inventory }
 }
 
 function New-AgentResult {
@@ -107,7 +105,7 @@ function New-RecoveryPreflight {
     if (Test-Path -LiteralPath $PrivateDirectory) { $conflicts.Add('private-state-target-already-exists') }
     $ready = $missing.Count -eq 0 -and $conflicts.Count -eq 0
     return [ordered]@{
-        schema_version = 1; operation = 'recover'; target = $null; mode = 'recovery'; state = 'supported'; executor = 'local-assisted'
+        schema_version = 1; operation = 'recover'; target = $null; state = 'supported'; executor = 'local-assisted'
         mutation = $true; authorization_class = 'local-write'; context_complete = $ready; authorized = $true; ready = $ready
         missing_context = @($missing); conflicts = @($conflicts); user_decisions = @('enter-recovery-password-only-in-local-7zip-prompt')
         expected_effects = @('restore-local-canonical-private-state','rewrite-restored-ssh-key-paths','reset-observed-state','no-remote-infrastructure-change')
@@ -135,27 +133,22 @@ try {
         'bootstrap' {
             $state = Initialize-PPMPrivateState -PrivateDirectory $PrivateDirectory
             $inventory = Read-PPMStateInventory -Path $state.inventory_path
-            Write-AgentJson (New-AgentResult -Name bootstrap -Success $true -Data ([ordered]@{ created = [bool]$state.created; context = Get-PPMSanitizedContext -Inventory $inventory -OperatorContext $state.operator }))
+            Write-AgentJson (New-AgentResult -Name bootstrap -Success $true -Data ([ordered]@{ created = [bool]$state.created; context = Get-PPMSanitizedContext -Inventory $inventory }))
         }
         'context' {
             $state = Read-AgentState
-            Write-AgentJson (New-AgentResult -Name context -Success $true -Data (Get-PPMSanitizedContext -Inventory $state.Inventory -OperatorContext $state.Operator))
+            Write-AgentJson (New-AgentResult -Name context -Success $true -Data (Get-PPMSanitizedContext -Inventory $state.Inventory))
         }
         'drift' {
             $state = Read-AgentState
             Write-AgentJson (New-AgentResult -Name drift -Success $true -Data (Get-PPMDriftReport -Inventory $state.Inventory -PrivateDirectory $PrivateDirectory -InventoryPath $inventoryPath))
-        }
-        'mode' {
-            if (-not $Mode) { $state = Read-AgentState; Write-AgentJson (New-AgentResult -Name mode -Success $true -Data ([ordered]@{ mode = [string]$state.Operator.mode })); break }
-            $context = Set-PPMOperatorMode -Mode $Mode -PrivateDirectory $PrivateDirectory
-            Write-AgentJson (New-AgentResult -Name mode -Success $true -Data ([ordered]@{ mode = [string]$context.mode; rule = 'The agent owns the project workflow, not the user authority.' }))
         }
         'preflight' {
             if (-not $Operation) { throw 'Operation is required for preflight.' }
             $requestContext = Read-AgentContext
             if ($Operation -eq 'recover') { Write-AgentJson (New-AgentResult -Name preflight -Success $true -Data (New-RecoveryPreflight -Context $requestContext)); break }
             $state = Read-AgentState
-            $preflight = New-PPMPreflight -Operation $Operation -Target $Target -Inventory $state.Inventory -PrivateDirectory $PrivateDirectory -OperatorContext $state.Operator -Context $requestContext -Approved:$Approved
+            $preflight = New-PPMPreflight -Operation $Operation -Target $Target -Inventory $state.Inventory -PrivateDirectory $PrivateDirectory -Context $requestContext -Approved:$Approved
             Write-AgentJson (New-AgentResult -Name preflight -Success $true -Data $preflight)
         }
         'execute' {
@@ -163,7 +156,7 @@ try {
             if ($Operation -eq 'bootstrap') {
                 $state = Initialize-PPMPrivateState -PrivateDirectory $PrivateDirectory
                 $inventory = Read-PPMStateInventory -Path $state.inventory_path
-                Write-AgentJson (New-AgentResult -Name execute -Success $true -Data ([ordered]@{ operation = 'bootstrap'; created = [bool]$state.created; context = Get-PPMSanitizedContext -Inventory $inventory -OperatorContext $state.operator }))
+                Write-AgentJson (New-AgentResult -Name execute -Success $true -Data ([ordered]@{ operation = 'bootstrap'; created = [bool]$state.created; context = Get-PPMSanitizedContext -Inventory $inventory }))
                 break
             }
             $requestContext = Read-AgentContext
@@ -174,18 +167,12 @@ try {
             }
 
             $state = Read-AgentState
-            $preflight = New-PPMPreflight -Operation $Operation -Target $Target -Inventory $state.Inventory -PrivateDirectory $PrivateDirectory -OperatorContext $state.Operator -Context $requestContext -Approved:$Approved
+            $preflight = New-PPMPreflight -Operation $Operation -Target $Target -Inventory $state.Inventory -PrivateDirectory $PrivateDirectory -Context $requestContext -Approved:$Approved
             if (-not $preflight.ready) { Write-AgentJson (New-AgentResult -Name execute -Success $false -Code 'context-gate-blocked' -Data $preflight); exit 2 }
 
             $resultData = $null
             switch ($Operation) {
-                'status' { $resultData = Get-PPMSanitizedContext -Inventory $state.Inventory -OperatorContext $state.Operator }
-                'set-mode' {
-                    $requestedMode = [string](Get-PPMOptional $requestContext 'mode')
-                    if ($requestedMode -notin @('collaborative','steward')) { throw 'Agent context mode must be collaborative or steward.' }
-                    $updated = Set-PPMOperatorMode -Mode $requestedMode -PrivateDirectory $PrivateDirectory
-                    $resultData = [ordered]@{ mode = [string]$updated.mode }
-                }
+                'status' { $resultData = Get-PPMSanitizedContext -Inventory $state.Inventory }
                 'add-server' {
                     $created = Add-PPMServer -Inventory $state.Inventory -InventoryPath $inventoryPath -Context $requestContext
                     $resultData = [ordered]@{ id = [string]$created.id; compute_driver = 'byo-ssh'; host_ownership = [string]$created.compute.host_ownership; state = 'desired-only'; remote_changed = $false }

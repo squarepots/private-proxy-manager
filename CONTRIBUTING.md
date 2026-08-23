@@ -1,67 +1,73 @@
 # Contributing
 
-Private Proxy Manager is intentionally narrow: it lets capable AI agents safely operate a person's private proxy infrastructure through one model-neutral deterministic core.
+Private Proxy Manager lets capable AI agents operate a person's private proxy routes through one deterministic, model-neutral core.
 
-## Before changing code
+## Start with the contract
 
-Read `AGENTS.md`, `.agents/skills/private-proxy-manager/SKILL.md`, `ARCHITECTURE.md`, `SECURITY.md`, and `docs/THREAT-MODEL.md`.
+Read `AGENTS.md`, the repository Skill, `ARCHITECTURE.md`, `SECURITY.md`, and `docs/COMPATIBILITY.md`.
 
-Keep these boundaries intact:
+Contributions should preserve these boundaries:
 
-- natural-language agent interaction is the only first-class user interface;
+- natural-language intent is the user entry point;
 - `agent/ppm-agent.ps1` is the sanitized machine contract;
-- MCP/runtime adapters stay thin and contain no duplicated business logic;
-- canonical desired state and secrets remain local/ignored;
-- every mutation fails closed behind the Context Completeness Gate;
-- Steward Mode does not expand user authority;
-- Providers are optional;
-- migration is overlap-first;
-- no GUI/panel/TUI/billing/traffic-surveillance/hosted control plane is added to the personal product.
+- MCP and runtime adapters delegate to that contract;
+- desired state and secrets remain local and ignored;
+- every mutation uses fail-closed preflight;
+- Providers remain optional;
+- migration remains overlap-first;
+- remote writes remain inside PPM ownership.
 
-## Scope
+## Product changes
 
-Good changes reduce user burden, improve deterministic safety/reliability, add a well-tested capability/renderer/driver, or make the repository easier for an unfamiliar capable agent to operate.
+Good changes reduce user burden, improve reliability or safety, add a clearly needed and tested capability, or make the repository easier for an unfamiliar agent to operate.
 
-Do not add protocol/provider/client breadth only to increase a feature count. A new capability should have a clear user outcome, machine-readable capability truth, preflight requirements, safe execution semantics, and tests.
+A new driver, renderer, or operation needs:
 
-## Private data
+- a specific user outcome;
+- machine-readable capability metadata;
+- required context, effects, and authorization semantics;
+- deterministic implementation;
+- focused behavior tests;
+- an update to `docs/COMPATIBILITY.md`.
 
-Never put real infrastructure values in a contribution. Use documentation ranges/domains such as `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, `2001:db8::/32`, and `example.invalid`.
+Keep user-facing onboarding outcome-oriented. Put exact machine semantics in Operations and the repository Skill instead of repeating them across every document.
 
-Before sharing a change, run the repository's tracked-tree secret/public-content checks and the relevant tests. Generated client files, credentials, recovery archives, local inventory/observed/operator state, Provider URLs, SSH material, and subscription state must remain ignored/private.
+## Public examples and private data
+
+Use synthetic IDs and reserved values such as `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`, `2001:db8::/32`, and `example.invalid`.
+
+Generated client files, credentials, recovery archives, local inventory/observed state, Provider URLs, SSH material, and subscription state stay outside the tracked tree.
+
+Run the public-tree and secret checks before sharing a change.
 
 ## Validation
 
-Use `scripts/Validate-Local.ps1 -Quick` during rapid iteration. Before a PR/release, run `scripts/Validate-Local.ps1` on a machine with the relevant local toolchains; it executes the deterministic PowerShell/public-tree suite and, when available, encrypted-recovery, MCP, Worker, Bash, and ShellCheck validation.
+Use:
 
-The hosted PR CI remains the independent cross-platform integration boundary and covers:
+```powershell
+pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
+```
 
-- tracked-tree secret/public-content checks;
-- static architecture/template and release-contract checks;
-- agent bootstrap, capability discovery, context gates, and Steward Mode;
-- generic migration/state validation;
-- ClientTarget rendering with and without Providers;
-- observed state and sanitized drift;
-- private subscription state/export;
-- encrypted recovery behavior;
-- local stdio MCP type checking;
-- server shell validation;
-- Worker type checking/tests/dry-run.
+Before merge or release, run the full validator:
 
-Add or update tests with behavior changes. Do not weaken a safety assertion merely to make a new workflow pass.
+```powershell
+pwsh -NoProfile -File .\scripts\Validate-Local.ps1
+```
 
-## Pull requests and releases
+The full suite covers PowerShell behavior, public-tree checks, rendering, drift, recovery, MCP, Worker, Bash, and ShellCheck when those toolchains are available. Public hosted PR CI supplies the independent Linux and Windows integration result.
 
-Use a clear, outcome-oriented PR title. Before a PR is ready to merge, review the final diff, make sure the branch is current with the target branch, classify `Version impact` as `none`, `patch`, `minor`, or `major`, and record the decision in the PR body.
+Add or update focused behavior tests with every contract change.
 
-For `none`, keep `version.txt` equal to the current target-branch version. For `patch`, `minor`, or `major`, run `scripts/Bump-Version.ps1` once from that current base so the PR contains the exact intended successor version. If the target branch advances or the scope changes, recompute from the new base instead of bumping the provisional branch version again.
+## Pull requests and versions
 
-Do not bump product versions per commit, push, or intermediate work. Release automation publishes an already-prepared version from `main`; it does not decide or modify SemVer. See `docs/RELEASING.md`.
+Use an outcome-oriented title. Review the final diff, update from the target branch, and record one `Version impact`: `none`, `patch`, `minor`, or `major`.
 
-## Third-party material
+For a version change, run `scripts/Bump-Version.ps1` once from the current target version. If the base or scope changes, recompute the intended successor instead of stacking another bump.
 
-Preserve license/notice files for vendored code. The current vendored QR generator retains its own MIT license and notice under `client/vendor/`.
+Release automation publishes the version already present on `main`. See `docs/RELEASING.md`.
 
-## Compatibility
+## Compatibility and third-party material
 
-Some server-side service and path identifiers are deployed ABI. Do not rename them casually without checking existing installations and uninstall behavior. Product-facing concepts and new code should use the Private Proxy Manager model.
+Server-side service and path identifiers are deployed ABI. Check existing installations and uninstall behavior before changing them.
+
+Preserve license and notice files for vendored material. The QR generator retains its MIT notice under `client/vendor/`; PPM itself remains AGPL-3.0-only.

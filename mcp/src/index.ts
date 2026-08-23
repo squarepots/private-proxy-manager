@@ -69,7 +69,6 @@ function runAgent(
   options: {
     operation?: string;
     target?: string;
-    mode?: 'collaborative' | 'steward';
     context?: Record<string, unknown>;
   } = {}
 ): Promise<AgentEnvelope> {
@@ -77,7 +76,6 @@ function runAgent(
     const args = ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', agentScript, command, '-PrivateDirectory', privateDirectory];
     if (options.operation) args.push('-Operation', options.operation);
     if (options.target) args.push('-Target', options.target);
-    if (options.mode) args.push('-Mode', options.mode);
     if (options.context) args.push('-ContextStdin');
 
     const child = spawn(pwsh, args, { cwd: repoRoot, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
@@ -133,14 +131,8 @@ function createServer(): McpServer {
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
   }, async () => toolResult(await runAgent('drift')));
 
-  server.registerTool('ppm_set_mode', {
-    description: 'Set collaborative or Steward Mode. Steward Mode never grants destructive, credential-rotation, or purchase authority.',
-    inputSchema: z.object({ mode: z.enum(['collaborative', 'steward']) }),
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false }
-  }, async ({ mode }) => toolResult(await runAgent('mode', { mode })));
-
   server.registerTool('ppm_preflight', {
-    description: 'Evaluate the Context Completeness Gate before mutation. Backup and migration may be preflighted here even though they are not generic one-shot MCP executions.',
+    description: 'Evaluate required context, conflicts, effects, and authorization before mutation. Backup and migration may be preflighted here even though they are not generic one-shot MCP executions.',
     inputSchema: z.object({
       operation: preflightOperationSchema,
       target: z.string().min(1).optional(),
@@ -150,7 +142,7 @@ function createServer(): McpServer {
   }, async ({ operation, target, context }) => toolResult(await runAgent('preflight', { operation, target, context })));
 
   server.registerTool('ppm_execute', {
-    description: 'Execute one supported repository-owned PPM operation after the Context Completeness Gate passes. Backup/recovery use local secure password prompts; migration is composed; destructive cloud deletion, purchases, and credential rotation are never generic execute operations.',
+    description: 'Execute one supported repository-owned PPM operation after preflight passes. Backup/recovery use local secure password prompts; migration is composed; subscription-token rotation requires its dedicated authorized path.',
     inputSchema: z.object({
       operation: executableOperationSchema,
       target: z.string().min(1).optional(),

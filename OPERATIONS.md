@@ -54,7 +54,6 @@ The machine surface intentionally suppresses raw secret-bearing lower-level diag
 ```text
 <private>/inventory.json    canonical desired Server / Link / Route / Provider / Profile / ClientTarget state
 <private>/secrets/          canonical credentials, Provider URLs, subscription state, payloads
-<private>/operator.json     collaborative / steward mode
 <private>/observed.json     disposable sanitized remote audit evidence
 <private>/delivery/         generated ClientTarget artifacts + hash-only render manifest
 <private>/recovery/         encrypted recovery artifacts
@@ -88,8 +87,7 @@ Initial operation families include:
 - remote PPM write: deploy Route;
 - external configuration publication: private subscription publication;
 - guarded target-scoped credential change: subscription-token rotation;
-- workflow-level migration/recovery;
-- destructive/paid-external classes that are not generic PPM execution tools.
+- workflow-level migration/recovery.
 
 Capability metadata is the source of truth when this document and code differ.
 
@@ -101,7 +99,6 @@ Clean bootstrap creates valid schema-1 local state with:
 - an available policy catalog but no selected policy/Profile;
 - no ClientTarget, device, application, or subscription assumption;
 - empty secret index and observed state;
-- collaborative operator mode;
 - private delivery/recovery directories under the selected private root.
 
 The agent gathers actual user context and then explicitly creates the required Profile and ClientTarget objects.
@@ -194,12 +191,6 @@ A migration request does not imply immediate cloud deletion.
 Backup creates an encrypted local recovery artifact from canonical schema-1 private state. Decryption credentials must not be passed through model-visible command arguments or logs.
 
 Recovery is local-first: restore to a clean private root, verify the SHA-256 manifest, reject unsafe paths/symlinks, relocate SSH material, validate the restored current inventory, reset observed evidence, then decide whether any remote repair/deployment is needed. Chat history is never a recovery source of truth.
-
-## External research
-
-The agent may use current authoritative web/browser sources for facts such as VPS offerings, regions/prices, provider firewall requirements, and client compatibility.
-
-Research never directly mutates state. Map any conclusion to supported PPM capabilities and run preflight. Purchasing a resource or changing an external account remains a separately authorized external action.
 
 ## Contributor/debug interfaces
 

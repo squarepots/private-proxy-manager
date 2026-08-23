@@ -38,7 +38,7 @@ $violations = [Collections.Generic.List[string]]::new()
 foreach ($relative in $files) {
     $normalized = $relative.Replace('\', '/')
     if ($normalized -match '(^|/)(private|exports|delivery|secrets)(/|$)' -or
-        $normalized -match '(?i)((?:^|/)(?:payload|client)(?:[-_.][^/]*)?\.ya?ml$|(?:^|/)[^/]+-(?:nodes|import|subscription)\.(?:txt|html)$|inventory\.json$|operator\.json$|observed\.json$|client-render-manifest\.json$|RECOVERY-METADATA\.json$|SHA256SUMS$|\.zip$|\.7z$|\.pem$|\.pfx$|\.p12$|\.key$)') {
+        $normalized -match '(?i)((?:^|/)(?:payload|client)(?:[-_.][^/]*)?\.ya?ml$|(?:^|/)[^/]+-(?:nodes|import|subscription)\.(?:txt|html)$|inventory\.json$|observed\.json$|client-render-manifest\.json$|RECOVERY-METADATA\.json$|SHA256SUMS$|\.zip$|\.7z$|\.pem$|\.pfx$|\.p12$|\.key$)') {
         $violations.Add("forbidden generated/secret path: $relative")
         continue
     }
