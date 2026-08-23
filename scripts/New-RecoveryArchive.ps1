@@ -54,7 +54,7 @@ try {
     New-Item -ItemType Directory -Path $stage | Out-Null
     Protect-PPMPath -Path $stage -Directory
     Copy-RecoveryFile -Source $InventoryPath -Destination (Join-Path $stage 'private\inventory.json')
-    foreach ($name in 'operator.json', 'observed.json') {
+    foreach ($name in 'observed.json') {
         $source = Join-Path $privateDirectory $name
         if (Test-Path -LiteralPath $source -PathType Leaf) { Copy-RecoveryFile -Source $source -Destination (Join-Path $stage "private\$name") }
     }

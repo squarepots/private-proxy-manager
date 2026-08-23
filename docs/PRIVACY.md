@@ -4,7 +4,7 @@ PPM separates product source, local private state, the chosen AI runtime, remote
 
 ## What stays local by product design
 
-The deterministic engine reads and writes the selected private directory. Inventory, operator context, credentials, Provider URLs, subscription state, generated client files, observed evidence, and recovery archives are not part of the tracked source tree. The engine has no product telemetry or hosted PPM database.
+The deterministic engine reads and writes the selected private directory. Inventory, credentials, Provider URLs, subscription state, generated client files, observed evidence, and recovery archives are not part of the tracked source tree. The engine has no product telemetry or hosted PPM database.
 
 ## What the AI runtime may receive
 

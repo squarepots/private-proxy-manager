@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please describe the user problem first. PPM intentionally does not include a hosted control plane, billing, traffic analytics, automatic cloud provisioning, or arbitrary protocol support without a concrete product need.
+        Please describe the user problem first. A useful proposal connects one clear outcome to PPM's deterministic capability, privacy, compatibility, and validation boundaries.
   - type: textarea
     id: problem
     attributes:
@@ -19,7 +19,7 @@ body:
     id: proposal
     attributes:
       label: Proposed outcome
-      description: Explain the smallest useful behavior and any compatibility or privacy impact.
+      description: Explain the smallest useful behavior, how an agent would discover/use it, and any compatibility or privacy impact.
     validations:
       required: true
   - type: textarea

@@ -1,125 +1,93 @@
 ---
 name: private-proxy-manager
-description: Operate Private Proxy Manager through natural-language intent. Use when a user gives this repository URL, asks to set up or manage a private proxy network, add or replace VPS routes, configure supported clients, inspect drift/security, publish the optional private subscription, recover state, or asks the AI to take care of the project. The normal user should not need proxy, networking, schema, or command knowledge.
+description: Operate Private Proxy Manager from natural-language intent. Use when a user provides this repository URL or asks to create, inspect, repair, migrate, render, back up, or recover a supported private proxy route. The agent discovers capabilities and operates the deterministic local machine surface so the user does not need to learn the repository or schema.
 ---
 
 # Private Proxy Manager
 
-Private Proxy Manager (PPM) is agent-native infrastructure software. The human expresses intent; the agent gathers context, researches current facts when needed, and delegates execution to PPM's deterministic local operations.
+PPM turns user intent into validated local state, scoped infrastructure operations, remote audit, and private client output.
 
-The product rule is:
+The governing rule is:
 
 > **The agent owns the project workflow, not the user's authority.**
 
-## Start here
+## Start from a repository URL
 
-When the user gives you the repository or says they want to use PPM:
+When the user gives you the repository or asks to use PPM:
 
-1. Read the root `AGENTS.md` and this Skill. Do not make the human explain the repository structure.
-2. If the repository is not local and your runtime can safely clone/open it from the supplied URL, do so. Otherwise ask only for the minimum action needed to make the repository accessible.
-3. Treat `agent/ppm-agent.ps1` as the stable machine surface. Scripts and PowerShell commands are implementation interfaces for agents/contributors, not a workflow to teach the user.
-4. Inspect capabilities before assuming support.
-5. Bootstrap clean private state if it does not exist. Clean bootstrap is neutral: it does not choose geography, Provider, Profile policy, client application/device targets, or subscription delivery.
-6. Inspect sanitized context and drift before proposing changes to an existing setup.
-7. Gather missing context using read-only local inspection and authoritative web/browser research where relevant.
-8. Create the actual Profiles and ClientTargets only after the user's network/client needs are known.
-9. Before every mutation, run the scoped preflight. **Do not execute unless `ready` is true.**
-10. After meaningful remote changes, validate/audit and report the outcome without dumping secrets or low-level implementation details.
+1. Open or safely clone the supplied repository.
+2. Read root `AGENTS.md` and this Skill.
+3. Run `agent/ppm-agent.ps1 capabilities`; do not infer support from external product features.
+4. Run `scripts/Validate-Local.ps1 -Quick` before accepting real infrastructure context.
+5. Bootstrap only if private state is absent.
+6. Inspect sanitized context and drift before changing existing state.
+7. Explain the dedicated-host prerequisites and host-wide effects.
+8. Gather only the facts required for the user's desired Route and ClientTarget.
+9. Run scoped preflight and execute only when `ready=true`.
+10. Audit and render after meaningful changes, then report the outcome without secret-bearing details.
 
-Representative internal machine calls are described in [references/operations.md](references/operations.md). Do not turn them into user-facing onboarding instructions.
+Representative machine calls are in [references/operations.md](references/operations.md). These are internal operations, not commands the user must learn.
 
-## Context Completeness Gate
+## Preflight
 
-Never mutate because a guess seems plausible. For the scoped action, establish enough verified context to identify the user's goal, target, relevant desired/observed state, supported capability, required access, expected effects, authorization class, and any decision that genuinely belongs to the user.
+Never mutate from an unverified guess. For the current operation, establish the goal, exact target, relevant desired and observed state, required access, supported capability, expected effects, conflicts, and authorization class.
 
-`complete context` means sufficient verified context for the current operation, not exhaustive knowledge of the whole project.
+If preflight is blocked:
 
-If preflight reports missing context or conflicts:
+- continue safe read-only discovery when possible;
+- use authoritative current sources for time-sensitive facts;
+- ask the smallest necessary question when the fact cannot be discovered;
+- do not invent credentials, ownership, provider state, purchase decisions, or destructive intent.
 
-- continue safe read-only discovery where possible;
-- use current authoritative external information when the missing fact is version-sensitive;
-- ask the smallest necessary user question only when the fact cannot be discovered safely;
-- never invent credentials, ownership, provider state, destructive intent, or a purchase decision.
+## Product model
 
-## Operating modes
+- `Server`: BYO dedicated, rebuildable Ubuntu 24.04 amd64 compute over SSH.
+- `Link`: single-hop WireGuard connection between two Servers.
+- `Route`: direct or relay private exit with Hysteria2 ingress.
+- `Provider`: optional generic Mihomo HTTP node source stored as a local secret.
+- `Profile`: reusable Route, Provider, and policy selection.
+- `ClientTarget`: renderer and delivery identity referencing a Profile.
+- `desired`: canonical inventory schema 1.
+- `observed`: disposable sanitized audit evidence.
+- `private secrets`: canonical local credentials and delivery state.
 
-PPM supports `collaborative` and `steward` modes.
+Bootstrap creates neutral state and waits for actual context before adding Profiles or ClientTargets.
 
-In collaborative mode, explain meaningful choices before carrying them out when helpful.
+The supported host preparation changes UFW, swap/fstab, SMTP egress, SSH/sysctl/journald, packages, unattended-upgrades, and vnstat. Confirm a dedicated rebuildable host before remote deployment. See `docs/COMPATIBILITY.md` for the current stack.
 
-In Steward Mode, take responsibility for routine technical operation: gather context, research, choose safe defaults, maintain desired state, run supported non-destructive operations covered by the user's goal, validate, diagnose, and keep supported client artifacts consistent. Minimize unnecessary questions.
+## Execution
 
-Steward Mode is **not** blanket authorization. It never silently authorizes purchases, cloud/VPS deletion, destructive retirement of a working route, credential rotation with user-visible blast radius, unrelated account/cloud mutations, or material cost/privacy/performance choices that need the user's preference.
+Prefer PPM-owned deterministic operations over arbitrary shell or free-form SSH. Use raw SSH only for necessary read-only diagnosis when PPM has no bounded equivalent.
 
-See [references/security.md](references/security.md).
+Remote mutation and uninstall stay inside the PPM ownership boundary. Unrelated Hysteria, Xray, WireGuard, firewall, service, package, account, and host-file state is not a cleanup target.
 
-## Product/domain model
+Typed drift does not grant repair authority. Diagnose the category and use a supported scoped operation.
 
-The agent should understand these concepts so the user usually does not have to:
-
-- `Server`: bring-your-own dedicated, rebuildable Ubuntu 24.04 amd64 compute with stable identity and SSH access; current compute driver is `byo-ssh` and `host_ownership` must be `dedicated`.
-- `Link`: an explicit inter-server link; current driver is single-hop WireGuard.
-- `Route`: a private logical exit; current ingress driver is Hysteria2 and topology is direct or single-hop relay.
-- `Provider`: an optional third-party node source; current source type is generic Mihomo HTTP. PPM must work with zero Providers.
-- `Profile`: reusable Route / Provider / policy selection. It is **not** a renderer or device identity.
-- `ClientTarget`: references a Profile and owns renderer/delivery identity (`mihomo` or `shadowrocket` initially).
-- `desired`: canonical local configuration using public inventory schema `1`.
-- `observed`: disposable, sanitized audit evidence that can be regenerated.
-- `client render state`: local hashes used only to identify stale/missing canonical ClientTarget output.
-- `private secrets`: local canonical credentials and delivery state; never source them from chat history.
-
-The initial supported infrastructure stack is intentionally narrow: Hysteria2 ingress, WireGuard single-hop relay, BYO SSH-accessible supported Linux servers, optional generic Providers, Mihomo/Clash Verge-compatible output, and Shadowrocket output.
-
-The server preparation step has host-wide effects, including UFW defaults, swap/fstab, SMTP egress, SSH/sysctl/journald, package, unattended-upgrades, and vnstat changes. It is not supported on a shared production host. Uninstall removes PPM-owned artifacts and named policy files but does not restore unknown prior host-wide state.
-
-Do not promise an unsupported protocol, provider, client renderer, or cloud lifecycle driver merely because external documentation says it exists. See `docs/COMPATIBILITY.md`.
-
-## Execution discipline
-
-Prefer PPM-owned deterministic operations over arbitrary shell or free-form SSH.
-
-Use raw SSH only for read-only diagnosis when there is no PPM-owned equivalent and the evidence is necessary. Do not use ad-hoc SSH configuration as a substitute for adding a missing core capability.
-
-Never hand-edit canonical private JSON/YAML merely to get past a validation failure. Use the supported operation or fix the product implementation.
-
-Remote mutation and uninstall must touch only PPM-owned resources. The presence of unrelated Xray, Hysteria, WireGuard, or other networking software is not permission to remove or disable it.
-
-Do not automatically self-heal drift. Typed drift may identify service, configuration, firewall/network, WireGuard, Hysteria2/certificate, egress, ClientTarget-render, or undetermined state. Diagnose it and apply a scoped operation only when the user's goal/authorization covers the change.
-
-For client selection/rendering, see [references/clients.md](references/clients.md).
-
-The model runtime may see the tool arguments required for an operation, including a server IP, SSH username, local key path, and selected IDs. Returned artifact paths are private-root-relative and raw diagnostics are suppressed, but local-first is not a promise of zero model-visible metadata. Use an offline runtime when those values must remain local.
-
-For migration and recovery, see [references/migration-recovery.md](references/migration-recovery.md).
+For client behavior, see [references/clients.md](references/clients.md). For migration and recovery, see [references/migration-recovery.md](references/migration-recovery.md).
 
 ## Subscription authority
 
-Shadowrocket subscription state is ClientTarget-scoped. Each subscription target requires an isolated Worker/host identity.
+Private subscription state belongs to one Shadowrocket ClientTarget and uses an isolated Worker/host identity.
 
-Subscription-token rotation is a `credential-change` operation. It is intentionally not available through the generic MCP execute tool. Only perform it after explicit current authorization; it must not rotate Route credentials or unrelated ClientTarget credentials.
+`rotate-subscription-token` is a `credential-change`. It requires explicit current approval, is excluded from generic MCP execute, and must leave Route and other ClientTarget credentials unchanged.
 
-## External research
+## External facts
 
-Use current authoritative web/browser sources when the task depends on facts that can change, such as VPS regions/prices, provider firewall requirements, client import support, current protocol/client compatibility, or cloud documentation.
-
-Research is evidence, not permission. It does not authorize a purchase, account change, cloud mutation, destructive action, or a capability PPM has not implemented.
-
-If your runtime has no web/browser capability, proceed with local capability truth and ask for the missing current fact rather than fabricating it.
+Use current authoritative web or browser sources for facts that can change, including VPS offerings, firewall requirements, and client import behavior. Research supplies evidence only; map the conclusion back to implemented PPM capabilities and current user authority.
 
 See [references/research.md](references/research.md).
 
-## Secrets and conversational output
+## Secrets and output
 
-Do not paste tokens, private keys, subscription URLs, auth strings, full live node URIs, server IPs, SSH key paths, or secret-bearing generated configs into the conversation unless the user explicitly needs one exact value and disclosure is necessary for the task.
+Do not put tokens, keys, subscription URLs, live node URIs, server addresses, local key paths, generated configs, or raw remote diagnostics in chat unless one exact disclosure is necessary and explicitly requested.
 
-Prefer sanitized machine results from `agent/ppm-agent.ps1`. Keep raw evidence local.
+The chosen cloud model may receive tool arguments such as a server address, SSH username, key path, and selected IDs. Prefer non-identifying IDs and an offline runtime when these inputs must remain local.
 
-Tell the user what changed, what was validated, what still needs their decision, and any meaningful risk. Hide incidental implementation complexity.
+Use sanitized machine results, keep raw evidence local, and tell the user:
 
-## Unsupported or unsafe requests
+- what changed;
+- what was validated;
+- what remains blocked or undecided;
+- any meaningful host, privacy, or availability effect.
 
-If the request is outside PPM capabilities, say what is unsupported instead of improvising a parallel system.
-
-If a capability should exist in PPM, improve the deterministic core rather than teaching the user a manual workaround.
-
-Never convert PPM into a GUI/panel/TUI, hosted management control plane, reseller/billing system, traffic-surveillance platform, or generic MCP wrapper around another proxy panel as a shortcut for the requested product behavior.
+When a requested outcome is absent from capability discovery, explain that gap. Extend the deterministic core with an explicit operation and tests when the product should support it; do not improvise a hidden parallel system.

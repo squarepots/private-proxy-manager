@@ -26,7 +26,7 @@ jobs:
       - name: Product version behavior
         shell: pwsh
         run: ./tests/Test-Version.ps1
-      - name: Agent bootstrap, capability discovery, context gate and Steward Mode
+      - name: Agent bootstrap, capability discovery, preflight and authorization
         shell: pwsh
         run: ./tests/Test-Agent.ps1
       - name: Generic Provider lifecycle

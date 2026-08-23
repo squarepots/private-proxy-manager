@@ -24,12 +24,6 @@ function Test-PPMRecoveryManifest {
     return $verified
 }
 
-function Assert-PPMRecoveredOperatorContext {
-    param([Parameter(Mandatory)]$Context)
-    if ([int](Get-PPMOptional $Context 'schema' 0) -ne 1) { throw 'Recovered operator context schema is unsupported.' }
-    if ([string](Get-PPMOptional $Context 'mode') -notin @('collaborative','steward')) { throw 'Recovered operator mode is invalid.' }
-}
-
 function Protect-PPMRecoveryTree {
     param([Parameter(Mandatory)][string]$Root)
     Protect-PPMPath -Path $Root -Directory
@@ -63,11 +57,6 @@ function Restore-PPMExtractedRecovery {
     $inventory = Read-PPMJson -Path $sourceInventory -Label 'Recovered inventory'
     $sourceSchema = [int](Get-PPMOptional $inventory 'schema' 0)
     if ($sourceSchema -ne 1 -or $sourceSchema -ne $metadataSchema) { throw 'Recovered inventory schema is unsupported or disagrees with recovery metadata.' }
-    $operatorPath = Join-Path $sourcePrivate 'operator.json'
-    $storedOperator = if (Test-Path -LiteralPath $operatorPath -PathType Leaf) { Read-PPMJson -Path $operatorPath -Label 'Recovered operator context' } else { [pscustomobject][ordered]@{ schema = 1; mode = 'collaborative' } }
-    Assert-PPMRecoveredOperatorContext -Context $storedOperator
-    $operator = [ordered]@{ schema = 1; mode = [string]$storedOperator.mode }
-
     $parent = Split-Path -Parent $target
     New-Item -ItemType Directory -Force -Path $parent | Out-Null
     $stage = Join-Path $parent ('.ppm-restore-' + [Guid]::NewGuid().ToString('N'))
@@ -97,7 +86,6 @@ function Restore-PPMExtractedRecovery {
         $inventory.metadata | Add-Member -NotePropertyName recovered_at -NotePropertyValue ([DateTime]::UtcNow.ToString('o')) -Force
 
         Write-PPMJsonAtomic -Value $inventory -Path (Join-Path $stage 'inventory.json')
-        Write-PPMJsonAtomic -Value $operator -Path (Join-Path $stage 'operator.json')
         Write-PPMJsonAtomic -Value ([ordered]@{ schema = 1; generated_at = $null; servers = @(); links = @(); routes = @() }) -Path (Join-Path $stage 'observed.json')
         Protect-PPMRecoveryTree -Root $stage
 

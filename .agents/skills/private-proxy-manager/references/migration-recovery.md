@@ -2,36 +2,35 @@
 
 ## Infrastructure migration
 
-Migration is an Agent-orchestrated workflow, not a delete-and-recreate command.
+Migration is an overlap-first workflow:
 
-1. Inspect current desired state and typed drift.
-2. Establish replacement server/access and any current external facts needed to choose it.
-3. Add replacement Server/Link/Route desired state while the old path remains usable.
-4. Preflight and deploy the replacement through repository-owned operations.
-5. Audit the replacement and confirm the declared exit is in sync.
-6. Render/update supported ClientTargets and ensure render drift is clear.
-7. Keep old capacity until the replacement is proven in the user's relevant clients/path.
-8. Retirement/termination of old capacity is a separate destructive action requiring explicit current authorization.
+1. inspect current desired state and drift;
+2. establish replacement server access and current external facts;
+3. add replacement Server, Link, and Route state while the working path remains available;
+4. preflight and deploy the replacement through repository-owned operations;
+5. audit the replacement and confirm the declared exit;
+6. render affected ClientTargets and clear render drift;
+7. confirm the replacement works in the relevant client path;
+8. handle old external capacity later as a separate user-requested action.
 
-Do not interpret “migrate” as “delete old server immediately.” Generic MCP execute intentionally does not expose a one-shot migration action; compose supported primitives so each gate/effect remains explicit.
+`migrate-route` describes and coordinates this composition; generic MCP execute does not turn it into an opaque one-shot remote mutation.
 
 ## Recovery
 
-Canonical recovery comes from the encrypted recovery archive containing current schema-1 local desired state, secrets, operator context, and SSH material. Observed state and ClientTarget render evidence are disposable.
+The encrypted recovery archive contains schema-1 desired state, secrets, and SSH material. Observed and render evidence can be regenerated.
 
-Use repository-owned `scripts/Restore-RecoveryArchive.ps1` for the restore primitive. The archive password is intentionally **not** accepted through Agent/MCP JSON, process arguments, repository files, or environment variables. The script asks 7-Zip to prompt locally; tell the user only to enter the password in that local secure prompt.
+Use `scripts/Restore-RecoveryArchive.ps1` and a clean destination. The archive password is accepted only by the local 7-Zip prompt, never Agent/MCP JSON, process arguments, repository files, environment variables, or chat.
 
 Recovery sequence:
 
-1. choose a clean destination private directory; never overwrite existing state;
-2. invoke the restore primitive and let the user satisfy the local password prompt;
-3. the primitive verifies the archive manifest, rejects links/unsafe paths, relocates SSH/private delivery paths, applies owner-only permissions, validates the restored schema-1 inventory, and resets `observed.json`;
-4. inspect capabilities/context/drift from restored state;
-5. do not assume remote infrastructure matches restored desired state;
-6. audit existing Routes before any remote write;
-7. render clients only from validated canonical state;
-8. redeploy only scoped resources that are actually missing/drifted and covered by the user's current intent.
+1. choose a clean private destination;
+2. invoke the restore script and enter the password in the local prompt;
+3. verify manifest and path safety, relocate SSH/delivery paths, apply private permissions, validate inventory, and reset `observed.json`;
+4. inspect capabilities, context, and drift;
+5. audit existing Routes before any remote write;
+6. render clients from validated canonical state;
+7. deploy only a scoped resource that evidence shows is missing or drifted and the user's current goal covers.
 
-The restore primitive reports `REMOTE_INFRASTRUCTURE_CHANGED=0`. Recovery must not depend on one AI vendor/runtime or on chat history.
+Older archives may contain deprecated `operator.json`; recovery verifies the archive manifest and ignores that file.
 
-PPM's first public desired-state contract is schema `1`. Recovery does not publish or preserve converters for development-only schemas that were never public contracts.
+Recovery reports no remote infrastructure change and does not depend on the original model or chat history.

@@ -9,7 +9,6 @@ function Get-PPMCapabilityCatalog {
         [ordered]@{ id = 'drift'; state = 'supported'; executor = 'agent'; mutation = $false; authorization_class = 'read-only'; description = 'Compare desired routes and ClientTarget renders with sanitized observed state.' },
         [ordered]@{ id = 'audit'; state = 'supported'; executor = 'core'; mutation = $false; authorization_class = 'read-only'; description = 'Compare one supported remote Route with desired state without changing it.' },
         [ordered]@{ id = 'bootstrap'; state = 'supported'; executor = 'agent'; mutation = $true; authorization_class = 'local-write'; description = 'Create clean local private state.' },
-        [ordered]@{ id = 'set-mode'; state = 'supported'; executor = 'agent'; mutation = $true; authorization_class = 'local-write'; description = 'Choose collaborative or steward mode.' },
         [ordered]@{ id = 'add-server'; state = 'supported'; executor = 'agent'; mutation = $true; authorization_class = 'local-write'; description = 'Add a BYO SSH Server to desired state without connecting to it.' },
         [ordered]@{ id = 'add-link'; state = 'supported'; executor = 'agent'; mutation = $true; authorization_class = 'local-write'; description = 'Allocate one WireGuard Link and local canonical keys.' },
         [ordered]@{ id = 'add-route'; state = 'supported'; executor = 'agent'; mutation = $true; authorization_class = 'local-write'; description = 'Add a Hysteria2 direct or relay Route and local canonical credentials.' },
@@ -28,13 +27,9 @@ function Get-PPMCapabilityCatalog {
         [ordered]@{ id = 'rotate-subscription-token'; state = 'supported'; executor = 'agent'; mutation = $true; authorization_class = 'credential-change'; description = 'Rotate only one ClientTarget subscription bearer token after explicit current authorization.' },
         [ordered]@{ id = 'migrate-route'; state = 'supported'; executor = 'workflow'; mutation = $true; authorization_class = 'remote-write'; description = 'Overlap-first workflow composed from add/deploy/audit operations; old capacity is not retired automatically.' },
         [ordered]@{ id = 'backup'; state = 'supported'; executor = 'local-assisted'; mutation = $true; authorization_class = 'local-write'; requires_local_secret_prompt = $true; description = 'Create an encrypted recovery archive through a local 7-Zip password prompt that is never sent through the model/MCP stream.' },
-        [ordered]@{ id = 'recover'; state = 'supported'; executor = 'local-assisted'; mutation = $true; authorization_class = 'local-write'; requires_local_secret_prompt = $true; description = 'Restore canonical private state through the repository-owned local recovery workflow and secure 7-Zip prompt.' },
-        [ordered]@{ id = 'rotate-credential'; state = 'guarded'; executor = 'workflow'; mutation = $true; authorization_class = 'credential-change'; description = 'Credential rotation always requires explicit current authorization.' },
-        [ordered]@{ id = 'delete-server'; state = 'guarded'; executor = 'external'; mutation = $true; authorization_class = 'destructive'; description = 'Cloud/server deletion requires explicit authorization and is not performed by PPM core.' },
-        [ordered]@{ id = 'purchase-resource'; state = 'guarded'; executor = 'external'; mutation = $true; authorization_class = 'paid-external'; description = 'Purchases require explicit authorization and happen through the external provider.' }
+        [ordered]@{ id = 'recover'; state = 'supported'; executor = 'local-assisted'; mutation = $true; authorization_class = 'local-write'; requires_local_secret_prompt = $true; description = 'Restore canonical private state through the repository-owned local recovery workflow and secure 7-Zip prompt.' }
     )
     $requiredContext = @{
-        'set-mode' = @([ordered]@{ name = 'mode'; type = 'collaborative|steward'; required = $true })
         'add-server' = @(
             [ordered]@{ name = 'server_id'; type = 'stable-id'; required = $true },
             [ordered]@{ name = 'public_ipv4'; type = 'ipv4'; required = $true },
@@ -60,12 +55,9 @@ function Get-PPMCapabilityCatalog {
         'rotate-subscription-token' = @([ordered]@{ name = 'target'; type = 'client-target-id'; required = $true; source = 'argument' })
         'migrate-route' = @([ordered]@{ name = 'target'; type = 'route-id'; required = $true; source = 'argument' },[ordered]@{ name = 'replacement_server_id'; type = 'server-id'; required = $true })
         'recover' = @([ordered]@{ name = 'archive_path'; type = 'local-file-path'; required = $true })
-        'rotate-credential' = @([ordered]@{ name = 'target'; type = 'resource-id'; required = $true; source = 'argument' })
-        'delete-server' = @([ordered]@{ name = 'target'; type = 'server-id'; required = $true; source = 'argument' })
-        'purchase-resource' = @([ordered]@{ name = 'provider'; type = 'provider-id'; required = $true },[ordered]@{ name = 'offering'; type = 'string'; required = $true },[ordered]@{ name = 'price'; type = 'declared-price'; required = $true })
     }
     $declaredEffects = @{
-        status = @('read-sanitized-local-state'); drift = @('read-sanitized-local-and-observed-state'); audit = @('read-remote-supported-state'); bootstrap = @('create-local-private-state'); 'set-mode' = @('update-local-operator-context'); 'add-server' = @('update-local-desired-state'); 'add-link' = @('allocate-local-link-and-keys'); 'add-route' = @('allocate-local-route-and-credentials'); 'add-provider' = @('store-provider-url-as-local-secret'); 'update-provider' = @('update-local-provider'); 'remove-provider' = @('remove-local-provider-and-secret'); 'add-profile' = @('update-local-profile'); 'update-profile' = @('update-local-profile'); 'remove-profile' = @('remove-local-profile'); 'add-client-target' = @('update-local-client-target'); 'update-client-target' = @('update-local-client-target'); 'remove-client-target' = @('remove-local-client-target'); 'deploy-route' = @('mutate-supported-dedicated-hosts','render-private-client-artifacts'); 'render-client' = @('write-private-client-artifacts'); 'publish-subscription' = @('publish-private-subscription-payload'); 'rotate-subscription-token' = @('rotate-target-subscription-token'); 'migrate-route' = @('create-and-validate-overlap'); backup = @('write-encrypted-local-recovery-archive'); recover = @('restore-local-canonical-state'); 'rotate-credential' = @('rotate-credential'); 'delete-server' = @('external-delete-or-terminate-server'); 'purchase-resource' = @('external-paid-purchase')
+        status = @('read-sanitized-local-state'); drift = @('read-sanitized-local-and-observed-state'); audit = @('read-remote-supported-state'); bootstrap = @('create-local-private-state'); 'add-server' = @('update-local-desired-state'); 'add-link' = @('allocate-local-link-and-keys'); 'add-route' = @('allocate-local-route-and-credentials'); 'add-provider' = @('store-provider-url-as-local-secret'); 'update-provider' = @('update-local-provider'); 'remove-provider' = @('remove-local-provider-and-secret'); 'add-profile' = @('update-local-profile'); 'update-profile' = @('update-local-profile'); 'remove-profile' = @('remove-local-profile'); 'add-client-target' = @('update-local-client-target'); 'update-client-target' = @('update-local-client-target'); 'remove-client-target' = @('remove-local-client-target'); 'deploy-route' = @('mutate-supported-dedicated-hosts','render-private-client-artifacts'); 'render-client' = @('write-private-client-artifacts'); 'publish-subscription' = @('publish-private-subscription-payload'); 'rotate-subscription-token' = @('rotate-target-subscription-token'); 'migrate-route' = @('create-and-validate-overlap'); backup = @('write-encrypted-local-recovery-archive'); recover = @('restore-local-canonical-state')
     }
     foreach ($capability in $catalog) {
         $id = [string]$capability.id
@@ -98,44 +90,6 @@ function Get-PPMDriverCapabilities {
     }
 }
 
-function New-PPMDefaultOperatorContext {
-    return [ordered]@{ schema = 1; mode = 'collaborative' }
-}
-
-function Assert-PPMOperatorContext {
-    param([Parameter(Mandatory)]$Context)
-    if ([int](Get-PPMOptional $Context 'schema' 0) -ne 1) { throw 'Operator context schema must be 1.' }
-    $mode = [string](Get-PPMOptional $Context 'mode')
-    if ($mode -notin @('collaborative','steward')) { throw "Unsupported operator mode '$mode'." }
-    return $true
-}
-
-function Read-PPMOperatorContext {
-    param([Parameter(Mandatory)][string]$PrivateDirectory, [switch]$AllowMissing)
-    $path = Join-Path $PrivateDirectory 'operator.json'
-    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-        if ($AllowMissing) { return New-PPMDefaultOperatorContext }
-        throw 'The local operator context was not found.'
-    }
-    $stored = Read-PPMJson -Path $path -Label 'The local operator context'
-    $null = Assert-PPMOperatorContext -Context $stored
-    return [ordered]@{ schema = 1; mode = [string]$stored.mode }
-}
-
-function Save-PPMOperatorContext {
-    param([Parameter(Mandatory)]$Context, [Parameter(Mandatory)][string]$PrivateDirectory)
-    $null = Assert-PPMOperatorContext -Context $Context
-    $normalized = [ordered]@{ schema = 1; mode = [string]$Context.mode }
-    Write-PPMJsonAtomic -Value $normalized -Path (Join-Path $PrivateDirectory 'operator.json')
-}
-
-function Set-PPMOperatorMode {
-    param([Parameter(Mandatory)][ValidateSet('collaborative','steward')][string]$Mode, [Parameter(Mandatory)][string]$PrivateDirectory)
-    $context = [ordered]@{ schema = 1; mode = $Mode }
-    Save-PPMOperatorContext -Context $context -PrivateDirectory $PrivateDirectory
-    return $context
-}
-
 function Read-PPMStateInventory {
     param([Parameter(Mandatory)][string]$Path, [switch]$SkipSecretCheck)
     return Read-PPMInventory -Path $Path -SkipSecretCheck:$SkipSecretCheck
@@ -146,21 +100,17 @@ function Initialize-PPMPrivateState {
     $privatePath = [IO.Path]::GetFullPath($PrivateDirectory)
     $inventoryPath = Join-Path $privatePath 'inventory.json'
     $secretIndexPath = Join-Path $privatePath 'secrets\index.json'
-    $operatorPath = Join-Path $privatePath 'operator.json'
     $observedPath = Join-Path $privatePath 'observed.json'
-    $knownPaths = @($inventoryPath, $secretIndexPath, $operatorPath, $observedPath)
+    $knownPaths = @($inventoryPath, $secretIndexPath, $observedPath)
     $existing = @($knownPaths | Where-Object { Test-Path -LiteralPath $_ })
 
     if ($existing.Count -gt 0) {
         if ((Test-Path -LiteralPath $inventoryPath -PathType Leaf) -and (Test-Path -LiteralPath $secretIndexPath -PathType Leaf)) {
-            $operatorExists = Test-Path -LiteralPath $operatorPath -PathType Leaf
             $inventory = Read-PPMStateInventory -Path $inventoryPath
-            $operator = Read-PPMOperatorContext -PrivateDirectory $privatePath -AllowMissing
-            if (-not $operatorExists) { Save-PPMOperatorContext -Context $operator -PrivateDirectory $privatePath }
             if (-not (Test-Path -LiteralPath $observedPath -PathType Leaf)) {
                 Write-PPMJsonAtomic -Value ([ordered]@{ schema = 1; generated_at = $null; servers = @(); links = @(); routes = @() }) -Path $observedPath
             }
-            return [pscustomobject]@{ created = $false; inventory_path = $inventoryPath; inventory = $inventory; operator = $operator }
+            return [pscustomobject]@{ created = $false; inventory_path = $inventoryPath; inventory = $inventory }
         }
         throw 'Private state is partially initialized. Refusing to overwrite or guess how to repair it.'
     }
@@ -169,25 +119,21 @@ function Initialize-PPMPrivateState {
     Protect-PPMPath -Path $privatePath -Directory
     Protect-PPMPath -Path (Join-Path $privatePath 'secrets') -Directory
     $inventory = New-PPMCleanInventory -PrivateDirectory $privatePath
-    $operator = New-PPMDefaultOperatorContext
     Write-PPMJsonAtomic -Value ([ordered]@{ schema = 1; refs = [ordered]@{} }) -Path $secretIndexPath
     Write-PPMJsonAtomic -Value $inventory -Path $inventoryPath
     Write-PPMJsonAtomic -Value ([ordered]@{ schema = 1; generated_at = $null; servers = @(); links = @(); routes = @() }) -Path $observedPath
-    Save-PPMOperatorContext -Context $operator -PrivateDirectory $privatePath
     $inventory = Read-PPMInventory -Path $inventoryPath
-    return [pscustomobject]@{ created = $true; inventory_path = $inventoryPath; inventory = $inventory; operator = $operator }
+    return [pscustomobject]@{ created = $true; inventory_path = $inventoryPath; inventory = $inventory }
 }
 
 function Get-PPMSanitizedContext {
-    param([Parameter(Mandatory)]$Inventory, [Parameter(Mandatory)]$OperatorContext)
-    $null = Assert-PPMOperatorContext -Context $OperatorContext
+    param([Parameter(Mandatory)]$Inventory)
     $enabledRoutes = @(@(Get-PPMOptional $Inventory 'routes' @()) | Where-Object { (Get-PPMOptional $_ 'enabled' $true) -ne $false })
     $enabledProviders = @(@(Get-PPMOptional $Inventory 'providers' @()) | Where-Object { (Get-PPMOptional $_ 'enabled' $true) -ne $false })
     $profiles = @(Get-PPMOptional $Inventory 'profiles' @())
     $targets = @(Get-PPMClientTargets -Inventory $Inventory)
     return [ordered]@{
         schema_version = 1
-        mode = [string]$OperatorContext.mode
         inventory_schema = [int]$Inventory.schema
         counts = [ordered]@{
             servers = @(Get-PPMOptional $Inventory 'servers' @()).Count
@@ -219,11 +165,11 @@ function Get-PPMTargetServer {
 
 function Test-PPMExplicitAuthorizationClass {
     param([Parameter(Mandatory)][string]$AuthorizationClass)
-    return $AuthorizationClass -in @('destructive','credential-change','paid-external')
+    return $AuthorizationClass -eq 'credential-change'
 }
 
 function New-PPMPreflightResult {
-    param([Parameter(Mandatory)]$Capability, [Parameter(Mandatory)][string]$Operation, [AllowNull()][string]$Target, [Parameter(Mandatory)]$OperatorContext, [Parameter(Mandatory)]$Missing, [Parameter(Mandatory)]$Conflicts, [Parameter(Mandatory)]$Decisions, [Parameter(Mandatory)]$Effects, [switch]$Approved)
+    param([Parameter(Mandatory)]$Capability, [Parameter(Mandatory)][string]$Operation, [AllowNull()][string]$Target, [Parameter(Mandatory)]$Missing, [Parameter(Mandatory)]$Conflicts, [Parameter(Mandatory)]$Decisions, [Parameter(Mandatory)]$Effects, [switch]$Approved)
     $authorizationRequired = Test-PPMExplicitAuthorizationClass -AuthorizationClass ([string]$Capability.authorization_class)
     $contextComplete = $Missing.Count -eq 0 -and $Conflicts.Count -eq 0
     $authorized = (-not $authorizationRequired) -or $Approved
@@ -231,7 +177,6 @@ function New-PPMPreflightResult {
         schema_version = 1
         operation = $Operation
         target = if ($Target) { $Target } else { $null }
-        mode = [string]$OperatorContext.mode
         state = [string]$Capability.state
         executor = [string]$Capability.executor
         mutation = [bool]$Capability.mutation
@@ -253,7 +198,6 @@ function New-PPMPreflight {
         [AllowNull()][string]$Target,
         [Parameter(Mandatory)]$Inventory,
         [Parameter(Mandatory)][string]$PrivateDirectory,
-        [Parameter(Mandatory)]$OperatorContext,
         $Context,
         [switch]$Approved
     )
@@ -265,7 +209,7 @@ function New-PPMPreflight {
 
     if ([int](Get-PPMOptional $Inventory 'schema' 0) -ne 1) {
         $conflicts.Add('state-schema-unsupported')
-        return New-PPMPreflightResult -Capability $capability -Operation $Operation -Target $Target -OperatorContext $OperatorContext -Missing $missing -Conflicts $conflicts -Decisions $decisions -Effects $effects -Approved:$Approved
+        return New-PPMPreflightResult -Capability $capability -Operation $Operation -Target $Target -Missing $missing -Conflicts $conflicts -Decisions $decisions -Effects $effects -Approved:$Approved
     }
     try { $null = Assert-PPMInventory -Inventory $Inventory -PrivateDirectory $PrivateDirectory }
     catch { $conflicts.Add('inventory-invalid') }
@@ -279,7 +223,6 @@ function New-PPMPreflight {
             $effects.Add('read-remote-supported-state')
         }
         'bootstrap' { $effects.Add('create-local-private-state') }
-        'set-mode' { $effects.Add('update-local-operator-context') }
         'add-server' {
             foreach ($field in 'server_id','public_ipv4','ssh_user','ssh_key_path','host_ownership') { if (-not $Context -or -not (Get-PPMOptional $Context $field)) { $missing.Add($field.Replace('_','-')) } }
             if ($Context -and (Get-PPMOptional $Context 'server_id') -and (Get-PPMTargetServer -Inventory $Inventory -Target ([string]$Context.server_id))) { $conflicts.Add('server-id-already-exists') }
@@ -436,23 +379,9 @@ function New-PPMPreflight {
         }
         'backup' { $effects.Add('write-encrypted-local-recovery-archive') }
         'recover' { $effects.Add('restore-local-canonical-state') }
-        'rotate-credential' { if (-not $Target) { $missing.Add('target') }; $decisions.Add('explicit-current-authorization'); $effects.Add('rotate-credential') }
-        'delete-server' {
-            $server = Get-PPMTargetServer -Inventory $Inventory -Target $Target
-            if (-not $server) { $missing.Add('target-server') }
-            else {
-                $dependencies = @($Inventory.routes | Where-Object { $_.entry_server -eq $server.id -or $_.exit_server -eq $server.id }).Count + @($Inventory.links | Where-Object { $_.entry_server -eq $server.id -or $_.exit_server -eq $server.id }).Count
-                if ($dependencies -gt 0) { $conflicts.Add('server-has-active-dependencies') }
-            }
-            $decisions.Add('explicit-current-authorization'); $effects.Add('external-delete-or-terminate-server')
-        }
-        'purchase-resource' {
-            foreach ($field in 'provider','offering','price') { if (-not $Context -or -not (Get-PPMOptional $Context $field)) { $missing.Add($field) } }
-            $decisions.Add('explicit-current-authorization'); $effects.Add('external-paid-purchase')
-        }
     }
 
-    return New-PPMPreflightResult -Capability $capability -Operation $Operation -Target $Target -OperatorContext $OperatorContext -Missing $missing -Conflicts $conflicts -Decisions $decisions -Effects $effects -Approved:$Approved
+    return New-PPMPreflightResult -Capability $capability -Operation $Operation -Target $Target -Missing $missing -Conflicts $conflicts -Decisions $decisions -Effects $effects -Approved:$Approved
 }
 
 function Add-PPMServer {

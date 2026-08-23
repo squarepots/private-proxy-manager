@@ -1,41 +1,41 @@
 # FAQ
 
-## Is PPM a VPN service?
+## What problem does PPM solve?
 
-No. PPM manages supported self-hosted infrastructure and renders client configuration. Mihomo/Clash-compatible clients or Shadowrocket carry traffic.
+PPM turns a set of SSH-accessible VPS hosts into a repeatable private proxy setup. It keeps the intended topology, credentials, client output, remote audit, drift, migration, and recovery workflow consistent so you do not have to maintain them as unrelated manual steps.
 
-## Can I use a shared server?
+## What do I need before I start?
 
-Not with the current contract. The supported baseline is a dedicated, rebuildable Ubuntu 24.04 amd64 host because setup changes host-wide UFW, swap/fstab, SSH, sysctl, journald, package, and unattended-upgrade state.
+You need a local computer with PowerShell 7 and a tool-capable AI agent, a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access, and either Mihomo/Clash Verge-compatible software or Shadowrocket. A relay route uses two VPS hosts.
 
-## Does PPM buy a VPS or delete one for me?
+## Why must the server be dedicated?
 
-No. Cloud purchasing and destructive server retirement are outside the current deterministic core and require explicit external decisions.
+Initial setup prepares the whole host. It changes UFW defaults, swap/fstab, SSH, sysctl, journald, packages, unattended-upgrades, SMTP egress, and vnstat state. A fresh dedicated host makes those effects explicit and keeps unrelated production workloads outside the change boundary.
 
-## Does PPM connect my bank or move money?
+## Can I start by giving the GitHub link to an AI agent?
 
-No. PPM is a proxy infrastructure tool. It does not provide a hosted control plane, billing, traffic analytics, or account management.
+Yes. Use the prompt in the [Quickstart](QUICKSTART.md). A capable agent can clone the repository, read its instructions, inspect machine-readable capabilities, run local validation, explain prerequisites, and then gather the minimum context for your route.
 
-## Will an AI model see my server details?
+## Will the AI model see my server details?
 
-Possibly. The chosen AI runtime may see tool arguments required for an operation, including an IP, SSH username, local key path, and selected IDs. PPM sanitizes returned artifacts, but local-first is not a promise that a cloud model sees zero metadata. Use an offline runtime for a fully local model boundary.
+It may. Operation arguments can include a server address, SSH username, local key path, and selected IDs. PPM sanitizes returned results, but a cloud runtime can still process the inputs it needs. Use non-identifying IDs and an offline runtime when those inputs must remain local.
 
-## Are private files encrypted?
+## How are private files protected?
 
-Not by default. Private state is local plaintext protected by your operating-system permissions, backup policy, and recovery handling. Encrypted recovery archives are available for portable backup.
+Inventory, credentials, generated client files, observed evidence, and recovery archives stay in the selected local private directory and are excluded from Git. They are plaintext unless your operating system, disk, or backup layer encrypts them. Portable recovery archives are encrypted through a local 7-Zip password prompt.
 
-## Does PPM promise anonymity?
+## What happens when a route changes unexpectedly?
 
-No. Network providers, VPS providers, optional Cloudflare delivery, and destination services retain the metadata visible to their roles.
+Read-only audit records bounded evidence and drift reports the category. PPM does not overwrite a drifted or undetermined deployed route until the discrepancy is understood and a supported operation passes preflight.
 
-## What happens if a route drifts?
+## How does server replacement avoid interruption?
 
-PPM reports typed evidence. It does not silently self-heal or overwrite an uncertain remote state. A repair must map to a supported operation, pass preflight, and match the user's authority.
+Migration is overlap-first: create and deploy replacement capacity, audit it, update client output, confirm it works, and keep the current route available throughout that proof. Retirement of old external capacity is a later, separate action.
 
-## Which operating systems and clients are supported?
+## Which hosts, topologies, and clients work?
 
-See [Compatibility](COMPATIBILITY.md). The initial baseline is Ubuntu 24.04 amd64, Hysteria2, single-hop WireGuard, Mihomo/Clash-compatible output, and Shadowrocket output. External documentation does not add support automatically.
+See [Compatibility](COMPATIBILITY.md). The machine-readable capability response is the runtime source of truth. Support is limited to the items explicitly listed there and implemented by the repository.
 
-## What does the subscription Worker do?
+## What does the optional subscription Worker do?
 
-It is an optional private configuration-delivery endpoint for one Shadowrocket ClientTarget. It is not a PPM database or proxy data plane. The current Worker secret payload has a 5120-byte UTF-8 limit; larger payloads fail locally before publication.
+It delivers one private Shadowrocket ClientTarget configuration from an isolated Cloudflare Worker endpoint. The bearer token is target-scoped and the UTF-8 subscription body is limited to 5120 bytes. Cloudflare remains inside that delivery path's privacy boundary.

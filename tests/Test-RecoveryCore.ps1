@@ -29,7 +29,7 @@ try {
     })
     [IO.File]::WriteAllText((Join-Path $source 'private\inventory.json'), ($inventory | ConvertTo-Json -Depth 30), [Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllText((Join-Path $source 'private\secrets\index.json'), (([ordered]@{ schema = 1; refs = [ordered]@{} }) | ConvertTo-Json -Depth 10), [Text.UTF8Encoding]::new($false))
-    [IO.File]::WriteAllText((Join-Path $source 'private\operator.json'), ((New-PPMDefaultOperatorContext) | ConvertTo-Json -Depth 10), [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText((Join-Path $source 'private\operator.json'), '{"schema":1,"mode":"steward"}', [Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllText((Join-Path $source 'private\observed.json'), '{"schema":1,"generated_at":"2026-01-01T00:00:00Z","servers":[],"links":[],"routes":[{"route":"stale"}]}', [Text.UTF8Encoding]::new($false))
     [IO.File]::WriteAllText((Join-Path $source 'ssh\entry-a\id_ed25519'), 'fixture-private-key', [Text.UTF8Encoding]::new($false))
     $metadata = [ordered]@{ schema = 1; product = 'private-proxy-manager'; inventory_schema = 1; recovery_model = 'agent-native-local-state' }
@@ -59,6 +59,7 @@ try {
     Assert-True ([IO.Path]::GetFullPath([string]$restored.delivery.directory) -eq [IO.Path]::GetFullPath((Join-Path $target 'delivery'))) 'Delivery directory was not rebound to restored private state.'
     $observed = Read-PPMJson -Path (Join-Path $target 'observed.json') -Label 'Restored observed state'
     Assert-True ($null -eq $observed.generated_at -and @($observed.routes).Count -eq 0) 'Stale observed evidence survived recovery.'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $target 'operator.json'))) 'Deprecated operator state from an older archive was restored instead of ignored.'
 
     Copy-Item -LiteralPath $source -Destination $tampered -Recurse
     [IO.File]::AppendAllText((Join-Path $tampered 'private\inventory.json'), "`n ", [Text.UTF8Encoding]::new($false))
@@ -68,7 +69,7 @@ try {
     Assert-True $failed 'Tampered recovery content was not rejected by manifest verification.'
     Assert-True (-not (Test-Path -LiteralPath $tamperedTarget)) 'Failed recovery left a partial destination.'
 
-    Write-Host 'Schema-1 recovery restore, path rebinding, permission hardening, observed reset, and tamper rejection tests passed.'
+    Write-Host 'Schema-1 recovery restore, deprecated operator-state tolerance, path rebinding, permission hardening, observed reset, and tamper rejection tests passed.'
 }
 finally {
     if (Test-Path -LiteralPath $root) { Remove-Item -LiteralPath $root -Recurse -Force }

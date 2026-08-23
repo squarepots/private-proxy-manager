@@ -1,42 +1,64 @@
 # 快速开始
 
-PPM 通过能够读取本地文件、调用本地工具的 agent 使用。下面的命令和 operation 名称主要用于检查与验证，不是要求普通用户学习的第二套产品界面。
+PPM 面向能够打开仓库、读取本地文件并运行 PowerShell 的 AI agent。你描述想要的路线，agent 读取仓库中的能力与安全契约，再调用 PPM 的确定性操作。
 
-## 使用前提
+## 1. 把仓库交给 agent
 
-- 一台可重建的专用 Ubuntu 24.04 amd64 VPS；
-- 有效的 SSH 用户名和 key；
-- 本地 PowerShell 7，用于 PPM machine surface；
-- 需要生成客户端文件时，准备受支持的 Mihomo/Clash 兼容客户端或 Shadowrocket；
-- 使用可选订阅 Worker 时才需要 Node.js 和 Wrangler；
-- 创建或恢复加密 recovery archive 时才需要 7-Zip。
+把下面的提示词粘贴到 Codex 或其他 tool-capable agent：
 
-连接服务器前先读 [README 的主机影响说明](../README.zh-CN.md#开始前必须知道它会修改主机)。不要使用共享生产主机。
+> 打开 https://github.com/squarepots/private-proxy-manager，帮我建立第一条私人代理路线；需要时先 clone。阅读 AGENTS.md 和 .agents/skills/private-proxy-manager/SKILL.md。在接触任何真实基础设施前，先运行 capability discovery 和快速本地验证。向我解释使用前提和主机级影响，只收集操作必需的事实，把全部私有状态留在被忽略的 private 目录，并且只有 preflight ready 后才执行 mutation。
 
-## 先让 agent 检查
+agent 应运行：
 
-把这句话交给本地 tool-capable agent：
-
-> 检查 PPM capabilities 和当前私有状态。我想在专用 Ubuntu 24.04 amd64 主机上建立 direct route 或 single-hop relay。执行任何 mutation 前，先告诉我缺少的上下文、主机级影响和授权要求。
-
-agent 应使用 `agent/ppm-agent.ps1`，只在私有状态不存在时 bootstrap，并且只有 scoped preflight 返回 `ready=true` 才能执行 mutation。
-
-## 正常流程
-
-```text
-capabilities → bootstrap（需要时）→ context/drift
-→ 收集服务器/客户端事实 → 创建 desired objects
-→ preflight → execute → audit/render → 解释结果
+```powershell
+pwsh -NoProfile -File .\agent\ppm-agent.ps1 capabilities
+pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
 ```
 
-建议使用 `entry-a`、`route-a`、`mobile-a` 这类稳定且不识别个人信息的 ID。不要把城市、雇主、客户、家庭网络等私有上下文写入 ID。
+这两个命令检查仓库并验证本地 machine surface，不会部署服务器。
 
-## 成功结果
+## 2. 准备必要信息
 
-结果应说明服务器契约、Route、ClientTarget、审计状态和 `<private>/delivery/mobile.html` 这样的私有根相对 artifact 名称。不得返回 Windows drive 路径、SSH key 内容、订阅 token、Provider URL 或原始远程诊断。
+第一条路线需要：
 
-## 出现问题时
+- 一台专用、可重建的 Ubuntu 24.04 amd64 VPS；
+- 服务器公网地址；
+- 有效的 Unix SSH 用户名和本地私钥路径；
+- 想配置的客户端：Mihomo/Clash Verge 兼容软件或 Shadowrocket；
+- direct 或 single-hop relay topology。
 
-停在 typed drift 或 preflight 结果，不要把 drift 当作自动修复许可。让 agent 解释具体类别并提出最小支持操作。迁移时保留旧路线，直到新路线的访问和渲染都验证成功。
+建议使用 `entry-a`、`route-a`、`desktop-a` 这类不识别个人信息的 ID。不要把城市、雇主、客户或家庭网络名称写进 ID。
 
-恢复时将内容恢复到新的干净私有目录，使用仓库 recovery workflow，并把 archive 与密码视为同一个敏感组合。详见 [Operations](../OPERATIONS.md)、[Security](../SECURITY.md) 和 [中文 FAQ](FAQ.zh-CN.md)。
+在接收服务器信息前，agent 应先解释 [README](../README.zh-CN.md#对主机的影响) 中的整机影响。
+
+## 3. 让 PPM 建立计划
+
+正常 machine workflow 是：
+
+```text
+capabilities → 状态不存在时 bootstrap → context 和 drift
+→ 收集必要事实 → 创建 desired objects
+→ preflight → execute → audit 和 render
+```
+
+bootstrap 创建中性的 schema-1 状态，不选择地区、Provider、策略、Profile、客户端、订阅或 AI 厂商。
+
+preflight 返回准确的 missing context、conflicts、expected effects 和 authorization class。只有 `ready=true` 时 agent 才继续。
+
+## 4. 检查结果
+
+成功结果应说明：
+
+- 创建了哪个 Server 和 Route；
+- 使用了哪种受支持的主机与 topology 契约；
+- remote audit 状态；
+- ClientTarget 和私有根相对 artifact，例如 `<private>/delivery/desktop-a.yaml`；
+- 是否还有 drift 或需要用户决定的事项。
+
+结果不得包含绝对用户目录、key 内容、Provider URL、subscription token、完整 live node URI 或原始 SSH 输出。
+
+## 5. 安全地继续
+
+修改已有路线前，让 agent 先做只读 audit 和 drift。替换服务器时，PPM 会在旧路线仍可用时创建并验证新容量。备份与恢复使用仓库自己的 7-Zip prompt，不要把 archive password 放进聊天或命令参数。
+
+机器语义见 [Operations](../OPERATIONS.md)，已实现支持见 [Compatibility](COMPATIBILITY.md)，授权与 secret 处理见 [Security](../SECURITY.md)，通俗问答见 [中文 FAQ](FAQ.zh-CN.md)。

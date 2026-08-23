@@ -1,41 +1,41 @@
 # 常见问题
 
-## PPM 是 VPN 服务吗？
+## PPM 解决什么问题？
 
-不是。PPM 管理受支持的自建基础设施并生成客户端配置；Mihomo/Clash 兼容客户端或 Shadowrocket 承载流量。
+PPM 把一组可通过 SSH 访问的 VPS 变成可重复维护的私人代理配置。它统一管理 topology、凭据、客户端输出、远程审计、drift、迁移和恢复，避免这些步骤变成彼此脱节的手工配置。
 
-## 可以用共享服务器吗？
+## 开始前需要什么？
 
-当前不支持。支持基线是专用、可重建的 Ubuntu 24.04 amd64 主机，因为安装会改变整机的 UFW、swap/fstab、SSH、sysctl、journald、软件包和 unattended-upgrades 状态。
+你需要一台安装 PowerShell 7、可供 tool-capable AI agent 操作的本地电脑，一台具备 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS，以及 Mihomo/Clash Verge 兼容软件或 Shadowrocket。relay route 需要两台 VPS。
 
-## PPM 会购买或删除 VPS 吗？
+## 为什么必须使用专用主机？
 
-不会。云资源购买和破坏性服务器退役不属于当前确定性核心，需要单独的外部决策和明确授权。
+首次安装会准备整台主机，改变 UFW defaults、swap/fstab、SSH、sysctl、journald、软件包、unattended-upgrades、SMTP egress 和 vnstat 状态。使用全新的专用主机可以明确这些影响，并把无关生产工作负载留在修改范围之外。
 
-## PPM 会连接银行或移动资金吗？
+## 可以只把 GitHub 链接交给 AI agent 吗？
 
-不会。PPM 是代理基础设施工具，不提供 hosted control plane、计费、流量分析或账户管理。
+可以。使用 [中文快速开始](QUICKSTART.zh-CN.md) 中的提示词。能够调用本地工具的 agent 可以 clone 仓库、阅读说明、检查机器可读 capabilities、运行本地验证、解释使用前提，然后只收集路线需要的最少信息。
 
-## AI 模型会看到我的服务器信息吗？
+## AI 模型会看到服务器信息吗？
 
-可能会。执行操作需要的工具参数可能包含 IP、SSH 用户名、本地 key 路径和选定 ID。PPM 会脱敏返回的 artifact，但 local-first 不等于云模型完全看不到元数据。需要完全本地的模型边界时，请使用离线 runtime。
+可能会。操作参数可能包含服务器地址、SSH 用户名、本地 key path 和选定 ID。PPM 会脱敏返回结果，但云端 runtime 仍会处理完成操作所需的输入。建议使用不识别个人信息的 ID；输入必须留在本机时，请使用离线 runtime。
 
-## 私有文件默认加密吗？
+## 私有文件如何保护？
 
-不是。私有状态默认是本地明文，依靠操作系统权限、备份策略和 recovery 流程保护。PPM 支持创建加密 recovery archive。
+inventory、凭据、生成的客户端文件、observed evidence 和 recovery archive 都留在选定的本地 private 目录，并被 Git 排除。除非操作系统、磁盘或备份层提供加密，否则它们是明文。便携式 recovery archive 通过本地 7-Zip password prompt 加密。
 
-## PPM 保证匿名吗？
+## 路线发生意外变化怎么办？
 
-不保证。ISP、VPS、可选的 Cloudflare 交付层和目标服务都会看到其职责范围内的网络元数据。
+只读 audit 会记录有限证据，drift 会报告类别。对于 drifted 或 undetermined 的已部署路线，PPM 会先阻止覆盖，直到差异得到解释且受支持的操作通过 preflight。
 
-## 路线发生 drift 怎么办？
+## 替换服务器如何避免中断？
 
-PPM 会返回类型化证据，不会静默自愈或覆盖不确定的远程状态。修复必须对应支持的 operation、通过 preflight，并符合用户授权。
+迁移采用 overlap-first：创建并部署替代容量、完成审计、更新客户端输出并确认可用；在整个验证期间保留现有路线。旧的外部容量之后再单独处理。
 
-## 支持哪些系统和客户端？
+## 支持哪些主机、topology 和客户端？
 
-见 [Compatibility](COMPATIBILITY.md)。当前基线是 Ubuntu 24.04 amd64、Hysteria2、单跳 WireGuard、Mihomo/Clash 兼容输出和 Shadowrocket 输出。外部文档不会自动增加 PPM 支持。
+见 [Compatibility](COMPATIBILITY.md)。运行时以机器可读 capability response 为准；只有文档明确列出且仓库实现的项目属于支持范围。
 
-## 订阅 Worker 做什么？
+## 可选 subscription Worker 做什么？
 
-它是可选的、面向一个 Shadowrocket ClientTarget 的私有配置交付端点，不是 PPM 数据库或代理数据面。当前 Worker secret payload 的 UTF-8 上限是 5120 bytes，超出会在发布前本地失败。
+它通过隔离的 Cloudflare Worker endpoint 交付一个私人 Shadowrocket ClientTarget 配置。bearer token 按 target 隔离，UTF-8 subscription body 上限为 5120 bytes；Cloudflare 属于这条交付路径的隐私边界。
