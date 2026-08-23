@@ -1,4 +1,4 @@
 interface:
   display_name: "Route Steward"
-  short_description: "Let an AI operate your self-hosted network paths"
-  default_prompt: "Use $route-steward to learn this repository, gather the context needed for my goal, and operate the project safely. Ask me only for decisions or access you cannot safely infer."
+  short_description: "Use AI to manage networking on your own servers"
+  default_prompt: "Use $route-steward to deploy, check, migrate, and recover networking on servers I manage. Read the repository contract, inspect capabilities, run quick validation, explain host-wide effects, keep sensitive state private, and ask me only for decisions or access you cannot safely infer."

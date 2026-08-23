@@ -65,8 +65,10 @@ Require-Text '.github/workflows/release.yml' 'git tag -a "\$tag" -m "\$tag" "\$E
 Reject-Text '.github/workflows/release.yml' 'git pull' 'Release workflow must not replace the event source with moving branch state.'
 
 # Product identity and positioning are canonical across the public tree.
-Require-Text 'README.md' 'local-first lifecycle manager for self-hosted network paths' 'The canonical product definition is missing.'
-Require-Text 'README.zh-CN.md' '自托管网络路径生命周期管理工具' 'The canonical Chinese product definition is missing.'
+Require-Text 'README.md' 'Use AI to manage networking on your own servers\.' 'The canonical English product statement is missing.'
+Require-Text 'README.md' 'Route Steward helps you deploy, check, migrate, and recover network connections on servers you manage\.' 'The canonical English product definition is missing.'
+Require-Text 'README.zh-CN.md' '用 AI 管理自己的服务器网络。' 'The canonical Chinese product statement is missing.'
+Require-Text 'README.zh-CN.md' 'Route Steward 帮你部署、检查、迁移和恢复所管理服务器上的网络连接。' 'The canonical Chinese product definition is missing.'
 Require-Text 'docs/OPERATING-BOUNDARY.md' 'owned by the operator or administered with the resource owner''s authorization' 'The authorized-infrastructure operating boundary is missing.'
 Require-Text 'agent/route-steward-agent.ps1' "product = 'route-steward'" 'The machine surface product identity is incorrect.'
 

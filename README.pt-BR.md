@@ -6,20 +6,18 @@
 
 [![Validation](https://github.com/squarepots/route-steward/actions/workflows/ci.yml/badge.svg)](https://github.com/squarepots/route-steward/actions/workflows/ci.yml)
 
-**Diga à sua IA como o caminho de rede deve operar. O Route Steward mantém tudo funcionando.**
+**Use IA para gerenciar a rede dos seus próprios servidores.**
 
-Route Steward é um gerenciador local-first do ciclo de vida de caminhos de rede auto-hospedados. Um agente de IA com acesso a ferramentas transforma a conectividade desejada sobre infraestrutura controlada pelo operador em estado validado, implantação, configuração de clientes, auditoria, detecção de drift, migração e recuperação.
-
-Route Steward parte da conectividade à Internet entre os endpoints escolhidos. A Internet fornece o transporte; você fornece os servidores, as contas e a autorização de uso dos recursos de rede; o Route Steward fornece uma camada operacional repetível.
+O Route Steward ajuda você a implantar, verificar, migrar e recuperar conexões de rede nos servidores que administra. Você fornece os servidores, as contas e a autorização; o Route Steward oferece a um agente de IA com ferramentas uma forma repetível e validada de operá-los a partir do seu computador local.
 
 ![Diagrama sintético do Route Steward que separa o plano de controle operado por IA dos caminhos de tráfego direct e relay por Entry-A e pelo Relay-A opcional.](docs/assets/network-path-lifecycle.svg)
 
 ## Comece com um agente de IA
 
-Entregue a URL ao Codex ou a outro agente capaz de ler arquivos locais e executar PowerShell:
+Cole este prompt no Codex ou em outro agente capaz de ler arquivos e executar PowerShell:
 
 ```text
-Abra https://github.com/squarepots/route-steward e opere o Route Steward para mim. Faça o clone se necessário, leia AGENTS.md e o repository Skill, inspecione capabilities e execute a validação local rápida. Antes de pedir dados de infraestrutura, explique os requisitos do host dedicado, os efeitos em todo o host e o operating boundary. Mantenha o estado sensível em private, execute preflight antes das mudanças e retorne resultados sanitizados.
+Abra https://github.com/squarepots/route-steward e me ajude a gerenciar a rede dos meus próprios servidores com IA. Faça o clone se necessário, leia AGENTS.md e o repository Skill, inspecione capabilities e execute a validação local rápida. Antes de pedir dados de infraestrutura, explique os requisitos do host dedicado, os efeitos em todo o host e o operating boundary. Mantenha o estado sensível em private, execute preflight antes das mudanças e retorne resultados sanitizados.
 ```
 
 ```powershell
@@ -27,26 +25,25 @@ pwsh -NoProfile -File .\agent\route-steward-agent.ps1 capabilities
 pwsh -NoProfile -File .\scripts\Validate-Local.ps1 -Quick
 ```
 
-## Recursos necessários
+## O que você precisa
 
 - um computador local com PowerShell 7 e um agente de IA com ferramentas;
 - um ou dois servidores Ubuntu 24.04 amd64 dedicados e reconstruíveis;
-- acesso SSH autorizado;
+- acesso SSH autorizado com usuário Unix e caminho da chave privada;
 - software compatível com Mihomo/Clash Verge ou Shadowrocket.
 
-## Ciclo de vida gerenciado
+O Route Steward prepara todo o servidor, portanto cada host gerenciado deve ser dedicado a esta configuração de rede.
 
-- caminhos Hysteria2 diretos e caminhos relay WireGuard de um salto;
-- desired state de Server, Link, Route, Provider, Profile e ClientTarget;
-- arquivos compatíveis com Mihomo/Clash e imports do Shadowrocket;
-- entrega opcional e isolada de configuração por ClientTarget;
-- auditoria remota, typed drift e migração overlap-first;
-- arquivos de recuperação criptografados.
+## O que o Route Steward faz
 
-## Condições de operação
+Ele cria e valida configurações de servidor e cliente, verifica o estado ativo, ajuda a substituir a infraestrutura sem descartar primeiro a conexão existente e gera arquivos de recuperação criptografados.
 
-Route Steward foi criado para servidores, contas e recursos de rede que o operador possui ou está autorizado a administrar. Cada implantação segue a legislação aplicável, os requisitos da operadora, os termos do provedor de nuvem e as políticas da organização. Consulte [Operating boundary](docs/OPERATING-BOUNDARY.md).
+[Compatibility](docs/COMPATIBILITY.md) lista os hosts, protocolos, clientes, topologias e a entrega opcional pelo Cloudflare que são suportados atualmente.
 
-A capacidade implementada está documentada em [Compatibility](docs/COMPATIBILITY.md) e em capability discovery. Os limites de privacidade e autoridade estão em [Privacy](docs/PRIVACY.md), [Security](SECURITY.md) e [Threat model](docs/THREAT-MODEL.md).
+## Efeitos no host e privacidade
 
-Route Steward é distribuído sob [AGPL-3.0-only](LICENSE).
+A instalação altera configurações globais de firewall, swap, SSH, sistema, logs, atualizações e monitoramento. O estado sensível e os arquivos gerados ficam no diretório private local escolhido; cada mudança exige um preflight pronto. Leia [Operations](OPERATIONS.md), [Privacy](docs/PRIVACY.md) e [Security](SECURITY.md).
+
+Use somente servidores, contas e recursos de rede próprios ou que você tenha autorização para administrar. Consulte [Operating boundary](docs/OPERATING-BOUNDARY.md).
+
+O Route Steward é distribuído sob [AGPL-3.0-only](LICENSE). A atribuição MIT do gerador de QR incluído permanece em [client/vendor/NOTICE.md](client/vendor/NOTICE.md).
