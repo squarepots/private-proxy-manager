@@ -12,11 +12,15 @@ Route Steward es un gestor local-first del ciclo de vida de rutas de red autoalo
 
 Route Steward parte de la conectividad a Internet entre los extremos seleccionados. Internet aporta el transporte; tú aportas los servidores, las cuentas y la autorización sobre los recursos de red; Route Steward aporta una capa operativa repetible.
 
+![Diagrama sintético de Route Steward que separa el plano de control operado por IA de las rutas de tráfico directas y relay mediante Entry-A y el Relay-A opcional.](docs/assets/network-path-lifecycle.svg)
+
 ## Empieza con un agente de IA
 
 Entrega la URL a Codex u otro agente capaz de leer archivos locales y ejecutar PowerShell:
 
-> Open <https://github.com/squarepots/route-steward> and operate Route Steward for me. Read AGENTS.md and the repository Skill, inspect capabilities, run quick local validation, explain the requirements for my first self-hosted network path, keep sensitive state in the private directory, run preflight before changes, and return sanitized results.
+```text
+Abre https://github.com/squarepots/route-steward y opera Route Steward por mí. Clónalo si hace falta, lee AGENTS.md y el repository Skill, inspecciona capabilities y ejecuta la validación local rápida. Antes de pedirme datos de infraestructura, explica los requisitos del host dedicado, los efectos sobre todo el host y el operating boundary. Mantén el estado sensible en private, ejecuta preflight antes de los cambios y devuelve resultados sanitizados.
+```
 
 ```powershell
 pwsh -NoProfile -File .\agent\route-steward-agent.ps1 capabilities

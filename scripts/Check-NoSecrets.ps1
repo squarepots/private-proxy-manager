@@ -44,6 +44,7 @@ foreach ($relative in $files) {
     }
     $path = Join-Path $repo $relative
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+    if ([IO.Path]::GetExtension($path) -ieq '.png') { continue }
     $text = [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8)
     foreach ($rule in @(
         @{ Name = 'private key material'; Pattern = '-----BEGIN (?:OPENSSH |RSA |EC )?PRIVATE KEY-----' },

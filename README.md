@@ -12,11 +12,15 @@ Route Steward is a local-first lifecycle manager for self-hosted network paths. 
 
 Route Steward assumes Internet reachability between the endpoints you select. The Internet provides transport; you provide the servers, accounts, and authority to use the network resources; Route Steward provides the repeatable operating layer.
 
+![Synthetic Route Steward diagram separating the AI-operated control plane from direct and optional WireGuard relay traffic paths through Entry-A and Relay-A.](docs/assets/network-path-lifecycle.svg)
+
 ## Start with an AI agent
 
 Give this repository URL to Codex or another agent that can read local files and run PowerShell, then use this prompt:
 
-> Open <https://github.com/squarepots/route-steward> and operate Route Steward for me. Clone it when needed, read AGENTS.md and the repository Skill, inspect the capability surface, and run quick local validation. Explain the requirements and host-wide effects for my first self-hosted network path, gather the required context, keep credentials and generated client files in the private directory, run preflight before each change, and return sanitized results.
+```text
+Open https://github.com/squarepots/route-steward and operate Route Steward for me. Clone it if needed, read AGENTS.md and the repository Skill, inspect capabilities, and run quick local validation. Explain the dedicated-host requirements, host-wide effects, and operating boundary before asking for infrastructure details. Keep sensitive state private, run preflight before changes, and return sanitized results.
+```
 
 The agent begins with:
 

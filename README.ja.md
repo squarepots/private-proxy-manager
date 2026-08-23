@@ -12,11 +12,17 @@ Route Steward は、セルフホスト型ネットワークパスのライフサ
 
 選択したエンドポイント間の Internet 到達性を前提とします。Internet が転送を担い、利用者がサーバー、アカウント、ネットワークリソースの利用権限を用意し、Route Steward が再現可能な運用レイヤーを提供します。
 
+![AI が操作するコントロールプレーンと、Entry-A および任意の Relay-A を通る direct/relay トラフィックパスを分けて示した synthetic Route Steward 図。](docs/assets/network-path-lifecycle.svg)
+
 ## AI agent から始める
 
 リポジトリ URL を Codex などのローカルファイルと PowerShell を扱える agent に渡し、次のように依頼します。
 
-> Open <https://github.com/squarepots/route-steward> and operate Route Steward for me. Read AGENTS.md and the repository Skill, inspect capabilities, run quick local validation, explain the requirements for my first self-hosted network path, keep sensitive state in the private directory, run preflight before changes, and return sanitized results.
+```text
+次のリポジトリを開き、Route Steward を操作してください：
+https://github.com/squarepots/route-steward
+必要なら clone し、AGENTS.md と repository Skill を読み、capabilities を確認して quick local validation を実行してください。インフラ情報を尋ねる前に、専用ホストの要件、ホスト全体への影響、運用境界を説明してください。機密状態は private ディレクトリに保持し、変更前に preflight を実行し、機密情報を除いた結果だけを返してください。
+```
 
 ```powershell
 pwsh -NoProfile -File .\agent\route-steward-agent.ps1 capabilities

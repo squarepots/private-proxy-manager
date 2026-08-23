@@ -12,11 +12,17 @@ Route Steward 是一个 local-first 的自托管网络路径生命周期管理�
 
 Route Steward 以你所选端点之间具备互联网可达性为运行前提。互联网承载数据传输；你提供服务器、账户及网络资源的使用授权；Route Steward 提供可重复、可验证的运维层。
 
+![Synthetic Route Steward 示意图：区分由 AI 操作的控制平面，以及经过 Entry-A、可选 Relay-A 和 WireGuard relay 的 direct/relay 流量路径。](docs/assets/network-path-lifecycle.svg)
+
 ## 从 AI agent 开始
 
 把仓库链接交给 Codex 或其他能够读取本地文件、运行 PowerShell 的 agent，然后使用下面的提示词：
 
-> 打开 <https://github.com/squarepots/route-steward> 并替我操作 Route Steward。需要时先 clone，阅读 AGENTS.md 和 repository Skill，检查 capability surface，并运行快速本地验证。先解释第一条自托管网络路径所需条件和主机级影响，再收集必需上下文；凭据与生成的客户端文件保存在 private 目录；每次修改前运行 preflight；向我返回脱敏结果。
+```text
+打开下面的仓库并替我操作 Route Steward：
+https://github.com/squarepots/route-steward
+需要时先 clone；阅读 AGENTS.md 和 repository Skill，检查 capabilities，并运行快速本地验证。向我索取基础设施信息前，先解释专用主机要求、主机级影响和运行边界。敏感状态保存在 private 目录；修改前运行 preflight；只返回脱敏结果。
+```
 
 agent 从以下检查开始：
 

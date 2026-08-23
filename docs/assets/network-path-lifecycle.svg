@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
+  <title id="title">Route Steward network path lifecycle</title>
+  <desc id="desc">A synthetic diagram separates the control plane from direct and relay traffic paths. An AI agent operates Route Steward through capabilities and preflight. Route Steward manages a client target, an Entry-A server, and an optional Relay-A server, then audits drift and supports migration and recovery.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07171a"/>
+      <stop offset="0.55" stop-color="#0d1b24"/>
+      <stop offset="1" stop-color="#0d1117"/>
+    </linearGradient>
+    <linearGradient id="steward" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f766e"/>
+      <stop offset="1" stop-color="#115e59"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#56d4c5"/>
+    </marker>
+    <marker id="mutedArrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8b949e"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="675" rx="28" fill="url(#background)"/>
+  <g font-family="Inter, Segoe UI, Arial, sans-serif">
+    <text x="64" y="66" fill="#f0f6fc" font-size="30" font-weight="700">One desired path. Full lifecycle.</text>
+    <text x="64" y="98" fill="#8b949e" font-size="17">Synthetic topology · operator-controlled infrastructure</text>
+    <g transform="translate(965 50)">
+      <rect width="171" height="34" rx="17" fill="#0f766e" fill-opacity="0.22" stroke="#2dd4bf" stroke-opacity="0.52"/>
+      <text x="85.5" y="23" text-anchor="middle" fill="#5eead4" font-size="14" font-weight="650">SYNTHETIC TOPOLOGY</text>
+    </g>
+
+    <rect x="62" y="126" width="1076" height="137" rx="18" fill="#0d1117" stroke="#30363d"/>
+    <text x="86" y="157" fill="#7d8590" font-size="13" font-weight="700" letter-spacing="1.5">CONTROL PLANE</text>
+
+    <g transform="translate(93 177)">
+      <rect width="190" height="58" rx="13" fill="#10233f" stroke="#2f81f7"/>
+      <text x="95" y="26" text-anchor="middle" fill="#79c0ff" font-size="16" font-weight="700">AI agent</text>
+      <text x="95" y="46" text-anchor="middle" fill="#9fb8d6" font-size="12">intent + tools</text>
+    </g>
+    <line x1="295" y1="206" x2="354" y2="206" stroke="#56d4c5" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="325" y="193" text-anchor="middle" fill="#8b949e" font-size="11">capabilities</text>
+
+    <g transform="translate(369 169)">
+      <rect width="245" height="74" rx="15" fill="url(#steward)" stroke="#5eead4" stroke-width="1.5"/>
+      <text x="122.5" y="31" text-anchor="middle" fill="#ecfeff" font-size="20" font-weight="750">Route Steward</text>
+      <text x="122.5" y="55" text-anchor="middle" fill="#b9f7ee" font-size="12">local desired + observed state</text>
+    </g>
+    <line x1="626" y1="206" x2="684" y2="206" stroke="#56d4c5" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="655" y="193" text-anchor="middle" fill="#8b949e" font-size="11">scoped</text>
+
+    <g transform="translate(699 169)">
+      <rect width="394" height="74" rx="15" fill="#161b22" stroke="#3d444d"/>
+      <g font-size="13" font-weight="650" text-anchor="middle">
+        <rect x="18" y="18" width="78" height="36" rx="18" fill="#1f6feb" fill-opacity="0.20" stroke="#388bfd"/>
+        <text x="57" y="41" fill="#79c0ff">preflight</text>
+        <rect x="105" y="18" width="72" height="36" rx="18" fill="#238636" fill-opacity="0.18" stroke="#2ea043"/>
+        <text x="141" y="41" fill="#56d364">deploy</text>
+        <rect x="186" y="18" width="64" height="36" rx="18" fill="#8957e5" fill-opacity="0.18" stroke="#a371f7"/>
+        <text x="218" y="41" fill="#d2a8ff">audit</text>
+        <rect x="259" y="18" width="117" height="36" rx="18" fill="#9e6a03" fill-opacity="0.20" stroke="#d29922"/>
+        <text x="317.5" y="41" fill="#e3b341">migrate · recover</text>
+      </g>
+    </g>
+
+    <rect x="62" y="285" width="1076" height="303" rx="18" fill="#0d1117" stroke="#30363d"/>
+    <text x="86" y="319" fill="#7d8590" font-size="13" font-weight="700" letter-spacing="1.5">TRAFFIC PATHS</text>
+
+    <text x="100" y="384" fill="#56d4c5" font-size="14" font-weight="750">DIRECT</text>
+    <g transform="translate(181 346)">
+      <rect width="170" height="66" rx="14" fill="#161b22" stroke="#3d444d"/>
+      <text x="85" y="29" text-anchor="middle" fill="#f0f6fc" font-size="16" font-weight="700">desktop-a</text>
+      <text x="85" y="50" text-anchor="middle" fill="#8b949e" font-size="12">ClientTarget</text>
+    </g>
+    <line x1="365" y1="379" x2="468" y2="379" stroke="#56d4c5" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="416" y="364" text-anchor="middle" fill="#5eead4" font-size="12">Hysteria2</text>
+    <g transform="translate(483 346)">
+      <rect width="170" height="66" rx="14" fill="#0f2c31" stroke="#2dd4bf"/>
+      <text x="85" y="29" text-anchor="middle" fill="#ecfeff" font-size="16" font-weight="700">Entry-A</text>
+      <text x="85" y="50" text-anchor="middle" fill="#94d9d1" font-size="12">dedicated server</text>
+    </g>
+    <line x1="667" y1="379" x2="822" y2="379" stroke="#8b949e" stroke-width="3" marker-end="url(#mutedArrow)"/>
+    <text x="744" y="364" text-anchor="middle" fill="#8b949e" font-size="12">direct egress</text>
+    <g transform="translate(837 346)">
+      <rect width="170" height="66" rx="14" fill="#161b22" stroke="#3d444d"/>
+      <text x="85" y="40" text-anchor="middle" fill="#c9d1d9" font-size="16" font-weight="700">Internet</text>
+    </g>
+
+    <line x1="86" y1="438" x2="1114" y2="438" stroke="#21262d"/>
+
+    <text x="100" y="514" fill="#a371f7" font-size="14" font-weight="750">RELAY</text>
+    <g transform="translate(181 476)">
+      <rect width="150" height="66" rx="14" fill="#161b22" stroke="#3d444d"/>
+      <text x="75" y="29" text-anchor="middle" fill="#f0f6fc" font-size="16" font-weight="700">desktop-a</text>
+      <text x="75" y="50" text-anchor="middle" fill="#8b949e" font-size="12">ClientTarget</text>
+    </g>
+    <line x1="344" y1="509" x2="418" y2="509" stroke="#56d4c5" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="381" y="494" text-anchor="middle" fill="#5eead4" font-size="12">Hysteria2</text>
+    <g transform="translate(433 476)">
+      <rect width="150" height="66" rx="14" fill="#0f2c31" stroke="#2dd4bf"/>
+      <text x="75" y="29" text-anchor="middle" fill="#ecfeff" font-size="16" font-weight="700">Entry-A</text>
+      <text x="75" y="50" text-anchor="middle" fill="#94d9d1" font-size="12">dedicated</text>
+    </g>
+    <line x1="596" y1="509" x2="670" y2="509" stroke="#a371f7" stroke-width="3" marker-end="url(#mutedArrow)"/>
+    <text x="633" y="494" text-anchor="middle" fill="#d2a8ff" font-size="12">WireGuard</text>
+    <g transform="translate(685 476)">
+      <rect width="150" height="66" rx="14" fill="#221a33" stroke="#8957e5"/>
+      <text x="75" y="29" text-anchor="middle" fill="#f3e8ff" font-size="16" font-weight="700">Relay-A</text>
+      <text x="75" y="50" text-anchor="middle" fill="#c9b6e4" font-size="12">dedicated</text>
+    </g>
+    <line x1="848" y1="509" x2="922" y2="509" stroke="#8b949e" stroke-width="3" marker-end="url(#mutedArrow)"/>
+    <g transform="translate(937 476)">
+      <rect width="150" height="66" rx="14" fill="#161b22" stroke="#3d444d"/>
+      <text x="75" y="40" text-anchor="middle" fill="#c9d1d9" font-size="16" font-weight="700">Internet</text>
+    </g>
+
+    <g transform="translate(62 611)" fill="#8b949e" font-size="14">
+      <text x="0" y="0">desired state</text>
+      <circle cx="116" cy="-5" r="3" fill="#2dd4bf"/>
+      <text x="133" y="0">typed drift</text>
+      <circle cx="223" cy="-5" r="3" fill="#2dd4bf"/>
+      <text x="240" y="0">overlap-first migration</text>
+      <circle cx="412" cy="-5" r="3" fill="#2dd4bf"/>
+      <text x="429" y="0">encrypted recovery</text>
+      <text x="1076" y="0" text-anchor="end" fill="#5eead4" font-weight="650">private state stays local</text>
+    </g>
+  </g>
+</svg>
