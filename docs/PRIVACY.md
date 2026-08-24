@@ -8,7 +8,7 @@ The deterministic engine reads and writes the selected private directory. Invent
 
 ## What the AI runtime may receive
 
-The runtime that operates RST may send prompts and tool arguments to its model provider. Depending on the operation, that can include server addresses, SSH usernames, local key paths, and stable Route/Profile/ClientTarget IDs. Returned machine results avoid internal absolute paths and raw diagnostics, but the operation still needs enough context to act.
+The runtime that operates RST may send prompts and tool arguments to its model provider. Depending on the operation, that can include server addresses, SSH usernames, local key paths, and stable Route/Profile/ClientTarget IDs. Migration checkpoints retain the supplied replacement Server context inside the selected private directory so an interrupted workflow can resume. Returned machine results avoid addresses, internal absolute paths, and raw diagnostics, but the operation still needs enough context to act.
 
 Use an offline model/runtime when the model provider must not receive those arguments. A private Git repository or ignored local directory is not the same as encryption or an offline runtime.
 

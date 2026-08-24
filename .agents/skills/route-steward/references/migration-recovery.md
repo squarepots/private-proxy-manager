@@ -13,11 +13,13 @@ Migration is an overlap-first workflow:
 7. confirm the replacement works in the relevant client path;
 8. handle old external capacity later as a separate user-requested action.
 
-`migrate-route` describes and coordinates this composition; generic MCP execute does not turn it into an opaque one-shot remote mutation.
+`migrate-route` persists this composition in private `migrations.json` and advances it through deterministic checkpoints. It may add a supplied BYO replacement Server, creates a matching replacement Link/Route, deploys without rendering, requires a healthy end-to-end check, then switches affected Profile selections and ClientTargets. Existing subscription targets are republished. A failed switch restores the old selection; an interrupted switch enters a recorded rollback path. Retry the same source Route and replacement Server when the result is `workflow-blocked`.
+
+The old Route is removed from client selection only after the replacement is healthy. Its remote service and external capacity are not uninstalled or deleted. Retirement always remains a separate, explicitly authorized destructive request. The dedicated `route_steward_migrate` MCP tool owns this workflow; generic MCP execute still excludes it.
 
 ## Recovery
 
-The encrypted recovery archive contains schema-1 desired state, secrets, and SSH material. Observed and render evidence can be regenerated.
+The encrypted recovery archive contains schema-1 desired state, secrets, SSH material, and any active migration checkpoint. Observed and render evidence can be regenerated. Restored migration stages are moved back to a revalidation point; query `migrations`, then resume the same source/replacement identity so deployment, audit, and health run again.
 
 Create an archive with `route-steward backup --private-dir <directory>`. Restore it into a clean destination with `route-steward recover --archive <path> --private-dir <directory>`. From a source checkout, replace `route-steward` with `go run ./cmd/route-steward`. The archive password is accepted only by the local 7-Zip prompt, never Agent/MCP JSON, process arguments, repository files, environment variables, or chat. The PowerShell recovery scripts remain compatibility entry points, not the canonical agent path.
 

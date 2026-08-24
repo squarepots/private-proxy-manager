@@ -78,6 +78,8 @@ Returned data omits credentials, absolute home paths, Provider URLs, subscriptio
 
 ## 6. Continue or recover
 
-Ask the agent to run audit and drift before changing an existing route. The current `migrate-route` capability supplies an overlap-first sequence; the agent must carry out and confirm its stages while preserving old capacity. Encrypted recovery uses `route-steward backup` and `route-steward recover`; enter the password only in the local 7-Zip prompt.
+Ask the agent to run audit and drift before changing an existing route. `migrate-route` persists and resumes an overlap-first replacement: the replacement is deployed and health-checked before affected client output changes, failed client switching is rolled back, and old remote capacity is not retired. A `workflow-blocked` result is safe to retry with the same Route and replacement Server. Encrypted recovery uses `route-steward backup` and `route-steward recover`; enter the password only in the local 7-Zip prompt.
+
+After a restart, `route-steward migrations --private-dir ./private` returns the sanitized checkpoint and recorded next action.
 
 Read [Compatibility](COMPATIBILITY.md), [Operations](../OPERATIONS.md), [Privacy](PRIVACY.md), [Security](../SECURITY.md), and the [operating boundary](OPERATING-BOUNDARY.md) before real deployment.

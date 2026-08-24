@@ -17,7 +17,7 @@ func main() { os.Exit(run()) }
 
 func run() int {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: route-steward <capabilities|bootstrap|context|drift|health|preflight|execute|mcp|backup|recover|version>")
+		fmt.Fprintln(os.Stderr, "usage: route-steward <capabilities|bootstrap|context|drift|health|migrations|preflight|execute|mcp|backup|recover|version>")
 		return 2
 	}
 	command := os.Args[1]
@@ -27,6 +27,16 @@ func run() int {
 	}
 	defaults := defaultPrivateDir()
 	switch command {
+	case "migrations":
+		fs := newFlags("migrations")
+		privateDir := fs.String("private-dir", defaults, "private state directory")
+		target := fs.String("target", "", "optional source Route id")
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			return 2
+		}
+		envelope, exit := steward.RunRequest(context.Background(), steward.Request{Command: "migrations", Target: *target, PrivateDir: absolute(*privateDir)})
+		writeEnvelope(envelope)
+		return exit
 	case "health":
 		fs := newFlags("health")
 		privateDir := fs.String("private-dir", defaults, "private state directory")

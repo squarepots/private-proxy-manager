@@ -64,6 +64,12 @@ func RunRequest(ctx context.Context, request Request) (Envelope, int) {
 			return SanitizedFailure("drift", err)
 		}
 		return success("drift", report)
+	case "migrations":
+		result, err := MigrationStatus(state, request.Target)
+		if err != nil {
+			return SanitizedFailure("migrations", err)
+		}
+		return success("migrations", result)
 	case "health":
 		preflight, err := NewPreflight("health", request.Target, state, request.Context, false)
 		if err != nil {
@@ -165,7 +171,14 @@ func executeReady(ctx context.Context, state *State, request Request) (any, stri
 	case "backup":
 		return localAssistanceResult("backup", "scripts/New-RecoveryArchive.ps1", "route-steward backup --private-dir <directory>"), "local-assistance-required", 3
 	case "migrate-route":
-		return map[string]any{"operation": "migrate-route", "executor": "workflow", "next": []string{"create replacement Server/Link/Route as needed", "deploy replacement while old route remains enabled", "audit replacement", "render ClientTargets", "verify replacement", "only retire old capacity after explicit destructive authorization if requested"}, "old_capacity_retired": false}, "ok", 0
+		migration, migrationErr := MigrateRoute(ctx, state, request.Target, request.Context)
+		if migrationErr != nil {
+			err = migrationErr
+		} else if migration.Status == "blocked" {
+			return migration, "workflow-blocked", 4
+		} else {
+			result = migration
+		}
 	default:
 		return map[string]string{"summary": safeFailureSummary}, "operation-failed", 1
 	}

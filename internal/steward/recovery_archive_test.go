@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 type fakeSevenZip struct {
@@ -67,6 +68,26 @@ func TestRecoveryArchiveRoundTripUsesLocalSevenZipPrompt(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := AddRoute(state, map[string]any{"route_id": "direct-a", "display_name": "Direct-A", "kind": "direct", "entry_server": "entry-a", "listen_port": 443}); err != nil {
+		t.Fatal(err)
+	}
+	route := findRoute(state.Inventory, "direct-a")
+	route.Enabled, route.State = true, "deployed"
+	if err := state.Save(false); err != nil {
+		t.Fatal(err)
+	}
+	now := func() time.Time { return time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC) }
+	txn, err := newMigrationTransaction(state, "direct-a", map[string]any{
+		"replacement_server_id": "replacement-b",
+		"replacement_server":    map[string]any{"public_ipv4": "198.51.100.60", "ssh_user": "ubuntu", "ssh_key_path": key, "host_ownership": "dedicated"},
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	migrations := &migrationState{Schema: 1, Transactions: []migrationTransaction{txn}}
+	if err := saveMigrationState(state.PrivateDir, migrations, &migrations.Transactions[0], now); err != nil {
+		t.Fatal(err)
+	}
 	fakeExecutable := filepath.Join(root, "7z-fixture")
 	if err := os.WriteFile(fakeExecutable, []byte("fixture"), 0o700); err != nil {
 		t.Fatal(err)
@@ -114,12 +135,23 @@ func TestRecoveryArchiveRoundTripUsesLocalSevenZipPrompt(t *testing.T) {
 	if restored, _ := result["restored"].(bool); !restored {
 		t.Fatalf("recovery result is incomplete: %#v", result)
 	}
+	if migrationRestored, _ := result["migration_state_restored"].(bool); !migrationRestored {
+		t.Fatalf("active migration checkpoint was not restored: %#v", result)
+	}
 	restored, err := LoadState(destination)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(restored.Inventory.Servers) != 1 || !regularFile(restored.Inventory.Servers[0].SSH.KeyPath) {
 		t.Fatal("round-trip recovery did not restore the server SSH key")
+	}
+	restoredMigrations, err := readMigrationState(destination)
+	if err != nil || len(restoredMigrations.Transactions) != 1 {
+		t.Fatalf("migration checkpoint recovery failed: %#v err=%v", restoredMigrations, err)
+	}
+	restoredTxn := restoredMigrations.Transactions[0]
+	if restoredTxn.Phase != "planned" || restoredTxn.LastFailure != "recovery-revalidation-required" || !regularFile(stringField(restoredTxn.ReplacementServerContext, "ssh_key_path")) {
+		t.Fatalf("restored migration is not safely resumable: %#v", restoredTxn)
 	}
 }
 

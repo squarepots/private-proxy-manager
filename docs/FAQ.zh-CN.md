@@ -42,7 +42,7 @@ inventory、凭据、生成的客户端文件、observed evidence 和 recovery a
 
 ## 替换服务器如何避免中断？
 
-当前 `migrate-route` capability 会返回由 agent 执行的 overlap-first 步骤，但还不会保存可恢复的迁移事务。替代容量被分别部署、审计、渲染并确认前，必须保留旧容量；退役旧容量是之后的显式操作。
+`migrate-route` 会保存 overlap-first 迁移事务。它创建或复用替代容量，在不改变当前客户端输出的情况下完成部署，要求真实 Hysteria2 流量 health 为 healthy，之后才切换并验证受影响的 ClientTarget。部署、health、渲染或 subscription 发布失败会返回 `workflow-blocked`；以相同旧 Route 和替代 Server 重试即可确定性恢复。旧远端容量绝不会自动退役，销毁仍是之后单独、显式的破坏性操作。
 
 ## 支持哪些主机、topology 和客户端？
 
