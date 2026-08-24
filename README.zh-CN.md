@@ -10,8 +10,6 @@
 
 Route Steward 帮助 AI agent 在你控制的 VPS 上搭建、检查、更换和恢复私有代理。把这个 GitHub 链接交给 agent；它会发现受支持的流程、在每次修改前检查前提、通过原生 `route-steward` 程序执行，并返回不暴露凭据或本地路径的脱敏结果。
 
-![Route Steward 将 AI 请求转化为通过一台服务器或可选两台服务器 relay 的私有代理，并提供服务器审计和私有客户端配置。](docs/assets/network-path-lifecycle.svg)
-
 ## 把链接交给 AI agent
 
 把下面的提示词粘贴到 Codex 或其他能够读取文件并运行本地命令的 agent：

@@ -10,8 +10,6 @@
 
 Route Steward helps an AI agent set up, inspect, change, and recover a private proxy on VPS servers you control. Give the agent this GitHub URL: it can discover the supported workflow, check prerequisites before every change, operate through the native `route-steward` executable, and return sanitized results without exposing credentials or local paths.
 
-![Route Steward turns an AI request into a private proxy through one server or an optional two-server relay, with server audit and private client-app output.](docs/assets/network-path-lifecycle.svg)
-
 ## Give the URL to an AI agent
 
 Paste this prompt into Codex or another agent that can read files and run local commands:

@@ -10,8 +10,6 @@
 
 Route Steward ayuda a un agente de IA a configurar, inspeccionar, cambiar y recuperar un proxy privado en servidores VPS que controlas. Dale esta URL de GitHub: el agente puede descubrir el flujo compatible, comprobar los requisitos antes de cada cambio, operar con el binario nativo `route-steward` y devolver resultados depurados sin exponer credenciales ni rutas locales.
 
-![Route Steward convierte una petición de IA en un proxy privado mediante un servidor o un relay opcional de dos servidores, con auditoría de servidor y configuración privada para la aplicación cliente.](docs/assets/network-path-lifecycle.svg)
-
 ## Entrega la URL a un agente de IA
 
 ```text

@@ -10,8 +10,6 @@
 
 Route Steward は、管理する VPS 上のプライベートプロキシを AI エージェントが構築、点検、変更、復旧できるようにします。この GitHub URL を渡すと、対応ワークフローの確認、変更前の要件確認、ネイティブ `route-steward` の実行、機密情報を除いた結果報告まで進められます。
 
-![AI の依頼から、1 台のサーバーまたは任意の 2 台 relay を通るプライベートプロキシ、サーバー audit、private なクライアント設定までを示す Route Steward。](docs/assets/network-path-lifecycle.svg)
-
 ## URL を AI agent に渡す
 
 ```text
