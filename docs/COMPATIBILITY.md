@@ -69,6 +69,8 @@ The optional `mihomo-http` Provider accepts an HTTP or HTTPS source URL stored i
 
 Read-only Route audit and sanitized desired-versus-observed drift cover RST service/configuration, firewall/network, WireGuard, Hysteria2 listener/certificate, egress, ClientTarget render, and undetermined state.
 
+On-demand `health` supports both direct and relay Routes. It runs the SHA-256-pinned official Hysteria2 2.9.3 client from a private local cache and checks the real client handshake, Internet access, DNS through a hostname request, declared exit identity, IPv4, optional declared IPv6, and request latency. Relay results also include the bounded WireGuard audit. Health uses ipify's address-family endpoints and Cloudflare's `/cdn-cgi/trace` endpoint; it is not continuous monitoring. Exact public IPs are omitted unless explicitly requested. Packet loss is currently reported as unsupported because no stable safe metric is implemented.
+
 Migration uses an overlap-first workflow composed from add, deploy, audit, and render operations. Encrypted recovery verifies the archive manifest and path safety, relocates SSH material, validates schema-1 state, resets observed evidence, and performs no remote mutation by itself.
 
 ## Optional Cloudflare delivery

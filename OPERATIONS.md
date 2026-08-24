@@ -55,6 +55,8 @@ The machine surface intentionally suppresses raw secret-bearing lower-level diag
 <private>/observed.json     disposable sanitized remote audit evidence
 <private>/delivery/         generated ClientTarget artifacts + hash-only render manifest
 <private>/recovery/         encrypted recovery artifacts
+<private>/tools/            verified disposable runtime helper cache
+<private>/health/           ephemeral secret-bearing health probe configuration
 ```
 
 Agents should prefer sanitized `context`/`drift` results. Read raw private state only when a supported operation genuinely requires it and never echo secret values into conversation.
@@ -79,7 +81,7 @@ Do not hard-code assumptions from this document into runtime adapters. Ask the m
 Initial operation families include:
 
 - local read: status/context/drift;
-- remote read: supported Route audit;
+- remote read: supported Route audit and on-demand end-to-end health;
 - local desired-state writes: Server/Link/Route/Provider/Profile/ClientTarget lifecycle;
 - local private output: render ClientTarget, backup;
 - remote RST write: deploy Route;
@@ -146,6 +148,12 @@ Remote audit emits only bounded typed evidence into the deterministic core. Agen
 Supported drift categories include `service-missing`, `remote-config-mismatch`, `firewall-network-mismatch`, `wireguard-link-mismatch`, `hysteria-listener-mismatch`, `certificate-mismatch`, `egress-mismatch`, `client-render-stale`, `undetermined`, and in-sync/disabled/never-audited informational states.
 
 Observed evidence is disposable. Drift does not self-heal; repair requires its own supported operation and preflight.
+
+## Connection health
+
+`route-steward health --target <route-id>` keeps configuration audit separate from actual client usability. It audits the Route, starts the pinned official Hysteria2 client with an ephemeral loopback HTTP proxy, and sends bounded requests through the Route to ipify's IPv4/IPv6 endpoints and Cloudflare's trace endpoint. The result layers server reachability, server audit, Hysteria2 handshake, real Internet access, DNS, declared exit identity, IPv4/IPv6, request latency, and relay WireGuard evidence.
+
+Health is read-only with respect to desired and remote state. It may download the checksum-verified helper into `<private>/tools/` on first use and records sanitized disposable evidence in `observed.json`. Ephemeral configuration under `<private>/health/` contains live Route credentials, stays owner-only, and is removed when the check ends. Public IP values remain omitted from machine output unless the caller explicitly requests them. A failed health check does not authorize repair or replacement.
 
 ## ClientTargets
 

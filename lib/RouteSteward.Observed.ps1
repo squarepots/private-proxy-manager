@@ -50,6 +50,7 @@ function Set-RSTObservedRoute {
     $observed = Read-RSTObservedState -PrivateDirectory $PrivateDirectory -AllowMissing
     $routeMap = @{}
     foreach ($item in @(Get-RSTOptional $observed 'routes' @())) { $routeMap[[string]$item.id] = $item }
+	$previousHealth = if ($routeMap.ContainsKey([string]$route.id)) { Get-RSTOptional $routeMap[[string]$route.id] 'health' } else { $null }
     $routeMap[[string]$route.id] = [pscustomobject][ordered]@{
         id = [string]$route.id
         audit_status = $Status
@@ -58,6 +59,7 @@ function Set-RSTObservedRoute {
         actual_egress_ipv4 = if ($ActualEgressIPv4) { $ActualEgressIPv4 } else { $null }
         hysteria_version = if ($HysteriaVersion) { $HysteriaVersion } else { $null }
         wireguard_version = if ($WireGuardVersion) { $WireGuardVersion } else { $null }
+		health = $previousHealth
     }
     $validRouteIds = @($Inventory.routes | ForEach-Object { [string]$_.id })
     $observed.routes = @($routeMap.Keys | Where-Object { $validRouteIds -contains $_ } | Sort-Object | ForEach-Object { $routeMap[$_] })

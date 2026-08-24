@@ -87,6 +87,26 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 			conflicts = append(conflicts, "target-route-missing")
 		}
 		effects = append(effects, "read-remote-supported-state")
+	case "health":
+		r := route(target)
+		if target == "" {
+			missing = append(missing, "target-route")
+		} else if r == nil {
+			conflicts = append(conflicts, "target-route-missing")
+		} else {
+			if r.State != "deployed" || !r.Enabled {
+				conflicts = append(conflicts, "target-route-not-deployed")
+			}
+			if _, err := ResolveSecret(r.PayloadSecretRef, state.PrivateDir, nil); err != nil {
+				conflicts = append(conflicts, "required-client-payload-missing")
+			}
+		}
+		if raw, ok := context["include_public_ip"]; ok {
+			if _, valid := raw.(bool); !valid {
+				conflicts = append(conflicts, "include-public-ip-must-be-boolean")
+			}
+		}
+		effects = append(effects, "read-remote-supported-state", "download-verified-local-health-helper-if-absent", "contact-public-health-endpoints-through-route", "write-sanitized-observed-health")
 	case "bootstrap":
 		effects = append(effects, "create-local-private-state")
 	case "add-server":

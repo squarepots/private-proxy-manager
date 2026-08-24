@@ -40,7 +40,7 @@ go install github.com/squarepots/route-steward/cmd/route-steward@latest
 
 - 通过一台服务器的私有 Hysteria2 代理，或可选的两台服务器 WireGuard relay；
 - 可直接导入 Mihomo/Clash Verge 兼容应用或 Shadowrocket 的完整私有配置；
-- 只读服务器审计和明确的配置 drift 分类，避免盲目覆盖；
+- 只读服务器审计、按需真实客户端流量 health，以及明确的配置 drift 分类；
 - overlap-first 的替换流程，以及加密本地恢复；
 - 同一套机器接口同时用于命令行和本地 stdio MCP。
 

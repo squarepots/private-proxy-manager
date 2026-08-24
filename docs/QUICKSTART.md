@@ -56,13 +56,20 @@ Preflight returns missing facts, conflicts, expected effects, and authorization 
 
 ## 5. Check the outcome
 
-A successful response identifies the proxy route, server audit result, and private-root-relative client artifact. Server audit proves that the managed configuration and services match; it is not yet an end-to-end client traffic test.
+A successful response identifies the proxy route, server audit result, and private-root-relative client artifact. Server audit proves that managed configuration and services match. To prove actual client traffic, run the separate on-demand health check:
+
+```text
+route-steward health --private-dir ./private --target route-a
+```
+
+Health runs a pinned Hysteria2 client through the Route, checks Internet and DNS access, compares the observed exit with desired state, and returns a short summary. Exact public IP values remain private unless `--include-public-ip` is explicitly supplied.
 
 ```json
 {
   "route": "route-a",
   "state": "deployed",
   "audit": { "status": "in-sync" },
+  "health": { "status": "healthy", "latency_ms": 82 },
   "artifact": { "relative_path": "<private>/delivery/desktop-a.yaml" }
 }
 ```

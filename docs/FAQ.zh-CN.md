@@ -34,7 +34,11 @@ inventory、凭据、生成的客户端文件、observed evidence 和 recovery a
 
 ## audit 能证明代理可以传输互联网流量吗？
 
-目前不能。audit 会检查受支持的服务器配置、服务、监听端口、relay 状态和服务器侧出口证据，但现在不会通过 Hysteria2 发起真正的客户端连接。服务器 audit 与端到端连接健康是两个不同结果。
+不能。audit 会检查受支持的服务器配置、服务、监听端口、relay 状态和服务器侧出口证据。单独的 `health` 操作会运行固定版本的真实 Hysteria2 客户端，通过 Route 发起互联网和 hostname 请求，将观测到的公网出口与 desired state 比较，并在已声明时报告 IPv4/IPv6。配置 audit 与端到端连接 health 是两个不同结果。
+
+## health 会暴露公网 IP 或持续监控吗？
+
+不会。health 是按需检查，不是监控服务。它会通过代理访问 ipify 地址 endpoint 和 Cloudflare trace endpoint，只保存有限的本地证据。普通 agent 结果只报告观测出口是否匹配；只有显式请求时才返回准确公网 IP。由于当前没有稳定、安全的端到端测量方法，packet loss 会明确返回 unsupported，而不是给出不可靠数字。
 
 ## 替换服务器如何避免中断？
 

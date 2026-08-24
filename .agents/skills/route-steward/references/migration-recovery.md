@@ -8,7 +8,7 @@ Migration is an overlap-first workflow:
 2. establish replacement server access and current external facts;
 3. add replacement Server, Link, and Route state while the working path remains available;
 4. preflight and deploy the replacement through repository-owned operations;
-5. audit the replacement and confirm the declared exit;
+5. audit the replacement, run health, and confirm real traffic through the declared exit;
 6. render affected ClientTargets and clear render drift;
 7. confirm the replacement works in the relevant client path;
 8. handle old external capacity later as a separate user-requested action.

@@ -182,13 +182,41 @@ type ObservedObject struct {
 }
 
 type ObservedRoute struct {
-	ID               string  `json:"id"`
-	AuditStatus      string  `json:"audit_status"`
-	Category         string  `json:"category"`
-	AuditedAt        string  `json:"audited_at"`
-	ActualEgressIPv4 *string `json:"actual_egress_ipv4"`
-	HysteriaVersion  *string `json:"hysteria_version"`
-	WireGuardVersion *string `json:"wireguard_version"`
+	ID               string          `json:"id"`
+	AuditStatus      string          `json:"audit_status"`
+	Category         string          `json:"category"`
+	AuditedAt        string          `json:"audited_at"`
+	ActualEgressIPv4 *string         `json:"actual_egress_ipv4"`
+	HysteriaVersion  *string         `json:"hysteria_version"`
+	WireGuardVersion *string         `json:"wireguard_version"`
+	Health           *ObservedHealth `json:"health,omitempty"`
+}
+
+type ObservedHealth struct {
+	Status    string            `json:"status"`
+	CheckedAt string            `json:"checked_at"`
+	LatencyMS *int64            `json:"latency_ms,omitempty"`
+	Checks    map[string]string `json:"checks"`
+}
+
+type HealthCheck struct {
+	Name      string `json:"name"`
+	Status    string `json:"status"`
+	Detail    string `json:"detail"`
+	LatencyMS *int64 `json:"latency_ms,omitempty"`
+}
+
+type HealthResult struct {
+	SchemaVersion int           `json:"schema_version"`
+	Route         string        `json:"route"`
+	Kind          string        `json:"kind"`
+	Status        string        `json:"status"`
+	Summary       string        `json:"summary"`
+	CheckedAt     string        `json:"checked_at"`
+	LatencyMS     *int64        `json:"latency_ms,omitempty"`
+	Checks        []HealthCheck `json:"checks"`
+	PublicIPv4    *string       `json:"public_ipv4,omitempty"`
+	PublicIPv6    *string       `json:"public_ipv6,omitempty"`
 }
 
 type ContextField struct {

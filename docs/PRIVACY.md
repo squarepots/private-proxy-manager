@@ -20,4 +20,6 @@ Never place real addresses, credentials, subscription URLs/tokens, SSH material,
 
 ## Remote visibility
 
-SSH/VPS providers see the network and account metadata inherent to their role. An optional Cloudflare subscription Worker can see request metadata such as source IP, time, and User-Agent. Destination services see the exit IP and normal application-layer metadata. RST does not promise anonymity or invisibility.
+SSH/VPS providers see the network and account metadata inherent to their role. An optional Cloudflare subscription Worker can see request metadata such as source IP, time, and User-Agent. An on-demand `health` check sends small requests through the managed proxy to ipify's IPv4/IPv6 address endpoints and Cloudflare's `/cdn-cgi/trace` endpoint, so those services see the Route's exit IP and request metadata. Destination services see the exit IP and normal application-layer metadata. RST does not promise anonymity or invisibility.
+
+Health stores bounded status, time, latency, and match results in the local private observed state. Exact public IP values are omitted from normal agent output and are returned only when the operator explicitly requests them.

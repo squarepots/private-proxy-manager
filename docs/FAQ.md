@@ -34,7 +34,11 @@ Read-only audit records bounded evidence and drift reports the category. RST doe
 
 ## Does audit prove that the proxy carries Internet traffic?
 
-Not yet. Audit checks supported server configuration, services, listeners, relay state, and server-side exit evidence. It does not currently run a real client connection through Hysteria2. Treat server audit and end-to-end connection health as separate results.
+No. Audit checks supported server configuration, services, listeners, relay state, and server-side exit evidence. The separate `health` operation runs a real pinned Hysteria2 client, makes Internet and hostname requests through the Route, compares the observed public exit with desired state, and reports IPv4/IPv6 where declared. Treat configuration audit and end-to-end connection health as separate results.
+
+## Does health expose my public IP or run monitoring continuously?
+
+No. Health is an on-demand check, not a monitoring service. It contacts ipify's address endpoints and Cloudflare's trace endpoint through the proxy and stores only bounded local evidence. The normal agent result reports whether the observed exit matches; exact public IP values are returned only when explicitly requested. Packet loss is reported as unsupported because RST does not yet have a stable, safe end-to-end metric for it.
 
 ## How does server replacement avoid interruption?
 

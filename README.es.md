@@ -36,7 +36,7 @@ Node.js solo se usa si eliges la entrega opcional de suscripciones mediante Clou
 
 - un proxy Hysteria2 privado mediante un servidor o un relay WireGuard opcional mediante dos;
 - configuración privada completa para una aplicación compatible con Mihomo/Clash Verge o Shadowrocket;
-- auditoría de servidor de solo lectura y drift de configuración tipado antes de sobrescribir;
+- auditoría de servidor de solo lectura, health real y bajo demanda del tráfico cliente, y drift de configuración tipado;
 - un flujo de sustitución con solapamiento y recuperación local cifrada;
 - una misma interfaz legible por máquinas para CLI y MCP stdio local.
 

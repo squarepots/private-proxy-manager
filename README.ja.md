@@ -36,7 +36,7 @@ Node.js は任意の Cloudflare Worker subscription delivery を選ぶ場合だ�
 
 - 1 台のサーバーを使うプライベート Hysteria2 プロキシ、または 2 台を使う任意の WireGuard relay
 - Mihomo/Clash Verge 互換アプリまたは Shadowrocket 用の完全な private 設定
-- 盲目的な上書きを防ぐ read-only のサーバー audit と設定 drift
+- read-only のサーバー audit、オンデマンドの実クライアント通信 health、設定 drift
 - overlap-first のサーバー置換ワークフローと暗号化ローカル復旧
 - CLI と local stdio MCP で共通の machine-readable interface
 

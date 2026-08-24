@@ -56,13 +56,20 @@ preflight 会返回缺少的事实、conflicts、expected effects 和 authorizat
 
 ## 5. 检查结果
 
-成功结果会说明代理 Route、服务器审计结果，以及 private-root-relative 客户端文件。服务器 audit 只能证明受管配置和服务一致，还不是真正的客户端端到端流量测试。
+成功结果会说明代理 Route、服务器审计结果，以及 private-root-relative 客户端文件。服务器 audit 证明受管配置和服务一致。要验证真实客户端流量，请另外运行按需 health check：
+
+```text
+route-steward health --private-dir ./private --target route-a
+```
+
+health 会通过该 Route 运行固定版本的 Hysteria2 客户端，检查互联网与 DNS、比较观测出口和 desired state，并返回简短摘要。除非显式加入 `--include-public-ip`，否则不会返回准确公网 IP。
 
 ```json
 {
   "route": "route-a",
   "state": "deployed",
   "audit": { "status": "in-sync" },
+  "health": { "status": "healthy", "latency_ms": 82 },
   "artifact": { "relative_path": "<private>/delivery/desktop-a.yaml" }
 }
 ```
