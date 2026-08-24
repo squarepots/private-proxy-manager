@@ -14,6 +14,7 @@ Multiple ClientTargets may reuse one Profile. Renderer behavior comes only from 
 ## Current first-class renderers
 
 - `mihomo`: file output for Mihomo-compatible clients such as Clash Verge-compatible clients.
+- `karing`: private Clash YAML for Karing, compatibility baseline 1.2.23.2606. Import the generated `.yaml` through Karing's local Clash-file flow without editing it. The renderer requires the managed SHA-256 certificate pin on every Hysteria2 node.
 - `shadowrocket`: offline node import, or optional target-scoped private subscription delivery.
 - `hysteria2`: private official-client JSON for a Linux server, backend, script, or CI job. It selects one enabled Route from the referenced Profile and exposes HTTP and SOCKS5 on one loopback-only listener.
 
@@ -49,7 +50,7 @@ The Worker is not a proxy data plane, management database, panel, telemetry serv
 
 ## Validation and render drift
 
-Validate generated Mihomo configuration with a compatible local core when available. Validate a headless Hysteria2 target with the dedicated real-traffic check before depending on it. Keep output private and restrict local permissions.
+Validate generated Mihomo/Karing Clash configuration with a compatible local core when available. Karing output also passes a renderer-specific pinned-Hysteria2 structure check. Validate a headless Hysteria2 target with the dedicated real-traffic check before depending on it. Keep output private and restrict local permissions.
 
 RST records only local input/output hashes needed to detect a stale or missing canonical ClientTarget render. A stale render is drift, not permission to mutate remote infrastructure.
 

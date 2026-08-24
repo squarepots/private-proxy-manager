@@ -40,7 +40,7 @@ agent 会按照 capability discovery 声明的字段询问：
 - direct route 需要一台专用、可重建的 Ubuntu 24.04 amd64 VPS；relay 需要两台；
 - 每台服务器的公网地址、有效 Unix SSH 用户名和本地 private-key path；
 - 希望使用 direct 还是单跳 relay 连接；
-- Mihomo/Clash Verge 兼容、Shadowrocket，或无 GUI 的 Hysteria2 ClientTarget。
+- Mihomo/Clash Verge 兼容、Karing、Shadowrocket，或无 GUI 的 Hysteria2 ClientTarget。
 
 使用 `entry-a`、`route-a`、`desktop-a` 这类不识别个人信息的 ID。真实运行值只保存在你选择的 private 目录。
 
@@ -75,6 +75,15 @@ health 会通过该 Route 运行固定版本的 Hysteria2 客户端，检查互�
 ```
 
 返回数据不会包含凭据、绝对用户目录、Provider URL、subscription token、完整 node URI 或原始 SSH 输出。
+
+使用 Karing 1.2.23.2606 或保持同一导入契约的版本时，在 Route 启用后创建并渲染 Karing target：
+
+```text
+route-steward execute --private-dir ./private --operation add-client-target --context-json '{"target_id":"karing-mobile","profile_id":"primary","renderer":"karing"}'
+route-steward execute --private-dir ./private --operation render-client --target karing-mobile
+```
+
+在 Karing 中选择 Add Profile，通过本地 Clash 文件导入 `<private>/delivery/karing-mobile.yaml`。不要修改证书、混淆或路由字段；生成文件就是受支持的 artifact，并包含真实凭据。
 
 ## 6. 让 Linux 服务器或应用使用 Route
 

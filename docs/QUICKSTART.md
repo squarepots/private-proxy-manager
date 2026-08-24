@@ -40,7 +40,7 @@ The agent will ask for the facts declared by capability discovery:
 - one dedicated, rebuildable Ubuntu 24.04 amd64 VPS for a direct route, or two for a relay;
 - each server's public address, valid Unix SSH username, and local private-key path;
 - the desired direct or single-hop relay connection;
-- a Mihomo/Clash Verge-compatible, Shadowrocket, or headless Hysteria2 client target.
+- a Mihomo/Clash Verge-compatible, Karing, Shadowrocket, or headless Hysteria2 client target.
 
 Use non-identifying IDs such as `entry-a`, `route-a`, and `desktop-a`. Route Steward stores real operational values only in the selected private directory.
 
@@ -75,6 +75,15 @@ Health runs a pinned Hysteria2 client through the Route, checks Internet and DNS
 ```
 
 Returned data omits credentials, absolute home paths, Provider URLs, subscription tokens, live node URIs, and raw SSH output.
+
+For Karing 1.2.23.2606 or the same maintained import contract, create and render a Karing target after the Route is enabled:
+
+```text
+route-steward execute --private-dir ./private --operation add-client-target --context-json '{"target_id":"karing-mobile","profile_id":"primary","renderer":"karing"}'
+route-steward execute --private-dir ./private --operation render-client --target karing-mobile
+```
+
+In Karing, choose Add Profile, import a local Clash file, and select `<private>/delivery/karing-mobile.yaml`. Do not edit certificate, obfuscation, or routing fields; the generated file is the supported artifact and contains live credentials.
 
 ## 6. Use a Route from a Linux server or application
 

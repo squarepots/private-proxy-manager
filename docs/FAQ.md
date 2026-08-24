@@ -6,7 +6,7 @@ Route Steward helps an AI agent set up and manage a private proxy on VPS servers
 
 ## What do I need before I start?
 
-You need the Route Steward release binary on a Linux, macOS, or Windows computer with a tool-capable AI agent and a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access. You can use Mihomo/Clash Verge-compatible software, Shadowrocket, or the built-in headless Hysteria2 workflow. A relay route uses two VPS hosts. PowerShell and Node.js are not required for normal use.
+You need the Route Steward release binary on a Linux, macOS, or Windows computer with a tool-capable AI agent and a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access. You can use Mihomo/Clash Verge-compatible software, Karing, Shadowrocket, or the built-in headless Hysteria2 workflow. A relay route uses two VPS hosts. PowerShell and Node.js are not required for normal use.
 
 ## How do I install it?
 

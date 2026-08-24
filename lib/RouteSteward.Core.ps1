@@ -329,10 +329,10 @@ function Assert-RSTInventory {
         $delivery = [string](Get-RSTOptional $target 'delivery')
         $subscriptionRef = [string](Get-RSTOptional $target 'subscription_secret_ref')
         if ($profileIds -notcontains $profileId) { $failures.Add("ClientTarget '$id' references unknown Profile '$profileId'.") }
-        if ($renderer -notin @('mihomo','shadowrocket','hysteria2')) { $failures.Add("ClientTarget '$id' has unsupported renderer '$renderer'.") }
-        if ($renderer -eq 'mihomo') {
-            if ($delivery -ne 'file') { $failures.Add("Mihomo ClientTarget '$id' must use file delivery.") }
-            if ($subscriptionRef) { $failures.Add("Mihomo ClientTarget '$id' cannot own subscription state.") }
+        if ($renderer -notin @('mihomo','karing','shadowrocket','hysteria2')) { $failures.Add("ClientTarget '$id' has unsupported renderer '$renderer'.") }
+        if ($renderer -in @('mihomo','karing')) {
+            if ($delivery -ne 'file') { $failures.Add("Clash-file ClientTarget '$id' must use file delivery.") }
+            if ($subscriptionRef) { $failures.Add("Clash-file ClientTarget '$id' cannot own subscription state.") }
         }
         if ($renderer -eq 'shadowrocket') {
             if ($delivery -notin @('nodes','subscription')) { $failures.Add("Shadowrocket ClientTarget '$id' has unsupported delivery '$delivery'.") }

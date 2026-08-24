@@ -37,7 +37,7 @@ The core never branches on model/vendor identity. Runtime-specific files delegat
 - **Provider** — optional upstream third-party node source. Initial source type: generic `mihomo-http`.
 - **Policy** — reusable client routing/DNS behavior where a renderer needs it.
 - **Profile** — reusable selection of Routes, optional Providers, and Policy. It is not a renderer or device identity.
-- **ClientTarget** — concrete renderer/delivery identity referencing a Profile. Current renderers: `mihomo`, `shadowrocket`, and headless `hysteria2`.
+- **ClientTarget** — concrete renderer/delivery identity referencing a Profile. Current renderers: `mihomo`, `karing`, `shadowrocket`, and headless `hysteria2`.
 - **Private subscription** — optional target-scoped delivery state for one Shadowrocket ClientTarget.
 
 These concepts make the core deterministic. They are not concepts the user must learn before using the product.
@@ -119,6 +119,7 @@ Each new Link receives isolated RST-native interface/UDP-port/subnet resources. 
 A renderer resolves one ClientTarget, follows its Profile reference, then consumes selected canonical Route payloads and optional Providers.
 
 - Mihomo ClientTargets use file delivery and may compose managed Routes with explicitly selected generic Providers.
+- Karing ClientTargets use the tested private Clash YAML contract and retain SHA-256 certificate pinning for every managed Hysteria2 node.
 - Shadowrocket ClientTargets render private Hysteria2 node imports or use optional target-scoped subscription delivery.
 - Hysteria2 ClientTargets select one enabled Route from their Profile, render official-client JSON, and expose same-port HTTP/SOCKS5 on an IP-literal loopback listener. They intentionally do not approximate GUI policy or Provider composition.
 

@@ -72,7 +72,9 @@ func RenderClients(state *State, targetID string, skipValidation bool) (RenderRe
 		var err error
 		switch target.Renderer {
 		case "mihomo":
-			output, err = renderMihomo(state, *profile, target, filepath.Join(outputDir, target.ID+".yaml"), skipValidation)
+			output, err = renderClash(state, *profile, target, filepath.Join(outputDir, target.ID+".yaml"), "mihomo", skipValidation)
+		case "karing":
+			output, err = renderClash(state, *profile, target, filepath.Join(outputDir, target.ID+".yaml"), "karing", skipValidation)
 		case "shadowrocket":
 			output, err = renderShadowrocket(state, *profile, target, filepath.Join(outputDir, target.ID+".html"))
 		case "hysteria2":
@@ -149,10 +151,17 @@ func SanitizedRender(result RenderResult) RenderResult {
 	return out
 }
 
-func renderMihomo(state *State, profile Profile, target ClientTarget, outputPath string, skipValidation bool) (RenderOutput, error) {
+func renderClash(state *State, profile Profile, target ClientTarget, outputPath, renderer string, skipValidation bool) (RenderOutput, error) {
 	nodes, bodies, err := profileNodes(state, profile)
 	if err != nil {
 		return RenderOutput{}, err
+	}
+	if renderer == "karing" {
+		for _, node := range nodes {
+			if err := validateKaringClashNode(node); err != nil {
+				return RenderOutput{}, err
+			}
+		}
 	}
 	providers, err := profileProviders(state, profile)
 	if err != nil {
@@ -201,12 +210,22 @@ func renderMihomo(state *State, profile Profile, target ClientTarget, outputPath
 			defer os.RemoveAll(home)
 			cmd := exec.Command(core, "-t", "-d", home, "-f", outputPath)
 			if output, err := cmd.CombinedOutput(); err != nil {
-				return RenderOutput{}, fmt.Errorf("Mihomo rejected generated ClientTarget: %w: %s", err, string(output))
+				return RenderOutput{}, fmt.Errorf("Clash validation core rejected generated ClientTarget: %w: %s", err, string(output))
 			}
 			validation = "passed"
 		}
 	}
-	return RenderOutput{ClientTarget: target.ID, Profile: profile.ID, Renderer: "mihomo", Path: outputPath, NodeCount: len(nodes), ProviderCount: len(providers), Validation: validation}, nil
+	return RenderOutput{ClientTarget: target.ID, Profile: profile.ID, Renderer: renderer, Path: outputPath, NodeCount: len(nodes), ProviderCount: len(providers), Validation: validation}, nil
+}
+
+func validateKaringClashNode(node routeNode) error {
+	if _, err := validateManagedHysteria2Node(node); err != nil {
+		return fmt.Errorf("Karing ClientTarget node %q does not satisfy the pinned Hysteria2 import contract: %w", node.Name, err)
+	}
+	if node.Values["skip-cert-verify"] != "true" || node.Values["alpn"] != "[h3]" {
+		return fmt.Errorf("Karing ClientTarget node %q must retain pinned self-signed TLS and Hysteria2 ALPN", node.Name)
+	}
+	return nil
 }
 
 func renderShadowrocket(state *State, profile Profile, target ClientTarget, outputPath string) (RenderOutput, error) {
@@ -369,7 +388,7 @@ func parseRoutePayload(raw string) ([]routeNode, string, error) {
 	return nodes, body, nil
 }
 
-func shadowrocketURI(node routeNode) (string, error) {
+func validateManagedHysteria2Node(node routeNode) (string, error) {
 	required := []string{"type", "server", "port", "password", "sni", "fingerprint", "obfs", "obfs-password"}
 	for _, key := range required {
 		if node.Values[key] == "" {
@@ -385,6 +404,14 @@ func shadowrocketURI(node routeNode) (string, error) {
 	}
 	if node.Values["obfs"] != "salamander" {
 		return "", fmt.Errorf("node %q uses unsupported Hysteria2 obfuscation", node.Name)
+	}
+	return fingerprint, nil
+}
+
+func shadowrocketURI(node routeNode) (string, error) {
+	fingerprint, err := validateManagedHysteria2Node(node)
+	if err != nil {
+		return "", err
 	}
 	host := node.Values["server"]
 	if strings.Contains(host, ":") {

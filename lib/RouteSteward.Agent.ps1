@@ -45,7 +45,7 @@ function Get-RSTCapabilityCatalog {
         'add-profile' = @([ordered]@{ name = 'profile_id'; type = 'stable-id'; required = $true })
         'update-profile' = @([ordered]@{ name = 'target'; type = 'profile-id'; required = $true; source = 'argument' })
         'remove-profile' = @([ordered]@{ name = 'target'; type = 'profile-id'; required = $true; source = 'argument' })
-        'add-client-target' = @([ordered]@{ name = 'target_id'; type = 'stable-id'; required = $true },[ordered]@{ name = 'profile_id'; type = 'profile-id'; required = $true },[ordered]@{ name = 'renderer'; type = 'mihomo|shadowrocket|hysteria2'; required = $true },[ordered]@{ name = 'route_id'; type = 'route-id'; required = $false; when = 'renderer is hysteria2' },[ordered]@{ name = 'listen'; type = 'loopback-listener'; required = $false; when = 'renderer is hysteria2' },[ordered]@{ name = 'ingress_family'; type = 'auto|ipv4|ipv6'; required = $false; when = 'renderer is hysteria2' })
+        'add-client-target' = @([ordered]@{ name = 'target_id'; type = 'stable-id'; required = $true },[ordered]@{ name = 'profile_id'; type = 'profile-id'; required = $true },[ordered]@{ name = 'renderer'; type = 'mihomo|karing|shadowrocket|hysteria2'; required = $true },[ordered]@{ name = 'route_id'; type = 'route-id'; required = $false; when = 'renderer is hysteria2' },[ordered]@{ name = 'listen'; type = 'loopback-listener'; required = $false; when = 'renderer is hysteria2' },[ordered]@{ name = 'ingress_family'; type = 'auto|ipv4|ipv6'; required = $false; when = 'renderer is hysteria2' })
         'update-client-target' = @([ordered]@{ name = 'target'; type = 'client-target-id'; required = $true; source = 'argument' })
         'remove-client-target' = @([ordered]@{ name = 'target'; type = 'client-target-id'; required = $true; source = 'argument' })
         'audit' = @([ordered]@{ name = 'target'; type = 'route-id'; required = $true; source = 'argument' })
@@ -84,6 +84,7 @@ function Get-RSTDriverCapabilities {
         providers = @([ordered]@{ id = 'mihomo-http-provider'; state = 'supported'; optional = $true; schemes = @('https','http'); health_check = $false })
         renderers = @(
             [ordered]@{ id = 'mihomo'; state = 'supported'; clients = @('Clash Verge-compatible Mihomo clients') },
+            [ordered]@{ id = 'karing'; state = 'supported'; compatibility_baseline = '1.2.23.2606'; delivery = @('private-clash-yaml'); platforms = @('windows','macos','linux','ios','android','tvos'); tls_identity = 'sha256-certificate-pinning' },
             [ordered]@{ id = 'shadowrocket'; state = 'supported'; delivery = @('node-import','private-subscription') },
             [ordered]@{ id = 'hysteria2'; state = 'supported'; delivery = @('private-json'); local_modes = @('http','socks5'); runtime = 'verified-official-client' }
         )
@@ -304,7 +305,7 @@ function New-RSTPreflight {
                 if (Get-RSTClientTargetById -Inventory $Inventory -Id $id -AllowMissing) { $conflicts.Add('client-target-id-already-exists') }
             }
             if ($Context -and (Get-RSTOptional $Context 'profile_id') -and -not (Get-RSTProfileById -Inventory $Inventory -Id ([string]$Context.profile_id) -AllowMissing)) { $conflicts.Add('client-target-profile-missing') }
-            if ($Context -and (Get-RSTOptional $Context 'renderer') -and [string]$Context.renderer -notin @('mihomo','shadowrocket','hysteria2')) { $conflicts.Add('client-target-renderer-unsupported') }
+            if ($Context -and (Get-RSTOptional $Context 'renderer') -and [string]$Context.renderer -notin @('mihomo','karing','shadowrocket','hysteria2')) { $conflicts.Add('client-target-renderer-unsupported') }
             if ($Context -and [string](Get-RSTOptional $Context 'renderer') -eq 'hysteria2') {
                 $routeId = [string](Get-RSTOptional $Context 'route_id')
                 if (-not $routeId) { $missing.Add('route-id') }
