@@ -48,6 +48,7 @@ try {
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'add-provider').Count -eq 1) 'Agent capability discovery is missing generic Provider lifecycle.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'add-profile').Count -eq 1) 'Profile lifecycle is missing from capability discovery.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'add-client-target').Count -eq 1) 'ClientTarget lifecycle is missing from capability discovery.'
+	Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'health').authorization_class -eq 'read-only') 'End-to-end Route health is missing or not read-only.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'rotate-subscription-token').authorization_class -eq 'credential-change') 'Target-scoped subscription rotation is not a guarded credential change.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'migrate-route').executor -eq 'workflow') 'Migration is not exposed as an overlap-first workflow.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'backup').executor -eq 'local-assisted') 'Backup does not declare the local secure-prompt boundary.'
@@ -62,6 +63,7 @@ try {
     Assert-True (@($capabilities.data.capabilities | Where-Object { -not $_.PSObject.Properties['required_context'] -or -not $_.PSObject.Properties['effects'] }).Count -eq 0) 'One or more operations omit required-context or effect metadata.'
     Assert-True ($capabilities.data.drivers.ingress[0].id -eq 'hysteria2' -and $capabilities.data.drivers.ingress[0].version -eq '2.9.3') 'Hysteria2 driver truth is missing or inconsistent.'
     Assert-True ($capabilities.data.drivers.links[0].id -eq 'wireguard-single-hop') 'WireGuard single-hop capability truth is missing.'
+	Assert-True ($capabilities.data.drivers.health_checks[0].id -eq 'hysteria2-client-traffic' -and $capabilities.data.drivers.health_checks[0].packet_loss -eq 'unsupported') 'Health capability truth is incomplete.'
     Assert-True ($capabilities.data.drivers.compute[0].transport -eq 'ssh') 'BYO SSH compute capability truth is missing.'
     Assert-True (@($capabilities.data.drivers.renderers | Where-Object id -eq 'mihomo').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'shadowrocket').Count -eq 1) 'Client renderer capability truth is incomplete.'
 

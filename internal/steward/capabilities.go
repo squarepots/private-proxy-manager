@@ -21,6 +21,7 @@ func Capabilities() []Capability {
 		capability("status", "agent", false, "read-only", "Read sanitized local state.", nil, "read-sanitized-local-state"),
 		capability("drift", "agent", false, "read-only", "Compare desired routes and ClientTarget renders with sanitized observed state.", nil, "read-sanitized-local-and-observed-state"),
 		capability("audit", "core", false, "read-only", "Compare one supported remote Route with desired state without changing it.", []ContextField{target("route-id", true)}, "read-remote-supported-state"),
+		capability("health", "core", false, "read-only", "Run server audit and a real Hysteria2 client traffic check for one deployed Route.", []ContextField{target("route-id", true), field("include_public_ip", "boolean", false)}, "read-remote-supported-state", "download-verified-local-health-helper-if-absent", "contact-public-health-endpoints-through-route", "write-sanitized-observed-health"),
 		capability("bootstrap", "agent", true, "local-write", "Create clean local private state.", nil, "create-local-private-state"),
 		capability("add-server", "agent", true, "local-write", "Add a BYO SSH Server to desired state without connecting to it.", []ContextField{field("server_id", "stable-id", true), field("public_ipv4", "ipv4", true), field("ssh_user", "unix-user", true), field("ssh_key_path", "local-file-path", true), field("host_ownership", "dedicated", true)}, "update-local-desired-state"),
 		capability("add-link", "agent", true, "local-write", "Allocate one WireGuard Link and local canonical keys.", []ContextField{field("link_id", "stable-id", true), field("entry_server", "server-id", true), field("exit_server", "server-id", true)}, "allocate-local-link-and-keys"),
@@ -74,6 +75,7 @@ func DriverCapabilities() map[string]any {
 		"ingress":               []any{map[string]any{"id": "hysteria2", "state": "supported", "version": "2.9.3", "transport": "udp", "address_families": []string{"ipv4", "ipv6"}, "credential_model": "local-canonical-pinned-tls"}},
 		"links":                 []any{map[string]any{"id": "wireguard-single-hop", "state": "supported", "hops": 1, "address_family": "ipv4"}},
 		"providers":             []any{map[string]any{"id": "mihomo-http-provider", "state": "supported", "optional": true, "schemes": []string{"https", "http"}, "health_check": false}},
+		"health_checks":         []any{map[string]any{"id": "hysteria2-client-traffic", "state": "supported", "routes": []string{"direct", "relay"}, "on_demand": true, "external_endpoints": []string{"cloudflare-trace", "ipify"}, "packet_loss": "unsupported"}},
 		"renderers":             []any{map[string]any{"id": "mihomo", "state": "supported", "clients": []string{"Clash Verge-compatible Mihomo clients"}}, map[string]any{"id": "shadowrocket", "state": "supported", "delivery": []string{"node-import", "private-subscription"}}},
 		"subscription_delivery": []any{map[string]any{"id": "cloudflare-worker", "state": "supported", "optional": true, "role": "private-config-delivery-only"}},
 	}

@@ -8,6 +8,7 @@ The native `route-steward` executable is the canonical local machine surface. It
 - `bootstrap`: idempotently create neutral schema-1 private state.
 - `context`: sanitized inventory schema, counts, Profiles, ClientTargets, and supported-operation summary.
 - `drift`: sanitized desired-versus-observed Route and ClientTarget-render evidence.
+- `health`: on-demand real Hysteria2 client traffic check for one deployed Route.
 
 Inventory schema `1` is the first public desired-state contract.
 
@@ -21,6 +22,7 @@ Representative calls:
 
 ```text
 route-steward capabilities
+route-steward health --private-dir ./private --target route-a
 route-steward preflight --private-dir ./private --operation add-server --context-stdin
 route-steward execute --private-dir ./private --operation add-server --context-stdin
 route-steward mcp --private-dir ./private
@@ -31,6 +33,7 @@ route-steward mcp --private-dir ./private
 - `status`: sanitized local state.
 - `drift`: desired-versus-observed evidence.
 - `audit`: bounded read-only verification for one Route.
+- `health`: server audit plus real client handshake, Internet, DNS, exit identity, IP-family, latency, and relay checks.
 - `bootstrap`: neutral local private state.
 - `add-server`: local BYO SSH Server registration.
 - `add-link`: local WireGuard Link allocation and canonical keys.
@@ -59,3 +62,5 @@ Deployment and uninstall own only RST-namespaced resources and named policy file
 Keep raw secret-bearing stderr local. Surface a sanitized cause and next action.
 
 Remote transport or audit failure becomes `undetermined`, not permission to repair. If a remote change succeeded before a later validation step failed, report the partial outcome accurately.
+
+Health contacts ipify's address endpoints and Cloudflare's trace endpoint through the Route. It omits exact public IP values unless the caller explicitly requests them and reports packet loss as unsupported rather than inventing an unstable metric.

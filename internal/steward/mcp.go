@@ -15,6 +15,11 @@ type mcpOperationInput struct {
 	Context   map[string]any `json:"context,omitempty"`
 }
 
+type mcpHealthInput struct {
+	Target          string `json:"target"`
+	IncludePublicIP bool   `json:"include_public_ip,omitempty"`
+}
+
 func NewMCPServer(privateDir string) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "route-steward", Version: routesteward.Version()}, nil)
 	readOnly, notDestructive, closed, open := true, false, false, true
@@ -30,6 +35,7 @@ func NewMCPServer(privateDir string) *mcp.Server {
 	}
 	empty := json.RawMessage(`{"type":"object","additionalProperties":false}`)
 	ro := &mcp.ToolAnnotations{ReadOnlyHint: readOnly, IdempotentHint: true, DestructiveHint: &notDestructive, OpenWorldHint: &closed}
+	roOpen := &mcp.ToolAnnotations{ReadOnlyHint: readOnly, IdempotentHint: true, DestructiveHint: &notDestructive, OpenWorldHint: &open}
 	bootstrap := &mcp.ToolAnnotations{ReadOnlyHint: false, IdempotentHint: true, DestructiveHint: &notDestructive, OpenWorldHint: &closed}
 	execute := &mcp.ToolAnnotations{ReadOnlyHint: false, IdempotentHint: false, DestructiveHint: &notDestructive, OpenWorldHint: &open}
 	runSimple := func(command string) func(context.Context, json.RawMessage) Envelope {
@@ -42,8 +48,17 @@ func NewMCPServer(privateDir string) *mcp.Server {
 	add("route_steward_bootstrap", "Initialize clean local private state. Complete state is idempotent and partial state fails closed.", empty, bootstrap, runSimple("bootstrap"))
 	add("route_steward_context", "Read sanitized project context without returning endpoints, paths, credentials, Provider URLs, or subscription tokens.", empty, ro, runSimple("context"))
 	add("route_steward_drift", "Read sanitized desired-versus-observed route and client-render drift.", empty, ro, runSimple("drift"))
-	preflightOperations := []string{"status", "audit", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription", "rotate-subscription-token", "backup", "migrate-route"}
-	executableOperations := []string{"status", "audit", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription"}
+	healthSchema := json.RawMessage(`{"type":"object","additionalProperties":false,"required":["target"],"properties":{"target":{"type":"string","minLength":1},"include_public_ip":{"type":"boolean"}}}`)
+	add("route_steward_health", "Run an on-demand Hysteria2 client traffic check for one deployed Route. Public IP values are omitted unless explicitly requested.", healthSchema, roOpen, func(ctx context.Context, raw json.RawMessage) Envelope {
+		var input mcpHealthInput
+		if err := json.Unmarshal(raw, &input); err != nil {
+			return invalidMCPEnvelope("health", err)
+		}
+		envelope, _ := RunRequest(ctx, Request{Command: "health", Target: input.Target, Context: map[string]any{"include_public_ip": input.IncludePublicIP}, PrivateDir: privateDir})
+		return envelope
+	})
+	preflightOperations := []string{"status", "audit", "health", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription", "rotate-subscription-token", "backup", "migrate-route"}
+	executableOperations := []string{"status", "audit", "health", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription"}
 	add("route_steward_preflight", "Evaluate context, conflicts, effects, and authorization before an operation.", mcpOperationSchema(preflightOperations), ro, func(ctx context.Context, raw json.RawMessage) Envelope {
 		var input mcpOperationInput
 		if err := json.Unmarshal(raw, &input); err != nil {

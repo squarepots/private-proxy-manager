@@ -50,10 +50,13 @@ func SetObservedRoute(state *State, routeID, status, category, actualIPv4, hyste
 	if err != nil {
 		return ObservedRoute{}, err
 	}
-	entry := ObservedRoute{ID: route.ID, AuditStatus: status, Category: category, AuditedAt: utcNow(), ActualEgressIPv4: stringPointer(actualIPv4), HysteriaVersion: stringPointer(hysteriaVersion), WireGuardVersion: stringPointer(wireguardVersion)}
 	routeMap := map[string]ObservedRoute{}
 	for _, item := range observed.Routes {
 		routeMap[item.ID] = item
+	}
+	entry := ObservedRoute{ID: route.ID, AuditStatus: status, Category: category, AuditedAt: utcNow(), ActualEgressIPv4: stringPointer(actualIPv4), HysteriaVersion: stringPointer(hysteriaVersion), WireGuardVersion: stringPointer(wireguardVersion)}
+	if previous, ok := routeMap[route.ID]; ok {
+		entry.Health = previous.Health
 	}
 	routeMap[route.ID] = entry
 	observed.Routes = []ObservedRoute{}
@@ -111,6 +114,49 @@ func SetObservedRoute(state *State, routeID, status, category, actualIPv4, hyste
 		return ObservedRoute{}, err
 	}
 	return entry, nil
+}
+
+func SetObservedHealth(state *State, result HealthResult) (ObservedHealth, error) {
+	route := findRoute(state.Inventory, result.Route)
+	if route == nil {
+		return ObservedHealth{}, fmt.Errorf("unknown Route %q", result.Route)
+	}
+	observed, err := ReadObserved(state.PrivateDir, true)
+	if err != nil {
+		return ObservedHealth{}, err
+	}
+	checks := map[string]string{}
+	for _, check := range result.Checks {
+		checks[check.Name] = check.Status
+	}
+	health := ObservedHealth{Status: result.Status, CheckedAt: result.CheckedAt, LatencyMS: result.LatencyMS, Checks: checks}
+	routeMap := map[string]ObservedRoute{}
+	for _, item := range observed.Routes {
+		routeMap[item.ID] = item
+	}
+	entry, ok := routeMap[route.ID]
+	if !ok {
+		entry = ObservedRoute{ID: route.ID, AuditStatus: "undetermined", Category: "undetermined", AuditedAt: result.CheckedAt}
+	}
+	entry.Health = &health
+	routeMap[route.ID] = entry
+	observed.Routes = []ObservedRoute{}
+	ids := []string{}
+	for _, item := range state.Inventory.Routes {
+		if _, ok := routeMap[item.ID]; ok {
+			ids = append(ids, item.ID)
+		}
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		observed.Routes = append(observed.Routes, routeMap[id])
+	}
+	now := utcNow()
+	observed.GeneratedAt = &now
+	if err := writeJSONAtomic(filepath.Join(state.PrivateDir, "observed.json"), observed); err != nil {
+		return ObservedHealth{}, err
+	}
+	return health, nil
 }
 
 func DriftReport(state *State) (map[string]any, error) {

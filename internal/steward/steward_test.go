@@ -481,8 +481,8 @@ func TestInProcessMCPUsesGoEngine(t *testing.T) {
 		}
 		tools[tool.Name] = tool
 	}
-	if len(tools) != 6 {
-		t.Fatalf("got %d MCP tools, want 6", len(tools))
+	if len(tools) != 7 {
+		t.Fatalf("got %d MCP tools, want 7", len(tools))
 	}
 	assertAnnotations := func(name string, readOnly, idempotent, openWorld bool) {
 		t.Helper()
@@ -494,6 +494,7 @@ func TestInProcessMCPUsesGoEngine(t *testing.T) {
 	for _, name := range []string{"route_steward_capabilities", "route_steward_context", "route_steward_drift", "route_steward_preflight"} {
 		assertAnnotations(name, true, true, false)
 	}
+	assertAnnotations("route_steward_health", true, true, true)
 	assertAnnotations("route_steward_bootstrap", false, true, false)
 	assertAnnotations("route_steward_execute", false, false, true)
 	assertOperationEnum := func(name string, expected []string) {
@@ -522,8 +523,8 @@ func TestInProcessMCPUsesGoEngine(t *testing.T) {
 			t.Fatalf("MCP tool %s operation enum changed: got %v want %v", name, actual, expected)
 		}
 	}
-	assertOperationEnum("route_steward_preflight", []string{"status", "audit", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription", "rotate-subscription-token", "backup", "migrate-route"})
-	assertOperationEnum("route_steward_execute", []string{"status", "audit", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription"})
+	assertOperationEnum("route_steward_preflight", []string{"status", "audit", "health", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription", "rotate-subscription-token", "backup", "migrate-route"})
+	assertOperationEnum("route_steward_execute", []string{"status", "audit", "health", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription"})
 	bootstrap, err := clientSession.CallTool(ctx, &mcp.CallToolParams{Name: "route_steward_bootstrap", Arguments: map[string]any{}})
 	if err != nil || bootstrap.IsError {
 		t.Fatalf("MCP bootstrap failed: result=%#v err=%v", bootstrap, err)

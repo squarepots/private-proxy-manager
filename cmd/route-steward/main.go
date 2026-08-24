@@ -17,7 +17,7 @@ func main() { os.Exit(run()) }
 
 func run() int {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: route-steward <capabilities|bootstrap|context|drift|preflight|execute|mcp|backup|recover|version>")
+		fmt.Fprintln(os.Stderr, "usage: route-steward <capabilities|bootstrap|context|drift|health|preflight|execute|mcp|backup|recover|version>")
 		return 2
 	}
 	command := os.Args[1]
@@ -27,6 +27,21 @@ func run() int {
 	}
 	defaults := defaultPrivateDir()
 	switch command {
+	case "health":
+		fs := newFlags("health")
+		privateDir := fs.String("private-dir", defaults, "private state directory")
+		target := fs.String("target", "", "deployed Route id")
+		includePublicIP := fs.Bool("include-public-ip", false, "include the observed public IP in this response")
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			return 2
+		}
+		if *target == "" {
+			fmt.Fprintln(os.Stderr, "--target is required")
+			return 2
+		}
+		envelope, exit := steward.RunRequest(context.Background(), steward.Request{Command: "health", Target: *target, Context: map[string]any{"include_public_ip": *includePublicIP}, PrivateDir: absolute(*privateDir)})
+		writeEnvelope(envelope)
+		return exit
 	case "mcp":
 		fs := newFlags("mcp")
 		privateDir := fs.String("private-dir", defaults, "private state directory")

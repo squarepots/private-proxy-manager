@@ -40,7 +40,7 @@ Node.js is used only when you choose the optional Cloudflare Worker subscription
 
 - a private Hysteria2 proxy through one server, or through an optional two-server WireGuard relay;
 - complete private configuration for a Mihomo/Clash Verge-compatible app or Shadowrocket;
-- read-only server audit and typed configuration drift instead of blind overwrite;
+- read-only server audit, real on-demand client traffic health, and typed configuration drift;
 - an overlap-first replacement workflow and encrypted local recovery;
 - one machine-readable interface for command-line and local stdio MCP use.
 

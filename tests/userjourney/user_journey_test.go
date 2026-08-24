@@ -159,6 +159,10 @@ func TestInstalledCLIUserJourney(t *testing.T) {
 	if !bytes.Contains(audit.Data, []byte(`"category":"in-sync"`)) {
 		t.Fatal("direct audit did not report in-sync")
 	}
+	healthPreflight := h.preflight("health", "direct-a", map[string]any{"include_public_ip": false})
+	if !bytes.Contains(healthPreflight.Data, []byte(`"ready":true`)) || !bytes.Contains(healthPreflight.Data, []byte(`"authorization_class":"read-only"`)) {
+		t.Fatal("deployed Route health did not pass its read-only preflight")
+	}
 	drift := h.call(0, nil, "drift")
 	if !bytes.Contains(drift.Data, []byte(`"drifted":false`)) {
 		t.Fatalf("deployed and rendered state still drifted: %s", drift.Data)
@@ -202,8 +206,8 @@ func TestMCPStdioUsesInstalledBinary(t *testing.T) {
 		}
 		toolCount++
 	}
-	if toolCount != 6 {
-		t.Fatalf("stdio MCP listed %d tools, want 6", toolCount)
+	if toolCount != 7 {
+		t.Fatalf("stdio MCP listed %d tools, want 7", toolCount)
 	}
 	for _, name := range []string{"route_steward_bootstrap", "route_steward_capabilities", "route_steward_context", "route_steward_drift"} {
 		result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: map[string]any{}})

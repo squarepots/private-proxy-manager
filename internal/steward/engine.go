@@ -64,6 +64,19 @@ func RunRequest(ctx context.Context, request Request) (Envelope, int) {
 			return SanitizedFailure("drift", err)
 		}
 		return success("drift", report)
+	case "health":
+		preflight, err := NewPreflight("health", request.Target, state, request.Context, false)
+		if err != nil {
+			return SanitizedFailure("health", err)
+		}
+		if !preflight.Ready {
+			return failure("health", "context-gate-blocked", preflight, 2)
+		}
+		result, err := HealthRoute(ctx, state, request.Target, boolField(request.Context, "include_public_ip", false))
+		if err != nil {
+			return SanitizedFailure("health", err)
+		}
+		return success("health", result)
 	case "preflight":
 		if request.Operation == "" {
 			return SanitizedFailure("preflight", errors.New("operation is required"))
@@ -111,6 +124,8 @@ func executeReady(ctx context.Context, state *State, request Request) (any, stri
 		evidence := AuditRoute(ctx, state, request.Target)
 		_, err = SetObservedRoute(state, stateRouteID(state, request.Target), evidence.Status, evidence.Category, deref(evidence.ActualEgressIPv4), deref(evidence.HysteriaVersion), deref(evidence.WireGuardVersion))
 		result = evidence.Sanitized()
+	case "health":
+		result, err = HealthRoute(ctx, state, request.Target, boolField(request.Context, "include_public_ip", false))
 	case "add-server":
 		result, err = AddServer(state, request.Context)
 	case "add-link":
