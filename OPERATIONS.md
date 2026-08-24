@@ -122,7 +122,7 @@ A new WireGuard Link references existing entry/exit Servers, allocates collision
 
 ### Route
 
-A new direct or relay Route references existing topology, allocates a listener when needed, generates canonical Hysteria2 credentials/certificate/payload locally, and starts `pending` / disabled. It becomes enabled only after deterministic deployment succeeds.
+A new direct or relay Route references existing topology, allocates a listener when needed, generates canonical Hysteria2 credentials/certificate/payload locally, and starts `pending` / disabled. It becomes enabled only after deterministic deployment succeeds. An optional `port_hopping` value is one 2–8-port consecutive UDP range beginning at `listen_port`; deployment grants only the scoped Hysteria capability needed for that Route, configures the exact UFW range, and rejects overlapping Route or WireGuard listener ranges.
 
 ### Provider
 
@@ -154,7 +154,7 @@ Observed evidence is disposable. Drift does not self-heal; repair requires its o
 
 ## Connection health
 
-`route-steward health --target <route-id>` keeps configuration audit separate from actual client usability. It audits the Route, starts the pinned official Hysteria2 client with an ephemeral loopback HTTP proxy, and sends bounded requests through the Route to ipify's IPv4/IPv6 endpoints and Cloudflare's trace endpoint. The result layers server reachability, server audit, Hysteria2 handshake, real Internet access, DNS, declared exit identity, IPv4/IPv6, request latency, and relay WireGuard evidence.
+`route-steward health --target <route-id>` keeps configuration audit separate from actual client usability. It audits the Route, starts the pinned official Hysteria2 client with an ephemeral loopback HTTP proxy, and sends bounded requests through the Route to ipify's IPv4/IPv6 endpoints and Cloudflare's trace endpoint. The result layers server reachability, server audit, Hysteria2 handshake, real Internet access, DNS, declared exit identity, IPv4/IPv6, request latency, and relay WireGuard evidence. A hopping Route is checked with the rendered multi-port client configuration, while the server audit verifies its range/capability/firewall state; neither result is continuous monitoring or a claim that every future hop has been observed.
 
 Health is read-only with respect to desired and remote state. It may download the checksum-verified helper into `<private>/tools/` on first use and records sanitized disposable evidence in `observed.json`. Ephemeral configuration under `<private>/health/` contains live Route credentials, stays owner-only, and is removed when the check ends. Public IP values remain omitted from machine output unless the caller explicitly requests them. A failed health check does not authorize repair or replacement.
 
@@ -172,6 +172,8 @@ Current renderers:
 A Provider is optional. A clean private-only setup must render without one. Blank Profile policy uses generic privacy behavior; geography-specific policies are explicit opt-ins.
 
 The headless renderer defaults to `127.0.0.1:1080` and `auto` ingress selection (IPv4 first, then IPv6). Public/LAN listeners fail closed. It does not silently compose Profile Providers or GUI policy, and separate concurrent targets need separate local ports.
+
+For port hopping, managed payloads use the standard multi-port endpoint form. Mihomo/Karing receive `ports`, Shadowrocket receives that range in its Hysteria URI authority, and the headless JSON carries the same range with the fixed 30-second official UDP hop interval. No renderer-specific arbitrary interval is exposed because it would not be representable across the supported client contract.
 
 `route-steward proxy --target <client-target> --check` renders the target, obtains the checksum-verified official Hysteria2 client from the private cache, makes one real HTTP request through the Route, compares its IPv4 exit with desired state, and stops. Plain `proxy` runs the same target in the foreground for a service manager or job supervisor. The check contacts ipify and does not return the observed address.
 
@@ -200,7 +202,7 @@ Infrastructure migration is a persisted, retry-safe overlap-first workflow compo
 7. record the completed switch while leaving old remote services and cloud capacity intact;
 8. only then consume separately explicit destructive authority for old-capacity retirement if requested.
 
-`migrate-route` can create the BYO replacement Server from supplied structured context or use an existing Server. Direct and relay Routes are supported; relay replacement creates a new matching WireGuard Link. The private `migrations.json` checkpoint makes repeated calls deterministic and records a bounded failure code rather than raw transport output. A blocked workflow returns `workflow-blocked`; retry with the same source Route and replacement Server. A migration request never implies cloud deletion.
+`migrate-route` can create the BYO replacement Server from supplied structured context or use an existing Server. Direct and relay Routes are supported; relay replacement creates a new matching WireGuard Link. A hopping direct Route or relay-entry replacement retains its range on the new entry. For a relay-exit replacement, the unchanged entry must serve both Routes during the overlap, so RST reserves the next same-width non-overlapping range and publishes it only after replacement health succeeds. The private `migrations.json` checkpoint makes repeated calls deterministic and records a bounded failure code rather than raw transport output. A blocked workflow returns `workflow-blocked`; retry with the same source Route and replacement Server. A migration request never implies cloud deletion.
 
 ## Backup and recovery
 

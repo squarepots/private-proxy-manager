@@ -21,7 +21,7 @@ function Reject-Text([string]$RelativePath, [string]$Pattern, [string]$Message) 
 }
 
 # Static server safety properties that are naturally proven from the mutation scripts.
-Require-Text 'server/install-path-components.sh' 'HYSTERIA_VERSION=v2\.9\.3' 'The supported Hysteria2 binary is not pinned.'
+Require-Text 'server/install-path-components.sh' 'HYSTERIA_VERSION=v2\.12\.2' 'The supported Hysteria2 binary is not pinned.'
 Require-Text 'server/install-path-components.sh' 'HYSTERIA_SHA256=[0-9a-f]{64}' 'The supported Hysteria2 binary is not hash-pinned.'
 Require-Text 'server/install-path-components.sh' 'RST_BIN_DIR=/usr/local/lib/route-steward' 'The RST-owned binary namespace is missing.'
 Require-Text 'server/install-path-components.sh' 'HYSTERIA_BIN=\$\{RST_BIN_DIR\}/hysteria' 'Hysteria2 is not installed inside the RST-owned namespace.'
@@ -29,6 +29,11 @@ Require-Text 'server/config/99-route-steward-ssh.conf' 'PasswordAuthentication n
 Require-Text 'server/config/route-steward-hysteria.service' 'User=route-steward-hysteria' 'Direct-route service does not use the RST-owned runtime identity.'
 Require-Text 'server/configure-relay-entry.sh' 'bindDevice:\s*\$\{INTERFACE\}' 'Relay ingress is not bound to its WireGuard interface.'
 Require-Text 'server/configure-relay-entry.sh' 'Requires=wg-quick@\$\{INTERFACE\}' 'Relay service does not require its WireGuard interface.'
+Require-Text 'server/configure-ingress.sh' '--port-hopping-range' 'Direct ingress does not carry the bounded port-hopping deployment argument.'
+Require-Text 'server/configure-relay-entry.sh' '--port-hopping-range' 'Relay ingress does not carry the bounded port-hopping deployment argument.'
+Require-Text 'server/configure-ingress.sh' 'CAP_NET_BIND_SERVICE CAP_NET_ADMIN' 'Direct port hopping does not grant the required scoped capability.'
+Require-Text 'server/configure-relay-entry.sh' 'CAP_NET_RAW CAP_NET_ADMIN' 'Relay port hopping does not grant the required scoped capability.'
+Require-Text 'server/base-setup.sh' nftables 'Port hopping cannot rely on an unavailable packet-filter helper.'
 Require-Text 'server/configure-relay-exit.sh' 'POSTROUTING.+MASQUERADE' 'Relay exit NAT is missing.'
 Require-Text 'server/base-setup.sh' '/etc/modules-load.d/route-steward-bbr\.conf' 'Modules-load policy is not installed under a RST-owned name.'
 Require-Text 'server/base-setup.sh' '/etc/systemd/journald\.conf\.d/99-route-steward\.conf' 'Journald policy is not installed under a RST-owned name.'

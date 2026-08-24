@@ -19,7 +19,7 @@ try {
     [IO.File]::WriteAllText($keyPath, 'fixture', [Text.UTF8Encoding]::new($false))
     $serverContext = [ordered]@{ server_id = 'entry-a'; public_ipv4 = '192.0.2.80'; public_ipv6 = '2001:db8::80'; ssh_user = 'ubuntu'; ssh_key_path = $keyPath; host_ownership = 'dedicated' } | ConvertTo-Json -Compress
     $null = & $agent execute -PrivateDirectory $stage -Operation add-server -ContextJson $serverContext | ConvertFrom-Json
-    $routeContext = [ordered]@{ route_id = 'private-route'; display_name = 'Private-Route'; kind = 'direct'; entry_server = 'entry-a'; listen_port = 443 } | ConvertTo-Json -Compress
+    $routeContext = [ordered]@{ route_id = 'private-route'; display_name = 'Private-Route'; kind = 'direct'; entry_server = 'entry-a'; listen_port = 20000; port_hopping = '20000-20003' } | ConvertTo-Json -Compress
     $null = & $agent execute -PrivateDirectory $stage -Operation add-route -ContextJson $routeContext | ConvertFrom-Json
     $profileContext = [ordered]@{ profile_id = 'primary'; include_routes = @('private-route'); include_providers = @() } | ConvertTo-Json -Compress
     $null = & $agent execute -PrivateDirectory $stage -Operation add-profile -ContextJson $profileContext | ConvertFrom-Json
@@ -68,7 +68,7 @@ try {
     Assert-True ($bodyResult.node_count -eq 2 -and $bodyResult.client_target -eq 'mobile') 'Direct Route did not export both Shadowrocket nodes for the requested ClientTarget.'
     $encoded = [IO.File]::ReadAllText($bodyPath, [Text.Encoding]::UTF8)
     $plain = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($encoded))
-    Assert-True ($plain -match 'hysteria2://' -and $plain -match 'Private-Route-HY2-v4') 'Subscription body does not contain complete private node URIs.'
+    Assert-True ($plain -match 'hysteria2://' -and $plain -match 'Private-Route-HY2-v4' -and $plain -match '@192\.0\.2\.80:20000-20003/') 'Subscription body does not contain complete standard multi-port private node URIs.'
 
     Assert-True ((Assert-RSTSubscriptionBodySize -Body ('a' * 5120)) -eq 5120) 'A 5120-byte subscription payload was rejected.'
     Assert-True ((Assert-RSTSubscriptionBodySize -Body ('é' * 2560)) -eq 5120) 'A 5120-byte multibyte UTF-8 subscription payload was miscounted.'

@@ -111,6 +111,41 @@ function Test-RSTLoopbackListener {
     return [int]::TryParse($match.Groups['port'].Value, [ref]$port) -and $port -ge 1 -and $port -le 65535
 }
 
+function ConvertTo-RSTPortHoppingRange {
+    param([AllowNull()][string]$Value, [int]$ListenPort = 0)
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $null }
+    $match = [regex]::Match($Value.Trim(), '^(?<start>[1-9][0-9]{0,4})-(?<end>[1-9][0-9]{0,4})$')
+    if (-not $match.Success) { throw 'port_hopping must be one consecutive UDP port range such as 20000-20007.' }
+    $start = [int]$match.Groups['start'].Value
+    $end = [int]$match.Groups['end'].Value
+    if ($end -le $start -or $end -gt 65535 -or ($end - $start + 1) -gt 8) { throw 'port_hopping must contain 2..8 consecutive UDP ports.' }
+    if ($ListenPort -gt 0 -and $start -ne $ListenPort) { throw 'port_hopping must start at listen_port.' }
+    return [pscustomobject][ordered]@{ start_port = $start; end_port = $end }
+}
+
+function Get-RSTPortHoppingText {
+    param($PortHopping)
+    if ($null -eq $PortHopping) { return '' }
+    $start = [int](Get-RSTOptional $PortHopping 'start_port' 0)
+    $end = [int](Get-RSTOptional $PortHopping 'end_port' 0)
+    $range = ConvertTo-RSTPortHoppingRange -Value "$start-$end"
+    return '{0}-{1}' -f $range.start_port, $range.end_port
+}
+
+function Get-RSTRoutePortRange {
+    param([Parameter(Mandatory)]$Route)
+    $port = [int](Get-RSTOptional $Route 'listen_port' 0)
+    $hopping = Get-RSTOptional $Route 'port_hopping'
+    if ($null -eq $hopping) { return [pscustomobject][ordered]@{ start_port = $port; end_port = $port } }
+    $text = Get-RSTPortHoppingText -PortHopping $hopping
+    return ConvertTo-RSTPortHoppingRange -Value $text -ListenPort $port
+}
+
+function Test-RSTPortRangesOverlap {
+    param([int]$FirstStart, [int]$FirstEnd, [int]$SecondStart, [int]$SecondEnd)
+    return $FirstStart -le $SecondEnd -and $SecondStart -le $FirstEnd
+}
+
 function Test-RSTUnixUser {
     param([AllowNull()][string]$Value)
     if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
@@ -231,14 +266,15 @@ function Assert-RSTInventory {
             $family = [string](Get-RSTOptional $rule 'family')
             $protocol = [string](Get-RSTOptional $rule 'protocol')
             $port = [int](Get-RSTOptional $rule 'port' 0)
+            $endPort = [int](Get-RSTOptional $rule 'end_port' $port)
             $sourceServer = [string](Get-RSTOptional $rule 'source_server')
             $source = [string](Get-RSTOptional $rule 'source')
             if ($family -notin @('ipv4', 'ipv6', 'dual')) { $failures.Add("Server '$($server.id)' has an invalid firewall family.") }
             if ($protocol -notin @('tcp', 'udp')) { $failures.Add("Server '$($server.id)' has an invalid firewall protocol.") }
-            if ($port -lt 1 -or $port -gt 65535) { $failures.Add("Server '$($server.id)' has an invalid firewall port.") }
+            if ($port -lt 1 -or $port -gt 65535 -or $endPort -lt $port -or $endPort -gt 65535) { $failures.Add("Server '$($server.id)' has an invalid firewall port.") }
             if (-not $source -and -not $sourceServer) { $failures.Add("Server '$($server.id)' has a firewall rule without a source.") }
             if ($sourceServer -and -not $serverById.ContainsKey($sourceServer)) { $failures.Add("Server '$($server.id)' firewall references unknown source Server '$sourceServer'.") }
-            $key = '{0}:{1}:{2}:{3}' -f $family, $protocol, $port, $(if ($sourceServer) { "server:$sourceServer" } else { $source })
+            $key = '{0}:{1}:{2}-{3}:{4}' -f $family, $protocol, $port, $endPort, $(if ($sourceServer) { "server:$sourceServer" } else { $source })
             if ($seenFirewallRules.ContainsKey($key)) { $failures.Add("Server '$($server.id)' has duplicate firewall rule '$key'.") } else { $seenFirewallRules[$key] = $true }
         }
     }
@@ -283,9 +319,23 @@ function Assert-RSTInventory {
         if (-not $serverById.ContainsKey($exit)) { $failures.Add("Route '$id' references unknown exit Server '$exit'.") }
         $port = [int](Get-RSTOptional $route 'listen_port' 0)
         if ($port -lt 1 -or $port -gt 65535) { $failures.Add("Route '$id' has an invalid HY2 port.") }
-        $listenerKey = '{0}:{1}' -f $entry, $port
-        if ($routeListeners.ContainsKey($listenerKey)) { $failures.Add("Routes '$id' and '$($routeListeners[$listenerKey])' share listener '$listenerKey'.") }
-        else { $routeListeners[$listenerKey] = $id }
+        try { $range = Get-RSTRoutePortRange -Route $route }
+        catch { $failures.Add("Route '$id' has invalid port hopping."); $range = [pscustomobject]@{ start_port = $port; end_port = $port } }
+        if ($range.start_port -lt 1 -or $range.end_port -lt $range.start_port -or $range.end_port -gt 65535) { $failures.Add("Route '$id' has an invalid HY2 port.") }
+        if (-not $routeListeners.ContainsKey($entry)) { $routeListeners[$entry] = [Collections.Generic.List[object]]::new() }
+        foreach ($existing in @($routeListeners[$entry])) {
+            if (Test-RSTPortRangesOverlap -FirstStart $range.start_port -FirstEnd $range.end_port -SecondStart $existing.start_port -SecondEnd $existing.end_port) {
+                $failures.Add("Routes '$id' and '$($existing.id)' share listener range on Server '$entry'.")
+                break
+            }
+        }
+        $routeListeners[$entry].Add([pscustomobject]@{ id = $id; start_port = [int]$range.start_port; end_port = [int]$range.end_port })
+        foreach ($link in $links) {
+            if ([string](Get-RSTOptional $link 'exit_server') -eq $entry) {
+                $linkPort = [int](Get-RSTOptional $link 'listen_port' 0)
+                if ($linkPort -ge $range.start_port -and $linkPort -le $range.end_port) { $failures.Add("Route '$id' Hysteria2 listener range overlaps WireGuard Link '$($link.id)' on Server '$entry'.") }
+            }
+        }
         if ($kind -eq 'relay') {
             $linkId = [string](Get-RSTOptional $route 'link')
             if (-not $linkById.ContainsKey($linkId)) { $failures.Add("Relay Route '$id' references unknown Link '$linkId'.") }

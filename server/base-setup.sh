@@ -11,6 +11,7 @@ apt-get install -y --no-install-recommends \
   jq \
   openssl \
   ufw \
+  nftables \
   unattended-upgrades \
   mtr-tiny \
   vnstat

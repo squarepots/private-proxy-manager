@@ -23,6 +23,7 @@ function Invoke-RSTRouteOperation {
     }
 
     $arguments = @{}
+    $portHoppingRange = Get-RSTPortHoppingText -PortHopping (Get-RSTOptional $RouteObject 'port_hopping')
     $scriptPath = $null
     if ([string]$RouteObject.kind -eq 'relay') {
         $link = Get-RSTLinkById -Inventory $Inventory -Id ([string]$RouteObject.link)
@@ -49,6 +50,7 @@ function Invoke-RSTRouteOperation {
         if ($AuditOnly) { $arguments.AuditOnly = $true }
         else { $arguments.OutputPayloadPath = Resolve-RSTSecret -Reference ([string]$RouteObject.payload_secret_ref) -PrivateDirectory $PrivateDirectory }
         if ($credentialDirectory) { $arguments.CredentialBundleDirectory = $credentialDirectory }
+        if ($portHoppingRange) { $arguments.PortHoppingRange = $portHoppingRange }
         $scriptPath = Join-Path $repoRoot 'Deploy-Relay.ps1'
     }
     else {
@@ -64,6 +66,7 @@ function Invoke-RSTRouteOperation {
         if ($AuditOnly) { $arguments.AuditOnly = $true }
         else { $arguments.OutputPayloadPath = Resolve-RSTSecret -Reference ([string]$RouteObject.payload_secret_ref) -PrivateDirectory $PrivateDirectory }
         if ($credentialDirectory) { $arguments.CredentialBundleDirectory = $credentialDirectory }
+        if ($portHoppingRange) { $arguments.PortHoppingRange = $portHoppingRange }
         $scriptPath = Join-Path $repoRoot 'Deploy-Server.ps1'
     }
 

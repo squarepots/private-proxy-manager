@@ -21,7 +21,7 @@ The QR source and its notice are in `client/vendor/`. The complete license
 texts for the Go dependencies follow.
 
 Route Steward deployments, connection-health checks, and headless client runtime
-download the official Hysteria 2.9.3 server or client executable for the selected platform at runtime.
+download the official Hysteria 2.12.2 server or client executable for the selected platform at runtime.
 Those executables are SHA-256 pinned, are not embedded in Route Steward release
 archives, and are distributed by the [Hysteria project](https://github.com/HyNetworks/hysteria)
 under the MIT License.

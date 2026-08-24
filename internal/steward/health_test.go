@@ -172,7 +172,7 @@ func healthyHealthDependencies(ipv4, ipv6 string, relay bool) healthDependencies
 	}
 	return healthDependencies{
 		Audit: func(context.Context, *State, string) AuditEvidence {
-			return AuditEvidence{Status: "healthy", Category: "in-sync", ActualEgressIPv4: stringPointer(ipv4), EgressMatchesDeclaredExit: true, HysteriaVersion: stringPointer("v2.9.3"), WireGuardVersion: wireGuard}
+			return AuditEvidence{Status: "healthy", Category: "in-sync", ActualEgressIPv4: stringPointer(ipv4), EgressMatchesDeclaredExit: true, HysteriaVersion: stringPointer("v2.12.2"), WireGuardVersion: wireGuard}
 		},
 		EnsureClient: func(context.Context, *State) (string, bool, error) { return "fixture-hysteria", false, nil },
 		ProbeNode: func(_ context.Context, _ string, _ *State, node routeNode, testIPv6 bool, _ healthEndpoints) nodeHealthProbe {

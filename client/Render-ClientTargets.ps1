@@ -49,10 +49,23 @@ function Assert-ManagedHysteria2Node {
     $type = Get-NodeValue -Body $Node.Body -Key 'type' -Required
     if ($type.ToLowerInvariant() -ne 'hysteria2') { throw "Node '$($Node.Name)' uses unsupported type '$type'." }
     foreach ($key in 'server','port','password','sni','obfs-password') { $null = Get-NodeValue -Body $Node.Body -Key $key -Required }
+    $port = 0
+    if (-not [int]::TryParse((Get-NodeValue -Body $Node.Body -Key 'port' -Required), [ref]$port) -or $port -lt 1 -or $port -gt 65535) { throw "Node '$($Node.Name)' has an invalid Hysteria2 port." }
+    $ports = [string](Get-NodeValue -Body $Node.Body -Key 'ports')
+    if ($ports) { $null = ConvertTo-RSTPortHoppingRange -Value $ports -ListenPort $port }
     $fingerprint = ConvertTo-NormalizedFingerprint -Value (Get-NodeValue -Body $Node.Body -Key 'fingerprint' -Required) -NodeName $Node.Name
     $obfs = Get-NodeValue -Body $Node.Body -Key 'obfs' -Required
     if ($obfs -ne 'salamander') { throw "Node '$($Node.Name)' uses unsupported Hysteria2 obfuscation." }
     return $fingerprint
+}
+
+function Get-ManagedNodePortHoppingText {
+    param([Parameter(Mandatory)]$Node)
+    $port = 0
+    if (-not [int]::TryParse((Get-NodeValue -Body $Node.Body -Key 'port' -Required), [ref]$port) -or $port -lt 1 -or $port -gt 65535) { throw "Node '$($Node.Name)' has an invalid Hysteria2 port." }
+    $ports = [string](Get-NodeValue -Body $Node.Body -Key 'ports')
+    if (-not $ports) { return '' }
+    return Get-RSTPortHoppingText -PortHopping (ConvertTo-RSTPortHoppingRange -Value $ports -ListenPort $port)
 }
 
 function ConvertTo-ShadowrocketUri {
@@ -60,6 +73,8 @@ function ConvertTo-ShadowrocketUri {
     $fingerprint = Assert-ManagedHysteria2Node -Node $Node
     $server = Get-NodeValue -Body $Node.Body -Key 'server' -Required
     $port = Get-NodeValue -Body $Node.Body -Key 'port' -Required
+    $endpointPort = Get-ManagedNodePortHoppingText -Node $Node
+    if (-not $endpointPort) { $endpointPort = $port }
     $auth = Get-NodeValue -Body $Node.Body -Key 'password' -Required
     $sni = Get-NodeValue -Body $Node.Body -Key 'sni' -Required
     $obfs = Get-NodeValue -Body $Node.Body -Key 'obfs' -Required
@@ -73,7 +88,7 @@ function ConvertTo-ShadowrocketUri {
         'peer=' + (ConvertTo-UriComponent $sni),
         'alpn=h3','udp=1','insecure=1','pinSHA256=' + $fingerprint
     ) -join '&'
-    return 'hysteria2://{0}@{1}:{2}/?{3}#{4}' -f (ConvertTo-UriComponent $auth), (Format-UriHost $server), $port, $query, (ConvertTo-UriComponent $Node.Name)
+    return 'hysteria2://{0}@{1}:{2}/?{3}#{4}' -f (ConvertTo-UriComponent $auth), (Format-UriHost $server), $endpointPort, $query, (ConvertTo-UriComponent $Node.Name)
 }
 
 function Read-RouteNodes {
@@ -302,19 +317,21 @@ function Render-Hysteria2 {
     $port = Get-NodeValue -Body $node.Body -Key 'port' -Required
     $portNumber = 0
     if (-not [int]::TryParse($port, [ref]$portNumber) -or $portNumber -lt 1 -or $portNumber -gt 65535) { throw "Node '$($node.Name)' has an invalid port." }
+    $portHopping = Get-ManagedNodePortHoppingText -Node $node
     $auth = Get-NodeValue -Body $node.Body -Key 'password' -Required
     $sni = Get-NodeValue -Body $node.Body -Key 'sni' -Required
     $fingerprint = ConvertTo-NormalizedFingerprint -Value (Get-NodeValue -Body $node.Body -Key 'fingerprint' -Required) -NodeName $node.Name
     $obfs = Get-NodeValue -Body $node.Body -Key 'obfs' -Required
     if ($obfs -ne 'salamander') { throw "Node '$($node.Name)' uses unsupported Hysteria2 obfuscation." }
     $config = [ordered]@{
-        server = ('{0}:{1}' -f (Format-UriHost $selected[0].Server), $portNumber)
+        server = ('{0}:{1}' -f (Format-UriHost $selected[0].Server), $(if ($portHopping) { $portHopping } else { $portNumber }))
         auth = $auth
         tls = [ordered]@{ sni = $sni; insecure = $true; pinSHA256 = $fingerprint }
         obfs = [ordered]@{ type = 'salamander'; salamander = [ordered]@{ password = (Get-NodeValue -Body $node.Body -Key 'obfs-password' -Required) } }
         http = [ordered]@{ listen = $listen }
         socks5 = [ordered]@{ listen = $listen }
     }
+    if ($portHopping) { $config.transport = [ordered]@{ type = 'udp'; udp = [ordered]@{ hopInterval = '30s' } } }
     [IO.File]::WriteAllText($OutputPath, ($config | ConvertTo-Json -Depth 10), [Text.UTF8Encoding]::new($false))
     Protect-RSTPath -Path $OutputPath
     return [ordered]@{ client_target = [string]$ClientTarget.id; profile = [string]$Profile.id; renderer = 'hysteria2'; path = [IO.Path]::GetFullPath($OutputPath); node_count = 1; validation = 'official-json-structure-checked' }

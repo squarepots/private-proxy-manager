@@ -18,11 +18,12 @@ Initial setup changes host-wide UFW, swap/fstab, SMTP egress, SSH/sysctl/journal
 
 | Capability | Supported contract |
 | --- | --- |
-| Ingress | Hysteria2, exact version and SHA-256 pinned in deployment code |
+| Ingress | Hysteria2 2.12.2, exact version and SHA-256 pinned in deployment code |
 | Direct Route | Client → Hysteria2 Server → declared exit |
 | Relay Route | Client → Hysteria2 entry → one WireGuard Link → exit/NAT |
 | Link | Single-hop WireGuard over an isolated RST interface/port/subnet |
 | Address families | Hysteria2 client ingress supports IPv4 and IPv6; the relay Link uses IPv4 |
+| Optional port hopping | One `port_hopping` range of 2–8 consecutive UDP ports, starting at the Route listener; requires the server's nftables or iptables helper and opens that exact UFW range |
 
 ## Desired state
 
@@ -59,6 +60,8 @@ The `karing` renderer reuses the deterministic Clash YAML contract rather than m
 
 A `hysteria2` ClientTarget additionally selects exactly one enabled Route from its Profile, a loopback listener, and `auto`, `ipv4`, or `ipv6` ingress. `auto` prefers IPv4 and falls back to IPv6. This renderer does not compose Profile Providers or GUI policy rules. Multiple concurrently running targets need distinct local ports.
 
+When a Route has `port_hopping`, its canonical payload keeps `port` at the range start and adds `ports`. Mihomo and Karing receive that Clash field, Shadowrocket receives the standard multi-port Hysteria URI authority, and the headless official-client JSON uses the range plus Hysteria's fixed interoperable 30-second hop interval. The range is deliberately limited to 2–8 ports so its firewall exposure and diagnostics remain bounded. See the [reliability research record](RELIABILITY-RESEARCH.md) for sources, verification scope, and rejected candidates.
+
 ## Providers
 
 The optional `mihomo-http` Provider accepts an HTTP or HTTPS source URL stored in local secret storage. RST remains fully usable with zero Providers.
@@ -77,11 +80,11 @@ The optional `mihomo-http` Provider accepts an HTTP or HTTPS source URL stored i
 
 Read-only Route audit and sanitized desired-versus-observed drift cover RST service/configuration, firewall/network, WireGuard, Hysteria2 listener/certificate, egress, ClientTarget render, and undetermined state.
 
-Persisted `migrate-route` transactions support direct Route replacement and replacement of either endpoint of a relay Route. They reuse BYO SSH deployment, WireGuard Links, end-to-end health, ClientTarget rendering, and existing Shadowrocket subscription publication. Old external capacity is preserved; cloud provisioning and destructive provider retirement remain outside this supported workflow.
+Persisted `migrate-route` transactions support direct Route replacement and replacement of either endpoint of a relay Route. They reuse BYO SSH deployment, WireGuard Links, end-to-end health, ClientTarget rendering, and existing Shadowrocket subscription publication. A relay-exit replacement of a hopping Route uses a same-width non-overlapping range while both paths are live, then switches client output only after health succeeds. Old external capacity is preserved; cloud provisioning and destructive provider retirement remain outside this supported workflow.
 
-On-demand `health` supports both direct and relay Routes. It runs the SHA-256-pinned official Hysteria2 2.9.3 client from a private local cache and checks the real client handshake, Internet access, DNS through a hostname request, declared exit identity, IPv4, optional declared IPv6, and request latency. Relay results also include the bounded WireGuard audit. Health uses ipify's address-family endpoints and Cloudflare's `/cdn-cgi/trace` endpoint; it is not continuous monitoring. Exact public IPs are omitted unless explicitly requested. Packet loss is currently reported as unsupported because no stable safe metric is implemented.
+On-demand `health` supports both direct and relay Routes. It runs the SHA-256-pinned official Hysteria2 2.12.2 client from a private local cache and checks the real client handshake, Internet access, DNS through a hostname request, declared exit identity, IPv4, optional declared IPv6, and request latency. Relay results also include the bounded WireGuard audit. For a hopping Route, audit verifies the configured range, firewall range, scoped service capability drop-in, and desired configuration hash; health starts a real client configured with that range. It is still a point-in-time traffic test, not proof that every later periodic hop succeeds. Health uses ipify's address-family endpoints and Cloudflare's `/cdn-cgi/trace` endpoint; it is not continuous monitoring. Exact public IPs are omitted unless explicitly requested. Packet loss is currently reported as unsupported because no stable safe metric is implemented.
 
-`route-steward proxy` uses the same verified Hysteria2 2.9.3 cache and generated private JSON. `--check` starts the target temporarily, makes a real HTTP request through its loopback proxy, compares the observed IPv4 exit with the selected Route, omits the address from output, and stops. Run mode stays in the foreground so the operator's service manager owns restart policy. Public/LAN listeners, automatic multi-Route failover, Provider composition, and service installation are outside this renderer contract.
+`route-steward proxy` uses the same verified Hysteria2 2.12.2 cache and generated private JSON. `--check` starts the target temporarily, makes a real HTTP request through its loopback proxy, compares the observed IPv4 exit with the selected Route, omits the address from output, and stops. Run mode stays in the foreground so the operator's service manager owns restart policy. Public/LAN listeners, automatic multi-Route failover, Provider composition, and service installation are outside this renderer contract.
 
 Migration uses an overlap-first workflow composed from add, deploy, audit, and render operations. Encrypted recovery verifies the archive manifest and path safety, relocates SSH material, validates schema-1 state, resets observed evidence, and performs no remote mutation by itself.
 

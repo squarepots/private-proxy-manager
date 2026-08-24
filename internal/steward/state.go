@@ -274,7 +274,11 @@ func ValidateInventory(inv *Inventory, privateDir string, skipSecrets bool) erro
 			if rule.Protocol != "tcp" && rule.Protocol != "udp" {
 				failures = append(failures, fmt.Sprintf("Server %q has invalid firewall protocol", s.ID))
 			}
-			if rule.Port < 1 || rule.Port > 65535 {
+			endPort := rule.EndPort
+			if endPort == 0 {
+				endPort = rule.Port
+			}
+			if rule.Port < 1 || rule.Port > 65535 || endPort < rule.Port || endPort > 65535 {
 				failures = append(failures, fmt.Sprintf("Server %q has invalid firewall port", s.ID))
 			}
 			if rule.Source == "" && rule.SourceServer == "" {
@@ -287,7 +291,7 @@ func ValidateInventory(inv *Inventory, privateDir string, skipSecrets bool) erro
 			if rule.SourceServer != "" {
 				source = "server:" + rule.SourceServer
 			}
-			key := fmt.Sprintf("%s:%s:%d:%s", rule.Family, rule.Protocol, rule.Port, source)
+			key := fmt.Sprintf("%s:%s:%d-%d:%s", rule.Family, rule.Protocol, rule.Port, endPort, source)
 			if firewallRules[key] {
 				failures = append(failures, fmt.Sprintf("Server %q has duplicate firewall rule %q", s.ID, key))
 			}
@@ -316,7 +320,7 @@ func ValidateInventory(inv *Inventory, privateDir string, skipSecrets bool) erro
 		}
 		interfaces[l.Interface], ports[l.ListenPort], subnets[l.Subnet] = true, true, true
 	}
-	routeListeners, directEntries := map[string]bool{}, map[string]bool{}
+	routeListeners, directEntries := map[string][][2]int{}, map[string]bool{}
 	for _, r := range inv.Routes {
 		if r.Kind != "direct" && r.Kind != "relay" {
 			failures = append(failures, fmt.Sprintf("Route %q has unsupported kind", r.ID))
@@ -324,14 +328,26 @@ func ValidateInventory(inv *Inventory, privateDir string, skipSecrets bool) erro
 		if r.Ingress.Driver != "hysteria2" || r.ListenPort < 1 || r.ListenPort > 65535 {
 			failures = append(failures, fmt.Sprintf("Route %q has invalid ingress", r.ID))
 		}
+		startPort, endPort, rangeErr := routePortRange(r)
+		if rangeErr != nil {
+			failures = append(failures, fmt.Sprintf("Route %q has invalid port hopping: %v", r.ID, rangeErr))
+			startPort, endPort = r.ListenPort, r.ListenPort
+		}
 		if !serverSet[r.EntryServer] || !serverSet[r.ExitServer] {
 			failures = append(failures, fmt.Sprintf("Route %q references an unknown server", r.ID))
 		}
-		listener := fmt.Sprintf("%s:%d", r.EntryServer, r.ListenPort)
-		if routeListeners[listener] {
-			failures = append(failures, fmt.Sprintf("Route %q reuses listener %q", r.ID, listener))
+		for _, existing := range routeListeners[r.EntryServer] {
+			if portRangesOverlap(startPort, endPort, existing[0], existing[1]) {
+				failures = append(failures, fmt.Sprintf("Route %q reuses Hysteria2 listener range on Server %q", r.ID, r.EntryServer))
+				break
+			}
 		}
-		routeListeners[listener] = true
+		routeListeners[r.EntryServer] = append(routeListeners[r.EntryServer], [2]int{startPort, endPort})
+		for _, link := range inv.Links {
+			if link.ExitServer == r.EntryServer && link.ListenPort >= startPort && link.ListenPort <= endPort {
+				failures = append(failures, fmt.Sprintf("Route %q port range overlaps WireGuard Link %q on Server %q", r.ID, link.ID, r.EntryServer))
+			}
+		}
 		if r.Kind == "direct" {
 			if directEntries[r.EntryServer] {
 				failures = append(failures, fmt.Sprintf("Direct Route %q reuses one entry Server service", r.ID))

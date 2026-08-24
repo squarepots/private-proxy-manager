@@ -62,7 +62,7 @@ try {
     Assert-True (@($addServerCapability.required_context | Where-Object name -eq 'host_ownership')[0].type -eq 'dedicated') 'add-server capability metadata does not describe the dedicated-host type.'
     Assert-True (@($addServerCapability.effects) -contains 'update-local-desired-state') 'add-server capability metadata does not declare its effect.'
     Assert-True (@($capabilities.data.capabilities | Where-Object { -not $_.PSObject.Properties['required_context'] -or -not $_.PSObject.Properties['effects'] }).Count -eq 0) 'One or more operations omit required-context or effect metadata.'
-    Assert-True ($capabilities.data.drivers.ingress[0].id -eq 'hysteria2' -and $capabilities.data.drivers.ingress[0].version -eq '2.9.3') 'Hysteria2 driver truth is missing or inconsistent.'
+    Assert-True ($capabilities.data.drivers.ingress[0].id -eq 'hysteria2' -and $capabilities.data.drivers.ingress[0].version -eq '2.12.2' -and @($capabilities.data.drivers.ingress[0].reliability) -contains 'optional-port-hopping') 'Hysteria2 driver truth is missing or inconsistent.'
     Assert-True ($capabilities.data.drivers.links[0].id -eq 'wireguard-single-hop') 'WireGuard single-hop capability truth is missing.'
 	Assert-True ($capabilities.data.drivers.health_checks[0].id -eq 'hysteria2-client-traffic' -and $capabilities.data.drivers.health_checks[0].packet_loss -eq 'unsupported') 'Health capability truth is incomplete.'
     Assert-True ($capabilities.data.drivers.compute[0].transport -eq 'ssh') 'BYO SSH compute capability truth is missing.'
@@ -98,10 +98,15 @@ try {
     Assert-True ($addServer.success -and $addServer.data.result.id -eq 'entry-a') 'Structured add-server failed.'
     Assert-True ($addServer.data.result.compute_driver -eq 'byo-ssh' -and $addServer.data.result.host_ownership -eq 'dedicated' -and -not $addServer.data.result.remote_changed) 'add-server did not preserve explicit dedicated compute/local-only semantics.'
 
-    $routeContext = [ordered]@{ route_id = 'direct-a'; display_name = 'Direct-A'; kind = 'direct'; entry_server = 'entry-a'; listen_port = 443 } | ConvertTo-Json -Compress
+    $invalidPortHoppingContext = [ordered]@{ route_id = 'blocked-hop'; kind = 'direct'; entry_server = 'entry-a'; listen_port = 20001; port_hopping = '20000-20003' } | ConvertTo-Json -Compress
+    $invalidPortHopping = & $agent preflight -PrivateDirectory $stage -Operation add-route -ContextJson $invalidPortHoppingContext | ConvertFrom-Json
+    Assert-True (-not $invalidPortHopping.data.ready -and @($invalidPortHopping.data.conflicts) -contains 'port-hopping-must-start-at-listen-port') 'Port hopping whose range does not start at the listener passed preflight.'
+
+    $routeContext = [ordered]@{ route_id = 'direct-a'; display_name = 'Direct-A'; kind = 'direct'; entry_server = 'entry-a'; listen_port = 20000; port_hopping = '20000-20003' } | ConvertTo-Json -Compress
     $addRoute = & $agent execute -PrivateDirectory $stage -Operation add-route -ContextJson $routeContext | ConvertFrom-Json
     Assert-True ($addRoute.success -and $addRoute.data.result.id -eq 'direct-a') 'Structured add-route failed.'
     Assert-True ($addRoute.data.result.ingress_driver -eq 'hysteria2' -and -not $addRoute.data.result.enabled) 'A new Route did not preserve explicit ingress driver/pending semantics.'
+    Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'add-route')[0].required_context.type -contains 'udp-port-range-2-to-8') 'add-route capability metadata does not describe optional bounded port hopping.'
 
     $profileContext = [ordered]@{ profile_id = 'primary'; include_routes = @('direct-a'); include_providers = @() } | ConvertTo-Json -Compress
     $addProfile = & $agent execute -PrivateDirectory $stage -Operation add-profile -ContextJson $profileContext | ConvertFrom-Json

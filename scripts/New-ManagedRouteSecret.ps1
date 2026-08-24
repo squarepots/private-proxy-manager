@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory)][string]$EntryIPv4,
     [string]$EntryIPv6,
     [Parameter(Mandatory)][ValidateRange(1, 65535)][int]$Port,
+    [string]$PortHoppingRange,
     [Parameter(Mandatory)][string]$SecretDirectory
 )
 
@@ -15,6 +16,7 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 . (Join-Path $repo 'lib\RouteSteward.Core.ps1')
 if (-not (Test-RSTIPv4 $EntryIPv4)) { throw 'EntryIPv4 is invalid.' }
 if ($EntryIPv6 -and -not (Test-RSTIPv6 $EntryIPv6)) { throw 'EntryIPv6 is invalid.' }
+$portHopping = ConvertTo-RSTPortHoppingRange -Value $PortHoppingRange -ListenPort $Port
 
 $SecretDirectory = [IO.Path]::GetFullPath($SecretDirectory)
 if (Test-Path -LiteralPath $SecretDirectory) { throw "Managed secret directory for '$RouteId' already exists." }
@@ -67,6 +69,7 @@ try {
     type: hysteria2
     server: '$Address'
     port: $Port
+$(if ($portHopping) { "    ports: '$($portHopping.start_port)-$($portHopping.end_port)'" })
     password: '$auth'
     sni: '$EntryIPv4'
     skip-cert-verify: true

@@ -395,6 +395,12 @@ func validateManagedHysteria2Node(node routeNode) (string, error) {
 			return "", fmt.Errorf("node %q is missing %q", node.Name, key)
 		}
 	}
+	if port, err := strconv.Atoi(node.Values["port"]); err != nil || port < 1 || port > 65535 {
+		return "", fmt.Errorf("node %q has an invalid Hysteria2 port", node.Name)
+	}
+	if _, err := nodePortHoppingRange(node); err != nil {
+		return "", err
+	}
 	fingerprint := strings.ToLower(strings.NewReplacer(":", "", "-", "", " ", "").Replace(node.Values["fingerprint"]))
 	if len(fingerprint) != 64 {
 		return "", fmt.Errorf("node %q has an invalid SHA-256 fingerprint", node.Name)
@@ -408,10 +414,32 @@ func validateManagedHysteria2Node(node routeNode) (string, error) {
 	return fingerprint, nil
 }
 
+func nodePortHoppingRange(node routeNode) (string, error) {
+	value := strings.TrimSpace(node.Values["ports"])
+	if value == "" {
+		return "", nil
+	}
+	hopping, err := parsePortHoppingRange(value)
+	if err != nil {
+		return "", fmt.Errorf("node %q has invalid port hopping: %w", node.Name, err)
+	}
+	port, err := strconv.Atoi(node.Values["port"])
+	if err != nil || validatePortHopping(port, hopping) != nil {
+		return "", fmt.Errorf("node %q has invalid port hopping", node.Name)
+	}
+	return portHoppingText(hopping), nil
+}
+
 func shadowrocketURI(node routeNode) (string, error) {
 	fingerprint, err := validateManagedHysteria2Node(node)
 	if err != nil {
 		return "", err
+	}
+	endpointPort := node.Values["port"]
+	if hopping, err := nodePortHoppingRange(node); err != nil {
+		return "", err
+	} else if hopping != "" {
+		endpointPort = hopping
 	}
 	host := node.Values["server"]
 	if strings.Contains(host, ":") {
@@ -419,7 +447,7 @@ func shadowrocketURI(node routeNode) (string, error) {
 	}
 	escape := func(v string) string { return strings.ReplaceAll(url.QueryEscape(v), "+", "%20") }
 	query := "auth=" + escape(node.Values["password"]) + "&obfs=salamander&obfs-password=" + escape(node.Values["obfs-password"]) + "&obfsParam=" + escape(node.Values["obfs-password"]) + "&sni=" + escape(node.Values["sni"]) + "&peer=" + escape(node.Values["sni"]) + "&alpn=h3&udp=1&insecure=1&pinSHA256=" + fingerprint
-	return "hysteria2://" + escape(node.Values["password"]) + "@" + host + ":" + node.Values["port"] + "/?" + query + "#" + escape(node.Name), nil
+	return "hysteria2://" + escape(node.Values["password"]) + "@" + host + ":" + endpointPort + "/?" + query + "#" + escape(node.Name), nil
 }
 
 func yamlScalar(value string) string {

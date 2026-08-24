@@ -170,6 +170,9 @@ func operateDirect(ctx context.Context, state *State, route Route, server Server
 			return nil, err
 		}
 		configure := []string{"sudo", "bash", remoteServer + "/configure-ingress.sh", "--ipv4", server.Network.PublicIPv4, "--name", route.DisplayName, "--port", fmt.Sprint(route.ListenPort), "--output", "/var/lib/route-steward/client-payload.yaml", "--credential-dir", remoteCredential}
+		if hopping := portHoppingText(route.PortHopping); hopping != "" {
+			configure = append(configure, "--port-hopping-range", hopping)
+		}
 		if server.Network.PublicIPv6 != nil {
 			configure = append(configure, "--ipv6", *server.Network.PublicIPv6)
 		}
@@ -180,11 +183,14 @@ func operateDirect(ctx context.Context, state *State, route Route, server Server
 			return nil, err
 		}
 	}
-	fingerprint, configHash, err := routeAuditExpectation(credentialDir, route.ListenPort, "")
+	fingerprint, configHash, err := routeAuditExpectation(credentialDir, route.ListenPort, "", portHoppingText(route.PortHopping))
 	if err != nil {
 		return nil, err
 	}
 	audit := []string{"sudo", "bash", remoteServer + "/audit.sh", "--ingress-port", fmt.Sprint(route.ListenPort), "--expected-fingerprint", fingerprint, "--expected-config-hash", configHash}
+	if hopping := portHoppingText(route.PortHopping); hopping != "" {
+		audit = append(audit, "--port-hopping-range", hopping)
+	}
 	output, auditErr := runSSH(ctx, host, bashCommand(audit...))
 	lines = filterAuditLines(output)
 	if auditErr != nil && !auditOnly {
@@ -322,6 +328,9 @@ func operateRelay(ctx context.Context, state *State, route Route, entry, exit Se
 			return nil, err
 		}
 		entryConfigure := []string{"sudo", "bash", entryServer + "/configure-relay-entry.sh", "--interface", link.Interface, "--local-cidr", link.EntryAddress, "--peer-ip", exitPeer, "--peer-public-key", exitPublic, "--exit-endpoint", exit.Network.PublicIPv4, "--tunnel-port", fmt.Sprint(link.ListenPort), "--ingress-port", fmt.Sprint(route.ListenPort), "--entry-ipv4", entry.Network.PublicIPv4, "--exit-ipv4", exit.Network.PublicIPv4, "--name", route.DisplayName, "--via-name", entry.ID, "--output", "/var/lib/route-steward/relay-client-payload.yaml", "--unit-dir", entryServer + "/config", "--credential-dir", credentialRemote}
+		if hopping := portHoppingText(route.PortHopping); hopping != "" {
+			entryConfigure = append(entryConfigure, "--port-hopping-range", hopping)
+		}
 		if entry.Network.PublicIPv6 != nil {
 			entryConfigure = append(entryConfigure, "--entry-ipv6", *entry.Network.PublicIPv6)
 		}
@@ -343,11 +352,14 @@ func operateRelay(ctx context.Context, state *State, route Route, entry, exit Se
 		}
 		return lines, nil
 	}
-	fingerprint, configHash, err := routeAuditExpectation(credentialDir, route.ListenPort, link.Interface)
+	fingerprint, configHash, err := routeAuditExpectation(credentialDir, route.ListenPort, link.Interface, portHoppingText(route.PortHopping))
 	if err != nil {
 		return nil, err
 	}
 	entryAudit := []string{"sudo", "bash", entryServer + "/audit-relay.sh", "--role", "entry", "--interface", link.Interface, "--name", route.DisplayName, "--ingress-port", fmt.Sprint(route.ListenPort), "--peer-ip", exitPeer, "--expected-exit", exit.Network.PublicIPv4, "--expected-peer-public-key", keys.Exit.PublicKey, "--expected-fingerprint", fingerprint, "--expected-config-hash", configHash}
+	if hopping := portHoppingText(route.PortHopping); hopping != "" {
+		entryAudit = append(entryAudit, "--port-hopping-range", hopping)
+	}
 	entryOutput, entryErr := runSSH(ctx, entryHost, bashCommand(entryAudit...))
 	lines = filterAuditLines(entryOutput)
 	if entryErr != nil && !auditOnly {
@@ -469,7 +481,7 @@ func validatePayloadSemantics(expected, actual []byte) error {
 		}
 		actualByName[node.Name] = node
 	}
-	keys := []string{"type", "server", "port", "password", "sni", "skip-cert-verify", "fingerprint", "alpn", "obfs", "obfs-password"}
+	keys := []string{"type", "server", "port", "ports", "password", "sni", "skip-cert-verify", "fingerprint", "alpn", "obfs", "obfs-password"}
 	for _, expectedNode := range expectedNodes {
 		actualNode, exists := actualByName[expectedNode.Name]
 		if !exists {
@@ -478,6 +490,9 @@ func validatePayloadSemantics(expected, actual []byte) error {
 		for _, key := range keys {
 			expectedValue := normalizePayloadValue(key, expectedNode.Values[key])
 			actualValue := normalizePayloadValue(key, actualNode.Values[key])
+			if key == "ports" && expectedValue == "" && actualValue == "" {
+				continue
+			}
 			if expectedValue == "" || expectedValue != actualValue {
 				return errors.New("remote generated client payload does not match canonical local payload")
 			}
@@ -493,7 +508,7 @@ func normalizePayloadValue(key, value string) string {
 	return value
 }
 
-func routeAuditExpectation(directory string, port int, bind string) (string, string, error) {
+func routeAuditExpectation(directory string, port int, bind, portHopping string) (string, string, error) {
 	credentialData, err := os.ReadFile(filepath.Join(directory, "credentials.json"))
 	if err != nil {
 		return "", "", err
@@ -521,9 +536,9 @@ func routeAuditExpectation(directory string, port int, bind string) (string, str
 	}
 	fingerprintSum := sha256.Sum256(cert.Raw)
 	fingerprint := hex.EncodeToString(fingerprintSum[:])
-	material := fmt.Sprintf("hysteria2|port=%d|auth=%s|obfs=%s|cert=%s", port, credential.Hysteria.Auth, credential.Hysteria.Obfs, fingerprint)
+	material := fmt.Sprintf("hysteria2|port=%d|hop=%s|auth=%s|obfs=%s|cert=%s", port, defaultString(portHopping, "none"), credential.Hysteria.Auth, credential.Hysteria.Obfs, fingerprint)
 	if bind != "" {
-		material = fmt.Sprintf("hysteria2-relay|port=%d|auth=%s|obfs=%s|cert=%s|bind=%s", port, credential.Hysteria.Auth, credential.Hysteria.Obfs, fingerprint, bind)
+		material = fmt.Sprintf("hysteria2-relay|port=%d|hop=%s|auth=%s|obfs=%s|cert=%s|bind=%s", port, defaultString(portHopping, "none"), credential.Hysteria.Auth, credential.Hysteria.Obfs, fingerprint, bind)
 	}
 	hash := sha256.Sum256([]byte(material))
 	return fingerprint, hex.EncodeToString(hash[:]), nil

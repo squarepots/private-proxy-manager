@@ -22,7 +22,7 @@ try {
     [IO.File]::WriteAllText($keyPath, 'fixture', [Text.UTF8Encoding]::new($false))
     $serverContext = [ordered]@{ server_id = 'entry-a'; public_ipv4 = '192.0.2.10'; public_ipv6 = '2001:db8::10'; ssh_user = 'ubuntu'; ssh_key_path = $keyPath; host_ownership = 'dedicated' } | ConvertTo-Json -Compress
     $null = & $agent execute -PrivateDirectory $stage -Operation add-server -ContextJson $serverContext | ConvertFrom-Json
-    $routeContext = [ordered]@{ route_id = 'direct-a'; display_name = 'Direct-A'; kind = 'direct'; entry_server = 'entry-a'; listen_port = 443 } | ConvertTo-Json -Compress
+    $routeContext = [ordered]@{ route_id = 'direct-a'; display_name = 'Direct-A'; kind = 'direct'; entry_server = 'entry-a'; listen_port = 20000; port_hopping = '20000-20003' } | ConvertTo-Json -Compress
     $null = & $agent execute -PrivateDirectory $stage -Operation add-route -ContextJson $routeContext | ConvertFrom-Json
     $profileContext = [ordered]@{ profile_id = 'primary'; include_routes = @('direct-a'); include_providers = @() } | ConvertTo-Json -Compress
     Assert-True ((& $agent execute -PrivateDirectory $stage -Operation add-profile -ContextJson $profileContext | ConvertFrom-Json).success) 'Explicit Profile creation failed.'
@@ -37,6 +37,7 @@ try {
     $inventory = Read-RSTInventory -Path $inventoryPath
     Assert-True ([string]$inventory.servers[0].compute.driver -eq 'byo-ssh') 'Server compute driver was not made explicit.'
     Assert-True ([string]$inventory.routes[0].ingress.driver -eq 'hysteria2') 'Route ingress driver was not made explicit.'
+    Assert-True ([int]$inventory.routes[0].port_hopping.start_port -eq 20000 -and [int]$inventory.routes[0].port_hopping.end_port -eq 20003) 'Route did not retain its bounded port-hopping range.'
     Assert-True (-not $inventory.profiles[0].PSObject.Properties['kind']) 'Profile retained a renderer compatibility marker.'
     Assert-True ([string]$inventory.profiles[0].policy -eq '') 'Explicit Profile silently selected a geographic policy.'
     $inventory.routes[0].enabled = $true
@@ -65,6 +66,7 @@ try {
     Assert-True ($karing -ceq $mihomo) 'Karing did not reuse the tested Clash YAML contract exactly.'
     Assert-True ($karing -match '(?m)^\s+skip-cert-verify:\s*true\s*$' -and $karing -match "(?m)^\s+fingerprint:\s*'[0-9a-f]{64}'\s*$") 'Karing output weakened pinned self-signed TLS.'
     Assert-True ($mihomo -match '(?m)^\s*- name:\s*Direct-A-HY2-v[46]\s*$') 'Mihomo output is missing private Hysteria2 nodes.'
+    Assert-True ($mihomo -match "(?m)^\s+ports:\s*'20000-20003'\s*$") 'Mihomo/Karing output omitted the canonical port-hopping range.'
     Assert-True ($mihomo -notmatch '(?m)^proxy-providers:\s*$') 'Provider-free rendering emitted a provider section.'
     Assert-True ($mihomo -match '(?m)^\s*- MATCH,Private Routes\s*$') 'Generic private route group is missing.'
     Assert-True ($mihomo -match 'https://1\.1\.1\.1/dns-query' -and $mihomo -match 'https://8\.8\.8\.8/dns-query') 'Neutral privacy DNS defaults are missing.'
@@ -76,7 +78,8 @@ try {
     Assert-True ($html -match 'Direct-A-HY2-v4') 'Shadowrocket output is missing a rendered private node.'
 
     $headless = [IO.File]::ReadAllText($headlessPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
-    Assert-True ([string]$headless.server -eq '192.0.2.10:443') 'Hysteria2 auto mode did not deterministically select IPv4.'
+    Assert-True ([string]$headless.server -eq '192.0.2.10:20000-20003') 'Hysteria2 auto mode did not deterministically select the IPv4 port-hopping endpoint.'
+    Assert-True ([string]$headless.transport.type -eq 'udp' -and [string]$headless.transport.udp.hopInterval -eq '30s') 'Hysteria2 output omitted the official bounded port-hopping interval.'
     Assert-True ([string]$headless.http.listen -eq '127.0.0.1:18080' -and [string]$headless.socks5.listen -eq '127.0.0.1:18080') 'Hysteria2 HTTP/SOCKS5 listeners are not the target loopback listener.'
     Assert-True ($headless.tls.insecure -eq $true -and [string]$headless.tls.pinSHA256 -match '^[0-9a-f]{64}$') 'Hysteria2 output did not retain pinned TLS verification.'
 
