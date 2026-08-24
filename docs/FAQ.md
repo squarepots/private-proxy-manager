@@ -2,7 +2,7 @@
 
 ## What does Route Steward do?
 
-Route Steward helps you deploy, check, migrate, and recover network connections on servers you manage. A capable AI agent follows the repository's validated workflow while the technical details remain explicit and reviewable.
+Route Steward helps an AI agent set up and manage a private proxy on VPS servers you control. It generates server configuration and private client-app output through a reviewable, preflighted workflow.
 
 ## What do I need before I start?
 
@@ -32,9 +32,13 @@ Inventory, credentials, generated client files, observed evidence, and recovery 
 
 Read-only audit records bounded evidence and drift reports the category. RST does not overwrite a drifted or undetermined deployed route until the discrepancy is understood and a supported operation passes preflight.
 
+## Does audit prove that the proxy carries Internet traffic?
+
+Not yet. Audit checks supported server configuration, services, listeners, relay state, and server-side exit evidence. It does not currently run a real client connection through Hysteria2. Treat server audit and end-to-end connection health as separate results.
+
 ## How does server replacement avoid interruption?
 
-Migration is overlap-first: create and deploy replacement capacity, audit it, update client output, confirm it works, and keep the current route available throughout that proof. Retirement of old external capacity is a later, separate action.
+The current `migrate-route` capability returns an overlap-first sequence for the agent to perform. It does not yet persist a resumable migration transaction. Old capacity must remain available until the staged replacement has been separately deployed, audited, rendered, and confirmed; retirement is a later explicit action.
 
 ## Which hosts, topologies, and clients work?
 

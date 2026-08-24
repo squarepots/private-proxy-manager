@@ -2,7 +2,7 @@
 
 Files in this directory describe the public object model with reserved example addresses and placeholder secret references. They contain no live endpoints, credentials, subscription URLs, SSH paths, or generated client payloads.
 
-`inventory.example.json` is an **architecture example, not a ready-to-deploy private state directory**. Real RST state is created by the agent-native bootstrap and stored under ignored local `private/`, where secret references resolve to owner-only files.
+`inventory.example.json` is an **architecture example, not a ready-to-deploy private proxy configuration**. Real RST state is created by the agent-guided bootstrap and stored under ignored local `private/`, where secret references resolve to owner-only files.
 
 The example demonstrates the final separation between:
 

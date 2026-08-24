@@ -5,7 +5,7 @@ description: Operate Route Steward from natural-language intent. Use when a user
 
 # Route Steward
 
-RST turns user intent for operator-controlled network infrastructure into validated local state, scoped operations, remote audit, and private client output.
+RST lets an AI agent set up and manage private proxies on operator-controlled servers. It turns the user's request into validated local state, scoped operations, remote server audit, and private client-app output.
 
 The governing rule is:
 

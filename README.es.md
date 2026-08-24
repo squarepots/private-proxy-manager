@@ -6,16 +6,16 @@
 
 [![Validation](https://github.com/squarepots/route-steward/actions/workflows/ci.yml/badge.svg)](https://github.com/squarepots/route-steward/actions/workflows/ci.yml)
 
-**Usa IA para gestionar la red de tus propios servidores.**
+**Configura y gestiona proxies privados en tus propios servidores con un agente de IA.**
 
-Route Steward te ayuda a desplegar, comprobar, migrar y recuperar conexiones de red en los servidores que administras. Dale la URL de GitHub a un agente de IA con herramientas: puede descubrir las operaciones compatibles, preparar un plan, ejecutar preflight, operar con el binario nativo `route-steward` y devolver resultados sin exponer credenciales ni rutas locales.
+Route Steward ayuda a un agente de IA a configurar, inspeccionar, cambiar y recuperar un proxy privado en servidores VPS que controlas. Dale esta URL de GitHub: el agente puede descubrir el flujo compatible, comprobar los requisitos antes de cada cambio, operar con el binario nativo `route-steward` y devolver resultados depurados sin exponer credenciales ni rutas locales.
 
-![Route Steward convierte una petición de IA en estado validado, una conexión direct o relay, auditoría activa y salida privada para Mihomo o Shadowrocket.](docs/assets/network-path-lifecycle.svg)
+![Route Steward convierte una petición de IA en un proxy privado mediante un servidor o un relay opcional de dos servidores, con auditoría de servidor y configuración privada para la aplicación cliente.](docs/assets/network-path-lifecycle.svg)
 
 ## Entrega la URL a un agente de IA
 
 ```text
-Abre https://github.com/squarepots/route-steward y ayúdame a gestionar la red de mis propios servidores. Clona el repositorio si hace falta, lee AGENTS.md y .agents/skills/route-steward/SKILL.md, y usa el binario publicado o compila la CLI en Go. Ejecuta capabilities antes de pedir datos de infraestructura. Explica los requisitos de host dedicado y los efectos sobre el sistema, conserva el estado operativo en privado, ejecuta preflight antes de cada cambio y devuelve resultados depurados.
+Abre https://github.com/squarepots/route-steward y ayúdame a configurar y gestionar un proxy privado en mis propios servidores. Clona el repositorio si hace falta, lee AGENTS.md y .agents/skills/route-steward/SKILL.md, y usa el binario publicado o compila la CLI en Go. Ejecuta capabilities antes de pedir datos de infraestructura. Explica los requisitos de host dedicado y los efectos sobre el sistema, conserva el estado operativo en privado, ejecuta preflight antes de cada cambio y devuelve resultados depurados.
 ```
 
 ```text
@@ -34,10 +34,10 @@ Node.js solo se usa si eliges la entrega opcional de suscripciones mediante Clou
 
 ## Qué obtienes
 
-- una ruta direct mediante un servidor o un relay WireGuard de un salto mediante dos;
-- estado de servidor Hysteria2 y archivos privados para Mihomo o Shadowrocket;
-- auditoría de solo lectura y drift tipado antes de sobrescribir;
-- sustitución de servidores con solapamiento y recuperación local cifrada;
+- un proxy Hysteria2 privado mediante un servidor o un relay WireGuard opcional mediante dos;
+- configuración privada completa para una aplicación compatible con Mihomo/Clash Verge o Shadowrocket;
+- auditoría de servidor de solo lectura y drift de configuración tipado antes de sobrescribir;
+- un flujo de sustitución con solapamiento y recuperación local cifrada;
 - una misma interfaz legible por máquinas para CLI y MCP stdio local.
 
 La base actual es un VPS Ubuntu 24.04 amd64 dedicado y reconstruible con acceso SSH autorizado por clave. Consulta [Compatibility](docs/COMPATIBILITY.md) para conocer protocolos, clientes y topologías exactos.

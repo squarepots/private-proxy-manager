@@ -2,7 +2,7 @@
 
 ## Route Steward 是做什么的？
 
-Route Steward 帮你部署、检查、迁移和恢复所管理服务器上的网络连接。具备工具能力的 AI agent 按仓库中经过验证的流程操作，技术细节仍然明确并可供检查。
+Route Steward 帮助 AI agent 在你控制的 VPS 上搭建和管理私有代理。它通过可检查、带 preflight 的流程生成服务器配置和私有客户端配置。
 
 ## 开始前需要什么？
 
@@ -32,9 +32,13 @@ inventory、凭据、生成的客户端文件、observed evidence 和 recovery a
 
 只读 audit 会记录有限证据，drift 会报告类别。对于 drifted 或 undetermined 的已部署路线，RST 会先阻止覆盖，直到差异得到解释且受支持的操作通过 preflight。
 
+## audit 能证明代理可以传输互联网流量吗？
+
+目前不能。audit 会检查受支持的服务器配置、服务、监听端口、relay 状态和服务器侧出口证据，但现在不会通过 Hysteria2 发起真正的客户端连接。服务器 audit 与端到端连接健康是两个不同结果。
+
 ## 替换服务器如何避免中断？
 
-迁移采用 overlap-first：创建并部署替代容量、完成审计、更新客户端输出并确认可用；在整个验证期间保留现有路线。旧的外部容量之后再单独处理。
+当前 `migrate-route` capability 会返回由 agent 执行的 overlap-first 步骤，但还不会保存可恢复的迁移事务。替代容量被分别部署、审计、渲染并确认前，必须保留旧容量；退役旧容量是之后的显式操作。
 
 ## 支持哪些主机、topology 和客户端？
 

@@ -6,18 +6,18 @@
 
 [![Validation](https://github.com/squarepots/route-steward/actions/workflows/ci.yml/badge.svg)](https://github.com/squarepots/route-steward/actions/workflows/ci.yml)
 
-**Use AI to manage networking on your own servers.**
+**Set up and manage private proxies on your own servers with an AI agent.**
 
-Route Steward helps you deploy, check, migrate, and recover network connections on servers you manage. Give its GitHub URL to a capable AI agent: the agent can inspect supported operations, build a plan, run preflight, operate through the native `route-steward` executable, and return results without exposing credentials or local paths.
+Route Steward helps an AI agent set up, inspect, change, and recover a private proxy on VPS servers you control. Give the agent this GitHub URL: it can discover the supported workflow, check prerequisites before every change, operate through the native `route-steward` executable, and return sanitized results without exposing credentials or local paths.
 
-![Route Steward turns an AI request into validated state, a direct or relay server connection, a live audit, and private Mihomo or Shadowrocket output.](docs/assets/network-path-lifecycle.svg)
+![Route Steward turns an AI request into a private proxy through one server or an optional two-server relay, with server audit and private client-app output.](docs/assets/network-path-lifecycle.svg)
 
 ## Give the URL to an AI agent
 
 Paste this prompt into Codex or another agent that can read files and run local commands:
 
 ```text
-Open https://github.com/squarepots/route-steward and help me manage networking on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use the release binary or build the Go CLI. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
+Open https://github.com/squarepots/route-steward and help me set up and manage a private proxy on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use the release binary or build the Go CLI. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
 ```
 
 The agent starts with:
@@ -38,10 +38,10 @@ Node.js is used only when you choose the optional Cloudflare Worker subscription
 
 ## What it gives you
 
-- a validated direct route through one server, or a single-hop WireGuard relay through two;
-- generated Hysteria2 server state and private Mihomo or Shadowrocket client output;
-- read-only live audit and typed drift instead of blind overwrite;
-- overlap-first server replacement and encrypted local recovery;
+- a private Hysteria2 proxy through one server, or through an optional two-server WireGuard relay;
+- complete private configuration for a Mihomo/Clash Verge-compatible app or Shadowrocket;
+- read-only server audit and typed configuration drift instead of blind overwrite;
+- an overlap-first replacement workflow and encrypted local recovery;
 - one machine-readable interface for command-line and local stdio MCP use.
 
 The current server baseline is a dedicated, rebuildable Ubuntu 24.04 amd64 VPS with authorized SSH key access. Exact protocols, clients, topology, and optional delivery are listed in [Compatibility](docs/COMPATIBILITY.md).
