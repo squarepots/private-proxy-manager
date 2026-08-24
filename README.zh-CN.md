@@ -6,18 +6,18 @@
 
 [![Validation](https://github.com/squarepots/route-steward/actions/workflows/ci.yml/badge.svg)](https://github.com/squarepots/route-steward/actions/workflows/ci.yml)
 
-**用 AI 管理自己的服务器网络。**
+**用 AI agent 在自己的服务器上搭建和管理私有代理。**
 
-Route Steward 帮你部署、检查、迁移和恢复所管理服务器上的网络连接。把 GitHub 链接交给具备工具能力的 AI agent；它可以检查支持范围、建立计划、运行 preflight、通过原生 `route-steward` 程序执行，并在结果中隐藏凭据和本地路径。
+Route Steward 帮助 AI agent 在你控制的 VPS 上搭建、检查、更换和恢复私有代理。把这个 GitHub 链接交给 agent；它会发现受支持的流程、在每次修改前检查前提、通过原生 `route-steward` 程序执行，并返回不暴露凭据或本地路径的脱敏结果。
 
-![Route Steward 将 AI 请求转化为经过验证的状态、direct 或 relay 服务器连接、线上审计，以及私有 Mihomo 或 Shadowrocket 客户端配置。](docs/assets/network-path-lifecycle.svg)
+![Route Steward 将 AI 请求转化为通过一台服务器或可选两台服务器 relay 的私有代理，并提供服务器审计和私有客户端配置。](docs/assets/network-path-lifecycle.svg)
 
 ## 把链接交给 AI agent
 
 把下面的提示词粘贴到 Codex 或其他能够读取文件并运行本地命令的 agent：
 
 ```text
-打开 https://github.com/squarepots/route-steward 并帮我用 AI 管理自己的服务器网络。需要时先 clone；阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md，然后使用 release binary 或构建 Go CLI。先运行 capabilities，再向我询问基础设施信息。解释专用主机要求和整机影响；把运行状态保存在 private 目录；每次修改前运行 preflight；只返回脱敏结果。
+打开 https://github.com/squarepots/route-steward 并帮我在自己的服务器上搭建和管理私有代理。需要时先 clone；阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md，然后使用 release binary 或构建 Go CLI。先运行 capabilities，再向我询问基础设施信息。解释专用主机要求和整机影响；把运行状态保存在 private 目录；每次修改前运行 preflight；只返回脱敏结果。
 ```
 
 agent 会从以下命令开始：
@@ -38,10 +38,10 @@ go install github.com/squarepots/route-steward/cmd/route-steward@latest
 
 ## 它能交付什么
 
-- 通过一台服务器的 direct route，或通过两台服务器的单跳 WireGuard relay；
-- Hysteria2 服务器状态，以及私有 Mihomo 或 Shadowrocket 客户端输出；
-- 只读线上审计和明确的 drift 分类，避免盲目覆盖；
-- 保留现有连接的服务器替换流程，以及加密本地恢复；
+- 通过一台服务器的私有 Hysteria2 代理，或可选的两台服务器 WireGuard relay；
+- 可直接导入 Mihomo/Clash Verge 兼容应用或 Shadowrocket 的完整私有配置；
+- 只读服务器审计和明确的配置 drift 分类，避免盲目覆盖；
+- overlap-first 的替换流程，以及加密本地恢复；
 - 同一套机器接口同时用于命令行和本地 stdio MCP。
 
 当前服务器基线是具备授权 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS。准确的协议、客户端、拓扑和可选交付方式见 [Compatibility](docs/COMPATIBILITY.md)。

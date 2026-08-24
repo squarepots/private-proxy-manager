@@ -1,6 +1,6 @@
 # 快速开始
 
-Route Steward 帮助 AI agent 部署、检查、迁移和恢复你所管理服务器上的网络连接。正常入口是一个可运行于 Linux、macOS 和 Windows 的原生程序。
+Route Steward 帮助 AI agent 在你控制的 VPS 上搭建和管理私有代理。正常入口是一个可运行于 Linux、macOS 和 Windows 的原生程序。
 
 ## 1. 安装程序
 
@@ -19,7 +19,7 @@ go install github.com/squarepots/route-steward/cmd/route-steward@latest
 把下面的提示词粘贴到 Codex 或其他能够读取文件并运行本地命令的 agent：
 
 ```text
-打开 https://github.com/squarepots/route-steward 并帮我用 AI 管理自己的服务器网络。需要时先 clone；阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md，然后使用 release binary 或构建 Go CLI。先运行 capabilities，再向我询问基础设施信息。解释专用主机要求和整机影响；把运行状态保存在 private 目录；每次修改前运行 preflight；只返回脱敏结果。
+打开 https://github.com/squarepots/route-steward 并帮我在自己的服务器上搭建和管理私有代理。需要时先 clone；阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md，然后使用 release binary 或构建 Go CLI。先运行 capabilities，再向我询问基础设施信息。解释专用主机要求和整机影响；把运行状态保存在 private 目录；每次修改前运行 preflight；只返回脱敏结果。
 ```
 
 agent 应从以下命令开始：
@@ -33,7 +33,7 @@ route-steward drift --private-dir ./private
 
 在源码目录中，也可以使用 `go run ./cmd/route-steward <command>` 调用同一接口。
 
-## 3. 准备第一条 Route
+## 3. 准备第一个私有代理
 
 agent 会按照 capability discovery 声明的字段询问：
 
@@ -56,13 +56,13 @@ preflight 会返回缺少的事实、conflicts、expected effects 和 authorizat
 
 ## 5. 检查结果
 
-成功结果会说明 Route、线上审计状态，以及 private-root-relative 客户端文件，例如：
+成功结果会说明代理 Route、服务器审计结果，以及 private-root-relative 客户端文件。服务器 audit 只能证明受管配置和服务一致，还不是真正的客户端端到端流量测试。
 
 ```json
 {
   "route": "route-a",
   "state": "deployed",
-  "validation": { "status": "healthy", "category": "in-sync" },
+  "audit": { "status": "in-sync" },
   "artifact": { "relative_path": "<private>/delivery/desktop-a.yaml" }
 }
 ```
@@ -71,6 +71,6 @@ preflight 会返回缺少的事实、conflicts、expected effects 和 authorizat
 
 ## 6. 继续使用或恢复
 
-修改现有 Route 前先让 agent 运行 audit 和 drift。替换服务器时，会在保留当前 Route 的同时部署并验证替代容量。加密恢复使用 `route-steward backup` 和 `route-steward recover`；密码只输入本地 7-Zip prompt。
+修改现有 Route 前先让 agent 运行 audit 和 drift。当前 `migrate-route` capability 会给出 overlap-first 步骤；agent 仍须逐步执行和确认，并保留旧容量。加密恢复使用 `route-steward backup` 和 `route-steward recover`；密码只输入本地 7-Zip prompt。
 
 真实部署前请阅读 [Compatibility](COMPATIBILITY.md)、[Operations](../OPERATIONS.md)、[Privacy](PRIVACY.md)、[Security](../SECURITY.md) 和[运行边界](OPERATING-BOUNDARY.md)。
