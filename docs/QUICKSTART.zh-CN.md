@@ -44,7 +44,7 @@ agent 会按照 capability discovery 声明的字段询问：
 
 使用 `entry-a`、`route-a`、`desktop-a` 这类不识别个人信息的 ID。真实运行值只保存在你选择的 private 目录。
 
-如果网络持续对单个 UDP 目标端口限速或过滤，agent 可以创建带 `port_hopping`（例如 `20000-20003`）的 Route。范围必须是从 `listen_port` 开始的连续 2–8 个端口，所有受支持客户端都会得到同一个范围。它不能解决网络整体封锁 UDP 的情况；启用前请阅读[可靠性研究记录](RELIABILITY-RESEARCH.md)。
+如果网络持续对单个 UDP 目标端口限速或过滤，agent 可以创建带 `port_hopping`（例如 `20000-20003`）的 Route。范围必须是从 `listen_port` 开始的连续 2–8 个端口，所有受支持客户端都会得到同一个范围。它不能解决网络整体封锁 UDP 的情况；当前支持边界见[兼容性](COMPATIBILITY.md)。
 
 ## 4. 让 agent 完成流程
 

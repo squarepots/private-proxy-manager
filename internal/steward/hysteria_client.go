@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	hysteriaClientVersion  = "v2.12.2"
 	hysteriaReleaseBaseURL = "https://github.com/HyNetworks/hysteria/releases/download/app/" + hysteriaClientVersion
 	maxHysteriaBinarySize  = 64 << 20
 )

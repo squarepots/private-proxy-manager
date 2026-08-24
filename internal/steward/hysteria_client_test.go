@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 )
@@ -34,6 +35,41 @@ func TestHysteriaClientAssetMatrix(t *testing.T) {
 	if _, err := platformHysteriaClientAsset("plan9", "amd64"); err == nil {
 		t.Fatal("unsupported Hysteria client platform was accepted")
 	}
+}
+
+func TestDependencyVersionDomainsFeedCapabilities(t *testing.T) {
+	if !strings.HasPrefix(hysteriaClientVersion, "v") {
+		t.Fatalf("Hysteria client release tag must keep the upstream v-prefix: %q", hysteriaClientVersion)
+	}
+	if strings.TrimPrefix(hysteriaClientVersion, "v") != hysteriaProtocolVersion {
+		t.Fatalf("Hysteria client tag %q does not match protocol version %q", hysteriaClientVersion, hysteriaProtocolVersion)
+	}
+
+	drivers := DriverCapabilities()
+	ingress, ok := drivers["ingress"].([]any)
+	if !ok || len(ingress) == 0 {
+		t.Fatalf("capabilities ingress payload has unexpected shape: %#v", drivers["ingress"])
+	}
+	firstIngress, ok := ingress[0].(map[string]any)
+	if !ok || firstIngress["version"] != hysteriaProtocolVersion {
+		t.Fatalf("capabilities ingress version should use the protocol version constant: %#v", firstIngress)
+	}
+
+	renderers, ok := drivers["renderers"].([]any)
+	if !ok {
+		t.Fatalf("capabilities renderer payload has unexpected shape: %#v", drivers["renderers"])
+	}
+	for _, renderer := range renderers {
+		payload, ok := renderer.(map[string]any)
+		if !ok || payload["id"] != "karing" {
+			continue
+		}
+		if payload["compatibility_baseline"] != karingCompatibilityBaseline {
+			t.Fatalf("Karing compatibility baseline should use the renderer baseline constant: %#v", payload)
+		}
+		return
+	}
+	t.Fatal("Karing renderer capability is missing")
 }
 
 func TestEnsureHysteriaClientDownloadsVerifiesAndCaches(t *testing.T) {

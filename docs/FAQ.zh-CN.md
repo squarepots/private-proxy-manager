@@ -42,7 +42,7 @@ inventory、凭据、生成的客户端文件、observed evidence 和 recovery a
 
 ## 什么时候该用端口跳跃？
 
-只有当网络持续对特定 UDP 目标端口限速或过滤时，才应使用可选的 `port_hopping`。RST 支持一个从 Route listener 开始、连续 2–8 个端口的范围，并为 Mihomo、Karing、Shadowrocket 和无 GUI 官方客户端渲染同一范围。它无法解决网络整体封锁 UDP 的情况；health 验证的是带该范围的真实客户端路径，而不会声称已经观察到每一次周期跳跃。详见[可靠性研究](RELIABILITY-RESEARCH.md)。
+只有当网络持续对特定 UDP 目标端口限速或过滤时，才应使用可选的 `port_hopping`。RST 支持一个从 Route listener 开始、连续 2–8 个端口的范围，并为 Mihomo、Karing、Shadowrocket 和无 GUI 官方客户端渲染同一范围。它无法解决网络整体封锁 UDP 的情况；health 验证的是带该范围的真实客户端路径，而不会声称已经观察到每一次周期跳跃。详见[兼容性](COMPATIBILITY.md)。
 
 ## 替换服务器如何避免中断？
 

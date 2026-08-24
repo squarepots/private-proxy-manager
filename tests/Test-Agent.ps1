@@ -9,8 +9,10 @@ function Assert-True([bool]$Condition, [string]$Message) { if (-not $Condition) 
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $agent = Join-Path $repo 'agent\route-steward-agent.ps1'
 $stage = Join-Path ([IO.Path]::GetTempPath()) ('rst-agent-test-' + [Guid]::NewGuid().ToString('N'))
+$binaryStage = Join-Path ([IO.Path]::GetTempPath()) ('rst-agent-bin-' + [Guid]::NewGuid().ToString('N'))
 $recoveryTarget = Join-Path ([IO.Path]::GetTempPath()) ('rst-agent-recovery-target-' + [Guid]::NewGuid().ToString('N'))
 $archiveFixture = Join-Path ([IO.Path]::GetTempPath()) ('rst-agent-recovery-fixture-' + [Guid]::NewGuid().ToString('N') + '.7z')
+$previousRouteStewardBin = $env:RST_ROUTE_STEWARD_BIN
 try {
     $go = Get-Command go -ErrorAction SilentlyContinue
     if (-not $go) {
@@ -25,6 +27,18 @@ try {
     }
     finally { Pop-Location }
     Assert-True ($sourceExit -eq 0 -and $sourceVersion -eq ([IO.File]::ReadAllText((Join-Path $repo 'version.txt')).Trim())) 'The documented Go source-checkout invocation failed.'
+
+    New-Item -ItemType Directory -Force -Path $binaryStage | Out-Null
+    $agentBinaryName = if ($env:OS -eq 'Windows_NT') { 'route-steward-agent-test.exe' } else { 'route-steward-agent-test' }
+    $agentBinary = Join-Path $binaryStage $agentBinaryName
+    Push-Location $repo
+    try {
+        & $go.Source build -o $agentBinary ./cmd/route-steward
+        $buildExit = $LASTEXITCODE
+    }
+    finally { Pop-Location }
+    Assert-True ($buildExit -eq 0 -and (Test-Path -LiteralPath $agentBinary -PathType Leaf)) 'The agent compatibility test could not build the current native CLI.'
+    $env:RST_ROUTE_STEWARD_BIN = $agentBinary
 
     $bootstrap = & $agent bootstrap -PrivateDirectory $stage | ConvertFrom-Json
     Assert-True ($bootstrap.success -and $bootstrap.data.created) 'Clean agent bootstrap did not create private state.'
@@ -62,13 +76,13 @@ try {
     Assert-True (@($addServerCapability.required_context | Where-Object name -eq 'host_ownership')[0].type -eq 'dedicated') 'add-server capability metadata does not describe the dedicated-host type.'
     Assert-True (@($addServerCapability.effects) -contains 'update-local-desired-state') 'add-server capability metadata does not declare its effect.'
     Assert-True (@($capabilities.data.capabilities | Where-Object { -not $_.PSObject.Properties['required_context'] -or -not $_.PSObject.Properties['effects'] }).Count -eq 0) 'One or more operations omit required-context or effect metadata.'
-    Assert-True ($capabilities.data.drivers.ingress[0].id -eq 'hysteria2' -and $capabilities.data.drivers.ingress[0].version -eq '2.12.2' -and @($capabilities.data.drivers.ingress[0].reliability) -contains 'optional-port-hopping') 'Hysteria2 driver truth is missing or inconsistent.'
+    Assert-True ($capabilities.data.drivers.ingress[0].id -eq 'hysteria2' -and $capabilities.data.drivers.ingress[0].version -match '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' -and @($capabilities.data.drivers.ingress[0].reliability) -contains 'optional-port-hopping') 'Hysteria2 driver truth is missing or inconsistent.'
     Assert-True ($capabilities.data.drivers.links[0].id -eq 'wireguard-single-hop') 'WireGuard single-hop capability truth is missing.'
 	Assert-True ($capabilities.data.drivers.health_checks[0].id -eq 'hysteria2-client-traffic' -and $capabilities.data.drivers.health_checks[0].packet_loss -eq 'unsupported') 'Health capability truth is incomplete.'
     Assert-True ($capabilities.data.drivers.compute[0].transport -eq 'ssh') 'BYO SSH compute capability truth is missing.'
     Assert-True (@($capabilities.data.drivers.renderers | Where-Object id -eq 'mihomo').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'karing').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'shadowrocket').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'hysteria2').Count -eq 1) 'Client renderer capability truth is incomplete.'
     $karingCapability = @($capabilities.data.drivers.renderers | Where-Object id -eq 'karing')[0]
-    Assert-True ($karingCapability.compatibility_baseline -eq '1.2.23.2606' -and $karingCapability.tls_identity -eq 'sha256-certificate-pinning' -and @($karingCapability.platforms).Count -eq 6) 'Karing capability contract is incomplete.'
+    Assert-True ($karingCapability.compatibility_baseline -match '^(0|[1-9][0-9]*)\.' -and $karingCapability.tls_identity -eq 'sha256-certificate-pinning' -and @($karingCapability.platforms).Count -eq 6) 'Karing capability contract is incomplete.'
 
     $blocked = & $agent preflight -PrivateDirectory $stage -Operation add-server | ConvertFrom-Json
     Assert-True (-not $blocked.data.ready -and $blocked.data.missing_context.Count -gt 0) 'Incomplete add-server context was not blocked.'
@@ -131,11 +145,14 @@ try {
     $recoverExecute = & $agent execute -PrivateDirectory $recoveryTarget -Operation recover -ContextJson $recoveryContext | ConvertFrom-Json
     Assert-True (-not $recoverExecute.success -and $recoverExecute.code -eq 'local-assistance-required') 'Agent recovery incorrectly pretended to complete through a non-interactive model channel.'
     Assert-True ($recoverExecute.data.result.command -match '^route-steward recover ') 'Agent recovery did not delegate to the native secure restore workflow.'
+    Assert-True (-not $recoverExecute.data.result.PSObject.Properties['repository_script']) 'Agent recovery still exposes a legacy repository script as part of the contract.'
     $global:LASTEXITCODE = 0
 
     Write-Host 'Agent bootstrap, capability discovery, preflight, authorization, schema, legacy operator tolerance, and assisted recovery tests passed.'
 }
 finally {
-    foreach ($path in @($stage, $recoveryTarget)) { if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force } }
+    if ($null -eq $previousRouteStewardBin) { Remove-Item Env:\RST_ROUTE_STEWARD_BIN -ErrorAction SilentlyContinue }
+    else { $env:RST_ROUTE_STEWARD_BIN = $previousRouteStewardBin }
+    foreach ($path in @($stage, $binaryStage, $recoveryTarget)) { if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force } }
     if (Test-Path -LiteralPath $archiveFixture) { Remove-Item -LiteralPath $archiveFixture -Force }
 }

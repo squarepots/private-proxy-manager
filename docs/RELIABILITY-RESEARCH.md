@@ -1,6 +1,6 @@
 # Reliability research
 
-Research date: 2026-08-24. This record limits the reliability work to features that Route Steward can deploy, audit, recover, and render across every currently supported client path. It is not a claim that a protocol feature bypasses a network policy or makes an unreliable network reliable.
+Research date: 2026-08-24. This historical decision record explains the reliability choices made for the 1.6.0 work. The current support contract remains `route-steward capabilities` and `docs/COMPATIBILITY.md`. This record is not the runtime source of truth.
 
 ## Decision
 

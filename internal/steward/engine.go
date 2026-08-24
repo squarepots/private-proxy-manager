@@ -42,7 +42,7 @@ func RunRequest(ctx context.Context, request Request) (Envelope, int) {
 		if !preflight.Ready {
 			return failure("execute", "context-gate-blocked", preflight, 2)
 		}
-		return failure("execute", "local-assistance-required", map[string]any{"preflight": preflight, "result": localAssistanceResult("recover", "scripts/Restore-RecoveryArchive.ps1", "route-steward recover --archive <path> --private-dir <directory>")}, 3)
+		return failure("execute", "local-assistance-required", map[string]any{"preflight": preflight, "result": localAssistanceResult("recover", "route-steward recover --archive <path> --private-dir <directory>")}, 3)
 	}
 	if request.Command == "execute" && request.Operation == "bootstrap" {
 		state, created, err := Bootstrap(request.PrivateDir)
@@ -169,7 +169,7 @@ func executeReady(ctx context.Context, state *State, request Request) (any, stri
 	case "rotate-subscription-token":
 		result, err = RotateSubscriptionToken(state, request.Target)
 	case "backup":
-		return localAssistanceResult("backup", "scripts/New-RecoveryArchive.ps1", "route-steward backup --private-dir <directory>"), "local-assistance-required", 3
+		return localAssistanceResult("backup", "route-steward backup --private-dir <directory>"), "local-assistance-required", 3
 	case "migrate-route":
 		migration, migrationErr := MigrateRoute(ctx, state, request.Target, request.Context)
 		if migrationErr != nil {
@@ -196,11 +196,10 @@ func SanitizedFailure(command string, err error) (Envelope, int) {
 	return Envelope{SchemaVersion: 1, Command: command, Success: false, Code: code, Data: map[string]string{"summary": safeFailureSummary}}, 1
 }
 
-func localAssistanceResult(operation, repositoryScript, command string) map[string]any {
+func localAssistanceResult(operation, command string) map[string]any {
 	return map[string]any{
 		"operation":                    operation,
 		"executor":                     "local-assisted",
-		"repository_script":            repositoryScript,
 		"command":                      command,
 		"requires_local_secret_prompt": true,
 		"secret_prompt_rule":           "The password must stay in the local 7-Zip prompt and must not enter the model, MCP stream, process arguments, repository files, or logs.",
