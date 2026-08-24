@@ -2,6 +2,22 @@
 
 Route Steward lets capable AI agents operate self-hosted network paths through one deterministic, model-neutral core.
 
+## Contribution licensing
+
+Route Steward is licensed under `AGPL-3.0-only`. Contributions are accepted under the same license (inbound = outbound).
+
+Contributors retain copyright in their contributions. Route Steward does not require a Contributor License Agreement (CLA) or copyright assignment.
+
+All contributed commits must be signed off under the Developer Certificate of Origin 1.1 in `DCO`. A sign-off certifies that you have the right to submit the contribution under the project's license; it does not transfer your copyright.
+
+Create signed-off commits with:
+
+```text
+git commit -s
+```
+
+This adds a `Signed-off-by:` trailer using your Git identity. Keep that trailer on every contributed commit.
+
 ## Start with the contract
 
 Read `AGENTS.md`, the repository Skill, `ARCHITECTURE.md`, `SECURITY.md`, and `docs/COMPATIBILITY.md`.
