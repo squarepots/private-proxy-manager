@@ -158,6 +158,35 @@ func TestMigrationRollsBackFailedRenderAndRechecksHealthOnRetry(t *testing.T) {
 	}
 }
 
+func TestMigrationSwitchesAndRollsBackHeadlessRouteSelection(t *testing.T) {
+	state, source, input := migrationFixture(t, "direct", false)
+	if _, err := AddClientTarget(state, map[string]any{"target_id": "backend", "profile_id": "primary", "renderer": "hysteria2", "route_id": source.ID, "listen": "127.0.0.1:18080"}); err != nil {
+		t.Fatal(err)
+	}
+	deps := migrationTestDependencies(nil, "healthy")
+	renderCalls := 0
+	deps.Render = func(state *State, target string, skip bool) (RenderResult, error) {
+		renderCalls++
+		if renderCalls == 1 {
+			return RenderResult{}, errors.New("synthetic headless render failure")
+		}
+		return RenderClients(state, target, skip)
+	}
+	blocked, err := migrateRouteWith(context.Background(), state, source.ID, input, deps)
+	if err != nil || blocked.Status != "blocked" || findClientTarget(state.Inventory, "backend").Route != source.ID {
+		t.Fatalf("failed headless switch did not restore its explicit Route: %#v err=%v", blocked, err)
+	}
+	completed, err := migrateRouteWith(context.Background(), state, source.ID, input, migrationTestDependencies(nil, "healthy"))
+	headless := findClientTarget(state.Inventory, "backend")
+	if err != nil || completed.Status != "complete" || headless == nil || headless.Route != completed.ReplacementRoute {
+		t.Fatalf("headless target did not switch to the healthy replacement: %#v target=%#v err=%v", completed, headless, err)
+	}
+	artifact, err := os.ReadFile(filepath.Join(state.Inventory.Delivery.Directory, "backend.json"))
+	if err != nil || strings.Contains(string(artifact), "192.0.2.10") || !strings.Contains(string(artifact), "203.0.113.30") {
+		t.Fatalf("headless artifact did not follow the replacement Route: err=%v", err)
+	}
+}
+
 func TestMigrationRollsBackFailedSubscriptionPublication(t *testing.T) {
 	state, source, input := migrationFixture(t, "direct", true)
 	deps := migrationTestDependencies(nil, "healthy")

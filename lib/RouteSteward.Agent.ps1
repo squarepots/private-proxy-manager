@@ -45,7 +45,7 @@ function Get-RSTCapabilityCatalog {
         'add-profile' = @([ordered]@{ name = 'profile_id'; type = 'stable-id'; required = $true })
         'update-profile' = @([ordered]@{ name = 'target'; type = 'profile-id'; required = $true; source = 'argument' })
         'remove-profile' = @([ordered]@{ name = 'target'; type = 'profile-id'; required = $true; source = 'argument' })
-        'add-client-target' = @([ordered]@{ name = 'target_id'; type = 'stable-id'; required = $true },[ordered]@{ name = 'profile_id'; type = 'profile-id'; required = $true },[ordered]@{ name = 'renderer'; type = 'mihomo|shadowrocket'; required = $true })
+        'add-client-target' = @([ordered]@{ name = 'target_id'; type = 'stable-id'; required = $true },[ordered]@{ name = 'profile_id'; type = 'profile-id'; required = $true },[ordered]@{ name = 'renderer'; type = 'mihomo|shadowrocket|hysteria2'; required = $true },[ordered]@{ name = 'route_id'; type = 'route-id'; required = $false; when = 'renderer is hysteria2' },[ordered]@{ name = 'listen'; type = 'loopback-listener'; required = $false; when = 'renderer is hysteria2' },[ordered]@{ name = 'ingress_family'; type = 'auto|ipv4|ipv6'; required = $false; when = 'renderer is hysteria2' })
         'update-client-target' = @([ordered]@{ name = 'target'; type = 'client-target-id'; required = $true; source = 'argument' })
         'remove-client-target' = @([ordered]@{ name = 'target'; type = 'client-target-id'; required = $true; source = 'argument' })
         'audit' = @([ordered]@{ name = 'target'; type = 'route-id'; required = $true; source = 'argument' })
@@ -84,8 +84,10 @@ function Get-RSTDriverCapabilities {
         providers = @([ordered]@{ id = 'mihomo-http-provider'; state = 'supported'; optional = $true; schemes = @('https','http'); health_check = $false })
         renderers = @(
             [ordered]@{ id = 'mihomo'; state = 'supported'; clients = @('Clash Verge-compatible Mihomo clients') },
-            [ordered]@{ id = 'shadowrocket'; state = 'supported'; delivery = @('node-import','private-subscription') }
+            [ordered]@{ id = 'shadowrocket'; state = 'supported'; delivery = @('node-import','private-subscription') },
+            [ordered]@{ id = 'hysteria2'; state = 'supported'; delivery = @('private-json'); local_modes = @('http','socks5'); runtime = 'verified-official-client' }
         )
+        client_proxy = @([ordered]@{ id = 'hysteria2-loopback'; state = 'supported'; command = 'proxy'; check = 'real-http-exit-identity'; listen_scope = 'loopback-only' })
         subscription_delivery = @([ordered]@{ id = 'cloudflare-worker'; state = 'supported'; optional = $true; role = 'private-config-delivery-only' })
     }
 }
@@ -302,15 +304,52 @@ function New-RSTPreflight {
                 if (Get-RSTClientTargetById -Inventory $Inventory -Id $id -AllowMissing) { $conflicts.Add('client-target-id-already-exists') }
             }
             if ($Context -and (Get-RSTOptional $Context 'profile_id') -and -not (Get-RSTProfileById -Inventory $Inventory -Id ([string]$Context.profile_id) -AllowMissing)) { $conflicts.Add('client-target-profile-missing') }
-            if ($Context -and (Get-RSTOptional $Context 'renderer') -and [string]$Context.renderer -notin @('mihomo','shadowrocket')) { $conflicts.Add('client-target-renderer-unsupported') }
+            if ($Context -and (Get-RSTOptional $Context 'renderer') -and [string]$Context.renderer -notin @('mihomo','shadowrocket','hysteria2')) { $conflicts.Add('client-target-renderer-unsupported') }
+            if ($Context -and [string](Get-RSTOptional $Context 'renderer') -eq 'hysteria2') {
+                $routeId = [string](Get-RSTOptional $Context 'route_id')
+                if (-not $routeId) { $missing.Add('route-id') }
+                $selectedRoute = @($Inventory.routes | Where-Object id -eq $routeId)
+                if ($routeId -and ($selectedRoute.Count -ne 1 -or (Get-RSTOptional $selectedRoute[0] 'enabled' $true) -eq $false)) { $conflicts.Add('headless-route-not-enabled') }
+                $selectedProfile = Get-RSTProfileById -Inventory $Inventory -Id ([string](Get-RSTOptional $Context 'profile_id')) -AllowMissing
+                if ($routeId -and $selectedProfile) {
+                    $included = @(Get-RSTOptional $selectedProfile 'include_routes' @('*'))
+                    if ($included -notcontains '*' -and $included -notcontains $routeId) { $conflicts.Add('headless-route-outside-profile') }
+                }
+                $listen = [string](Get-RSTOptional $Context 'listen')
+                if ($listen -and -not (Test-RSTLoopbackListener $listen)) { $conflicts.Add('headless-listen-not-loopback') }
+                $family = [string](Get-RSTOptional $Context 'ingress_family')
+                if ($family -and $family -notin @('auto','ipv4','ipv6')) { $conflicts.Add('headless-ingress-family-unsupported') }
+                $delivery = [string](Get-RSTOptional $Context 'delivery')
+                if ($delivery -and $delivery -ne 'file') { $conflicts.Add('headless-delivery-unsupported') }
+            }
+            elseif ($Context -and @('route_id','listen','ingress_family' | Where-Object { $Context.PSObject.Properties[$_] }).Count) { $conflicts.Add('headless-fields-require-hysteria2-renderer') }
             $effects.Add('add-local-client-target')
         }
         'update-client-target' {
             if (-not $Target) { $missing.Add('target-client-target') }
             elseif (-not (Get-RSTClientTargetById -Inventory $Inventory -Id $Target -AllowMissing)) { $conflicts.Add('target-client-target-missing') }
-            $changes = @(@('profile_id','delivery') | Where-Object { $Context -and $Context.PSObject.Properties[$_] })
+            $changes = @(@('profile_id','delivery','route_id','listen','ingress_family') | Where-Object { $Context -and $Context.PSObject.Properties[$_] })
             if ($changes.Count -eq 0) { $missing.Add('client-target-change') }
             if ($Context -and (Get-RSTOptional $Context 'profile_id') -and -not (Get-RSTProfileById -Inventory $Inventory -Id ([string]$Context.profile_id) -AllowMissing)) { $conflicts.Add('client-target-profile-missing') }
+            $clientTarget = if ($Target) { Get-RSTClientTargetById -Inventory $Inventory -Id $Target -AllowMissing } else { $null }
+            if ($clientTarget -and [string]$clientTarget.renderer -eq 'hysteria2') {
+                $profileId = [string](Get-RSTOptional $Context 'profile_id' $clientTarget.profile)
+                $routeId = [string](Get-RSTOptional $Context 'route_id' $clientTarget.route)
+                $listen = [string](Get-RSTOptional $Context 'listen' $clientTarget.listen)
+                $family = [string](Get-RSTOptional $Context 'ingress_family' $clientTarget.ingress_family)
+                $selectedRoute = @($Inventory.routes | Where-Object id -eq $routeId)
+                if ($selectedRoute.Count -ne 1 -or (Get-RSTOptional $selectedRoute[0] 'enabled' $true) -eq $false) { $conflicts.Add('headless-route-not-enabled') }
+                $selectedProfile = Get-RSTProfileById -Inventory $Inventory -Id $profileId -AllowMissing
+                if ($selectedProfile) {
+                    $included = @(Get-RSTOptional $selectedProfile 'include_routes' @('*'))
+                    if ($included -notcontains '*' -and $included -notcontains $routeId) { $conflicts.Add('headless-route-outside-profile') }
+                }
+                if (-not (Test-RSTLoopbackListener $listen)) { $conflicts.Add('headless-listen-not-loopback') }
+                if ($family -notin @('auto','ipv4','ipv6')) { $conflicts.Add('headless-ingress-family-unsupported') }
+                $delivery = [string](Get-RSTOptional $Context 'delivery')
+                if ($delivery -and $delivery -ne 'file') { $conflicts.Add('headless-delivery-unsupported') }
+            }
+            elseif ($clientTarget -and $Context -and @('route_id','listen','ingress_family' | Where-Object { $Context.PSObject.Properties[$_] }).Count) { $conflicts.Add('headless-fields-require-hysteria2-renderer') }
             $effects.Add('update-local-client-target')
         }
         'remove-client-target' {

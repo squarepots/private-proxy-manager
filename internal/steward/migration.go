@@ -498,6 +498,16 @@ func applyMigrationSelection(candidate *Inventory, txn *migrationTransaction, re
 		}
 		profile.IncludeRoutes = sortedUnique(profile.IncludeRoutes)
 	}
+	from, to := txn.SourceRoute, txn.ReplacementRoute
+	if restoreOld {
+		from, to = txn.ReplacementRoute, txn.SourceRoute
+	}
+	for i := range candidate.ClientTargets {
+		target := &candidate.ClientTargets[i]
+		if target.Renderer == "hysteria2" && target.Route == from {
+			target.Route = to
+		}
+	}
 	return nil
 }
 
@@ -510,7 +520,11 @@ func affectedMigrationTargets(inv *Inventory, sourceRoute string) []string {
 	}
 	targets := []string{}
 	for _, target := range inv.ClientTargets {
-		if profiles[target.Profile] {
+		if target.Renderer == "hysteria2" {
+			if target.Route == sourceRoute {
+				targets = append(targets, target.ID)
+			}
+		} else if profiles[target.Profile] {
 			targets = append(targets, target.ID)
 		}
 	}

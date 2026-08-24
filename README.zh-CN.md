@@ -39,10 +39,10 @@ go install github.com/squarepots/route-steward/cmd/route-steward@latest
 ## 它能交付什么
 
 - 通过一台服务器的私有 Hysteria2 代理，或可选的两台服务器 WireGuard relay；
-- 可直接导入 Mihomo/Clash Verge 兼容应用或 Shadowrocket 的完整私有配置；
+- 可直接用于 Mihomo/Clash Verge 兼容应用、Shadowrocket，或无 GUI Linux/应用代理的完整私有配置；
 - 只读服务器审计、按需真实客户端流量 health，以及明确的配置 drift 分类；
 - 可恢复的 overlap-first 服务器替换：通过 health 后才切换客户端，绝不自动退役旧容量；
-- overlap-first 的替换流程，以及加密本地恢复；
+- 经过校验、可迁移私有状态的加密本地恢复；
 - 同一套机器接口同时用于命令行和本地 stdio MCP。
 
 当前服务器基线是具备授权 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS。准确的协议、客户端、拓扑和可选交付方式见 [Compatibility](docs/COMPATIBILITY.md)。

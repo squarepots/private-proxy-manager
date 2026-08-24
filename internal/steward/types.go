@@ -153,6 +153,9 @@ type ClientTarget struct {
 	Profile               string          `json:"profile"`
 	Renderer              string          `json:"renderer"`
 	Delivery              string          `json:"delivery"`
+	Route                 string          `json:"route,omitempty"`
+	Listen                string          `json:"listen,omitempty"`
+	IngressFamily         string          `json:"ingress_family,omitempty"`
 	QR                    json.RawMessage `json:"qr,omitempty"`
 	SubscriptionSecretRef string          `json:"subscription_secret_ref,omitempty"`
 }
@@ -281,6 +284,18 @@ type RenderResult struct {
 	Command       string         `json:"command"`
 	Success       bool           `json:"success"`
 	Outputs       []RenderOutput `json:"outputs"`
+}
+
+type ClientProxyCheckResult struct {
+	SchemaVersion int    `json:"schema_version"`
+	ClientTarget  string `json:"client_target"`
+	Route         string `json:"route"`
+	Status        string `json:"status"`
+	Detail        string `json:"detail"`
+	HTTPProxy     string `json:"http_proxy"`
+	SOCKS5Proxy   string `json:"socks5_proxy"`
+	ClientVersion string `json:"client_version"`
+	Downloaded    bool   `json:"downloaded"`
 }
 
 func (link *Link) UnmarshalJSON(data []byte) error {

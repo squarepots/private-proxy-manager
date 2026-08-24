@@ -35,10 +35,10 @@ Node.js solo se usa si eliges la entrega opcional de suscripciones mediante Clou
 ## Qué obtienes
 
 - un proxy Hysteria2 privado mediante un servidor o un relay WireGuard opcional mediante dos;
-- configuración privada completa para una aplicación compatible con Mihomo/Clash Verge o Shadowrocket;
+- configuración privada completa para una aplicación compatible con Mihomo/Clash Verge, Shadowrocket o un proxy sin GUI para Linux/aplicaciones;
 - auditoría de servidor de solo lectura, health real y bajo demanda del tráfico cliente, y drift de configuración tipado;
 - reemplazo reanudable de servidores con solapamiento, cambio de clientes condicionado por health y sin retiro automático;
-- un flujo de sustitución con solapamiento y recuperación local cifrada;
+- recuperación local cifrada con estado privado verificado y reubicable;
 - una misma interfaz legible por máquinas para CLI y MCP stdio local.
 
 La base actual es un VPS Ubuntu 24.04 amd64 dedicado y reconstruible con acceso SSH autorizado por clave. Consulta [Compatibility](docs/COMPATIBILITY.md) para conocer protocolos, clientes y topologías exactos.

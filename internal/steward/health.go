@@ -344,6 +344,10 @@ func startHysteriaHealthProxy(ctx context.Context, binary string, state *State, 
 }
 
 func hysteriaHealthConfig(node routeNode, listen string) ([]byte, error) {
+	return hysteriaClientConfig(node, listen, false)
+}
+
+func hysteriaClientConfig(node routeNode, listen string, includeSOCKS5 bool) ([]byte, error) {
 	port, err := strconv.Atoi(node.Values["port"])
 	if err != nil || port < 1 || port > 65535 {
 		return nil, errors.New("health node port is invalid")
@@ -367,6 +371,9 @@ func hysteriaHealthConfig(node routeNode, listen string) ([]byte, error) {
 			"salamander": map[string]string{"password": node.Values["obfs-password"]},
 		},
 		"http": map[string]string{"listen": listen},
+	}
+	if includeSOCKS5 {
+		config["socks5"] = map[string]string{"listen": listen}
 	}
 	return json.MarshalIndent(config, "", "  ")
 }

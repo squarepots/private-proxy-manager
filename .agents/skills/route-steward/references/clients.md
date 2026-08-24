@@ -15,6 +15,7 @@ Multiple ClientTargets may reuse one Profile. Renderer behavior comes only from 
 
 - `mihomo`: file output for Mihomo-compatible clients such as Clash Verge-compatible clients.
 - `shadowrocket`: offline node import, or optional target-scoped private subscription delivery.
+- `hysteria2`: private official-client JSON for a Linux server, backend, script, or CI job. It selects one enabled Route from the referenced Profile and exposes HTTP and SOCKS5 on one loopback-only listener.
 
 Do not hard-code operating-system identities such as `windows` or `iphone` into core behavior. ClientTarget IDs are project identities, not operating-system drivers.
 
@@ -30,6 +31,12 @@ Third-party `Provider` nodes are optional. A private-only setup with zero Provid
 
 When a Profile explicitly includes Providers, compose only those enabled Provider IDs. Do not impose provider-specific grouping, naming, health checking, or routing policy that was not declared by the Profile.
 
+The `hysteria2` renderer deliberately uses one explicitly selected managed Route. It does not compose Providers or apply GUI routing policy, and `auto` ingress selection prefers IPv4 before falling back to IPv6. Use distinct listener ports when multiple local proxies run concurrently.
+
+## Headless runtime
+
+`route-steward proxy --target <id> --check` downloads the pinned official client into the private cache when absent, renders the target, makes a real HTTP request through it, and compares the exit with desired state. Plain `route-steward proxy --target <id>` runs the same verified client in the foreground for supervision by a shell, service manager, or CI job. Never widen the generated listener beyond loopback.
+
 ## Shadowrocket delivery
 
 The offline HTML artifact contains private import QR data and must not load external scripts/resources.
@@ -42,7 +49,7 @@ The Worker is not a proxy data plane, management database, panel, telemetry serv
 
 ## Validation and render drift
 
-Validate generated Mihomo configuration with a compatible local core when available. Keep output private and restrict local permissions.
+Validate generated Mihomo configuration with a compatible local core when available. Validate a headless Hysteria2 target with the dedicated real-traffic check before depending on it. Keep output private and restrict local permissions.
 
 RST records only local input/output hashes needed to detect a stale or missing canonical ClientTarget render. A stale render is drift, not permission to mutate remote infrastructure.
 

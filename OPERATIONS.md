@@ -165,9 +165,14 @@ Renderers consume a ClientTarget plus its referenced Profile.
 Current renderers:
 
 - `mihomo` — private Hysteria2 Routes plus zero or more explicitly included generic Providers;
-- `shadowrocket` — offline node import or target-scoped private subscription import.
+- `shadowrocket` — offline node import or target-scoped private subscription import;
+- `hysteria2` — official-client JSON for one explicitly selected managed Route, with HTTP and SOCKS5 sharing one loopback listener.
 
 A Provider is optional. A clean private-only setup must render without one. Blank Profile policy uses generic privacy behavior; geography-specific policies are explicit opt-ins.
+
+The headless renderer defaults to `127.0.0.1:1080` and `auto` ingress selection (IPv4 first, then IPv6). Public/LAN listeners fail closed. It does not silently compose Profile Providers or GUI policy, and separate concurrent targets need separate local ports.
+
+`route-steward proxy --target <client-target> --check` renders the target, obtains the checksum-verified official Hysteria2 client from the private cache, makes one real HTTP request through the Route, compares its IPv4 exit with desired state, and stops. Plain `proxy` runs the same target in the foreground for a service manager or job supervisor. The check contacts ipify and does not return the observed address.
 
 Renderer compatibility is explicit: external client documentation may motivate a new renderer but does not make it supported automatically.
 

@@ -35,10 +35,10 @@ Node.js só é usado quando você escolhe a entrega opcional de assinatura pelo 
 ## O que você recebe
 
 - um proxy Hysteria2 privado por um servidor ou um relay WireGuard opcional por dois;
-- configuração privada completa para um app compatível com Mihomo/Clash Verge ou Shadowrocket;
+- configuração privada completa para um app compatível com Mihomo/Clash Verge, Shadowrocket ou um proxy sem GUI para Linux/aplicações;
 - auditoria de servidor somente leitura, health real e sob demanda do tráfego cliente e drift de configuração tipado;
 - substituição retomável de servidor com sobreposição, troca de clientes condicionada por health e sem aposentadoria automática;
-- um fluxo de substituição com sobreposição e recuperação local criptografada;
+- recuperação local criptografada com estado privado verificado e realocável;
 - a mesma interface legível por máquinas para CLI e MCP stdio local.
 
 A base atual é um VPS Ubuntu 24.04 amd64 dedicado e reconstruível, com acesso SSH autorizado por chave. Consulte [Compatibility](docs/COMPATIBILITY.md) para os protocolos, clientes e topologias exatos.

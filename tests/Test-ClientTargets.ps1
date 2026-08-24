@@ -40,14 +40,21 @@ try {
     $inventory.routes[0].enabled = $true
     $inventory.routes[0].state = 'deployed'
     Save-RSTInventory -Inventory $inventory -InventoryPath $inventoryPath
+    $headlessContext = [ordered]@{ target_id = 'backend'; profile_id = 'primary'; renderer = 'hysteria2'; route_id = 'direct-a'; listen = '127.0.0.1:18080'; ingress_family = 'auto' } | ConvertTo-Json -Compress
+    Assert-True ((& $agent execute -PrivateDirectory $stage -Operation add-client-target -ContextJson $headlessContext | ConvertFrom-Json).success) 'Explicit Hysteria2 ClientTarget creation failed.'
+    $unsafeHeadless = [ordered]@{ target_id = 'unsafe'; profile_id = 'primary'; renderer = 'hysteria2'; route_id = 'direct-a'; listen = '0.0.0.0:1080' } | ConvertTo-Json -Compress
+    $unsafePreflight = & $agent preflight -PrivateDirectory $stage -Operation add-client-target -ContextJson $unsafeHeadless | ConvertFrom-Json
+    Assert-True (-not $unsafePreflight.data.ready -and @($unsafePreflight.data.conflicts) -contains 'headless-listen-not-loopback') 'A public Hysteria2 listener passed preflight.'
 
     $privateOutput = Join-Path $stage 'private-only'
     $result = & $renderer -InventoryPath $inventoryPath -OutputDirectory $privateOutput -SkipValidation | ConvertFrom-Json
-    Assert-True ($result.success -and $result.outputs.Count -eq 2) 'Rendering did not produce both explicit ClientTargets.'
+    Assert-True ($result.success -and $result.outputs.Count -eq 3) 'Rendering did not produce all explicit ClientTargets.'
     $mihomoPath = Join-Path $privateOutput 'desktop.yaml'
     $shadowrocketPath = Join-Path $privateOutput 'mobile.html'
+    $headlessPath = Join-Path $privateOutput 'backend.json'
     Assert-True (Test-Path -LiteralPath $mihomoPath) 'Mihomo ClientTarget output is missing.'
     Assert-True (Test-Path -LiteralPath $shadowrocketPath) 'Shadowrocket ClientTarget output is missing.'
+    Assert-True (Test-Path -LiteralPath $headlessPath) 'Hysteria2 ClientTarget output is missing.'
 
     $mihomo = [IO.File]::ReadAllText($mihomoPath, [Text.Encoding]::UTF8)
     Assert-True ($mihomo -match '(?m)^\s*- name:\s*Direct-A-HY2-v[46]\s*$') 'Mihomo output is missing private Hysteria2 nodes.'
@@ -61,6 +68,11 @@ try {
     Assert-True ($html -notmatch '(?i)<script[^>]+src=' -and $html -notmatch '(?i)\bfetch\s*\(') 'Shadowrocket output can load an external resource.'
     Assert-True ($html -match 'Direct-A-HY2-v4') 'Shadowrocket output is missing a rendered private node.'
 
+    $headless = [IO.File]::ReadAllText($headlessPath, [Text.Encoding]::UTF8) | ConvertFrom-Json
+    Assert-True ([string]$headless.server -eq '192.0.2.10:443') 'Hysteria2 auto mode did not deterministically select IPv4.'
+    Assert-True ([string]$headless.http.listen -eq '127.0.0.1:18080' -and [string]$headless.socks5.listen -eq '127.0.0.1:18080') 'Hysteria2 HTTP/SOCKS5 listeners are not the target loopback listener.'
+    Assert-True ($headless.tls.insecure -eq $true -and [string]$headless.tls.pinSHA256 -match '^[0-9a-f]{64}$') 'Hysteria2 output did not retain pinned TLS verification.'
+
     $providerContext = [ordered]@{ provider_id = 'example-provider'; display_name = 'Example Provider'; url = 'https://example.invalid/provider.yaml'; interval_seconds = 86400 } | ConvertTo-Json -Compress
     $provider = & $agent execute -PrivateDirectory $stage -Operation add-provider -ContextJson $providerContext | ConvertFrom-Json
     Assert-True ($provider.success -and $provider.data.result.source_type -eq 'mihomo-http') 'Generic Provider was not added through the Agent contract.'
@@ -73,7 +85,7 @@ try {
     $providerMihomo = [IO.File]::ReadAllText((Join-Path $providerOutput 'desktop.yaml'), [Text.Encoding]::UTF8)
     Assert-True ($providerMihomo -match '(?m)^proxy-providers:\s*$' -and $providerMihomo -match '(?m)^\s{2}example-provider:\s*$') 'Generic Provider block is missing.'
 
-    Write-Host 'Explicit Profile/ClientTarget separation, neutral rendering, driver fields, and optional Provider composition tests passed.'
+    Write-Host 'Explicit GUI/headless ClientTargets, loopback Hysteria2 rendering, neutral defaults, and Provider composition tests passed.'
 }
 finally {
     if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }

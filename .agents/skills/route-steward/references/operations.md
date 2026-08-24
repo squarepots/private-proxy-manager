@@ -10,6 +10,7 @@ The native `route-steward` executable is the canonical local machine surface. It
 - `drift`: sanitized desired-versus-observed Route and ClientTarget-render evidence.
 - `health`: on-demand real Hysteria2 client traffic check for one deployed Route.
 - `migrations`: sanitized resumable migration checkpoints, optionally filtered by source Route.
+- `proxy`: render and run one loopback-only Hysteria2 ClientTarget; `--check` validates real HTTP traffic and exit identity, then exits.
 
 Inventory schema `1` is the first public desired-state contract.
 
@@ -25,6 +26,8 @@ Representative calls:
 route-steward capabilities
 route-steward health --private-dir ./private --target route-a
 route-steward migrations --private-dir ./private
+route-steward proxy --private-dir ./private --target backend-a --check
+route-steward proxy --private-dir ./private --target backend-a
 route-steward preflight --private-dir ./private --operation add-server --context-stdin
 route-steward execute --private-dir ./private --operation add-server --context-stdin
 route-steward execute --private-dir ./private --operation migrate-route --target route-a --context-stdin
@@ -69,3 +72,5 @@ Remote transport or audit failure becomes `undetermined`, not permission to repa
 Health contacts ipify's address endpoints and Cloudflare's trace endpoint through the Route. It omits exact public IP values unless the caller explicitly requests them and reports packet loss as unsupported rather than inventing an unstable metric.
 
 Migration returns `workflow-blocked` with a bounded failure code when a stage cannot complete. Retry with the same source Route and `replacement_server_id`; never change the replacement identity of an active transaction. A complete result still reports `old_capacity_retired=false`.
+
+The `proxy` command is local and target-scoped. It may write the private rendered JSON and verified official-client cache. Its check contacts ipify through the selected Route and returns no observed public IP value; the run mode stays in the foreground until stopped.

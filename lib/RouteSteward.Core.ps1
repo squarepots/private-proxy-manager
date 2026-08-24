@@ -99,6 +99,18 @@ function Test-RSTIPv6 {
     return [Net.IPAddress]::TryParse($Value, [ref]$parsed) -and $parsed.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetworkV6
 }
 
+function Test-RSTLoopbackListener {
+    param([AllowNull()][string]$Value)
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
+    $match = [regex]::Match($Value, '^(?:\[(?<ipv6>[^\]]+)\]|(?<ipv4>[^:]+)):(?<port>\d+)$')
+    if (-not $match.Success) { return $false }
+    $hostName = if ($match.Groups['ipv6'].Success) { $match.Groups['ipv6'].Value } else { $match.Groups['ipv4'].Value }
+    $address = $null
+    if (-not [Net.IPAddress]::TryParse($hostName, [ref]$address) -or -not [Net.IPAddress]::IsLoopback($address)) { return $false }
+    $port = 0
+    return [int]::TryParse($match.Groups['port'].Value, [ref]$port) -and $port -ge 1 -and $port -le 65535
+}
+
 function Test-RSTUnixUser {
     param([AllowNull()][string]$Value)
     if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
@@ -317,7 +329,7 @@ function Assert-RSTInventory {
         $delivery = [string](Get-RSTOptional $target 'delivery')
         $subscriptionRef = [string](Get-RSTOptional $target 'subscription_secret_ref')
         if ($profileIds -notcontains $profileId) { $failures.Add("ClientTarget '$id' references unknown Profile '$profileId'.") }
-        if ($renderer -notin @('mihomo','shadowrocket')) { $failures.Add("ClientTarget '$id' has unsupported renderer '$renderer'.") }
+        if ($renderer -notin @('mihomo','shadowrocket','hysteria2')) { $failures.Add("ClientTarget '$id' has unsupported renderer '$renderer'.") }
         if ($renderer -eq 'mihomo') {
             if ($delivery -ne 'file') { $failures.Add("Mihomo ClientTarget '$id' must use file delivery.") }
             if ($subscriptionRef) { $failures.Add("Mihomo ClientTarget '$id' cannot own subscription state.") }
@@ -326,6 +338,21 @@ function Assert-RSTInventory {
             if ($delivery -notin @('nodes','subscription')) { $failures.Add("Shadowrocket ClientTarget '$id' has unsupported delivery '$delivery'.") }
             if ($delivery -eq 'subscription' -and -not $subscriptionRef) { $failures.Add("Shadowrocket ClientTarget '$id' requires subscription_secret_ref for subscription delivery.") }
             if ($subscriptionRef -and $delivery -ne 'subscription') { $failures.Add("Shadowrocket ClientTarget '$id' with subscription state must use subscription delivery.") }
+        }
+        if ($renderer -eq 'hysteria2') {
+            $routeId = [string](Get-RSTOptional $target 'route')
+            $listen = [string](Get-RSTOptional $target 'listen')
+            $family = [string](Get-RSTOptional $target 'ingress_family')
+            $selectedRoute = @($routes | Where-Object id -eq $routeId)
+            $selectedProfile = @($profiles | Where-Object id -eq $profileId)
+            if ($delivery -ne 'file' -or $subscriptionRef) { $failures.Add("Hysteria2 ClientTarget '$id' must use private file delivery.") }
+            if ($selectedRoute.Count -ne 1 -or (Get-RSTOptional $selectedRoute[0] 'enabled' $true) -eq $false) { $failures.Add("Hysteria2 ClientTarget '$id' must select one enabled Route.") }
+            elseif ($selectedProfile.Count -eq 1) {
+                $included = @(Get-RSTOptional $selectedProfile[0] 'include_routes' @('*'))
+                if ($included -notcontains '*' -and $included -notcontains $routeId) { $failures.Add("Hysteria2 ClientTarget '$id' selects a Route outside its Profile.") }
+            }
+            if (-not (Test-RSTLoopbackListener $listen)) { $failures.Add("Hysteria2 ClientTarget '$id' must use a loopback listener.") }
+            if ($family -notin @('auto','ipv4','ipv6')) { $failures.Add("Hysteria2 ClientTarget '$id' has an invalid ingress family.") }
         }
     }
 

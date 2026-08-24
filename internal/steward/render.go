@@ -75,6 +75,8 @@ func RenderClients(state *State, targetID string, skipValidation bool) (RenderRe
 			output, err = renderMihomo(state, *profile, target, filepath.Join(outputDir, target.ID+".yaml"), skipValidation)
 		case "shadowrocket":
 			output, err = renderShadowrocket(state, *profile, target, filepath.Join(outputDir, target.ID+".html"))
+		case "hysteria2":
+			output, err = renderHysteria2(state, *profile, target, filepath.Join(outputDir, target.ID+".json"))
 		default:
 			err = fmt.Errorf("ClientTarget %q uses unsupported renderer %q", target.ID, target.Renderer)
 		}
@@ -87,6 +89,52 @@ func RenderClients(state *State, targetID string, skipValidation bool) (RenderRe
 		return RenderResult{}, err
 	}
 	return RenderResult{SchemaVersion: 1, Command: "render-client-targets", Success: true, Outputs: outputs}, nil
+}
+
+func renderHysteria2(state *State, profile Profile, target ClientTarget, outputPath string) (RenderOutput, error) {
+	_, node, err := headlessRouteNode(state, profile, target)
+	if err != nil {
+		return RenderOutput{}, err
+	}
+	config, err := hysteriaClientConfig(node, target.Listen, true)
+	if err != nil {
+		return RenderOutput{}, err
+	}
+	if err := writeFileAtomic(outputPath, config, 0o600); err != nil {
+		return RenderOutput{}, err
+	}
+	return RenderOutput{ClientTarget: target.ID, Profile: profile.ID, Renderer: "hysteria2", Path: outputPath, NodeCount: 1, Validation: "official-json-structure-checked"}, nil
+}
+
+func headlessRouteNode(state *State, profile Profile, target ClientTarget) (Route, routeNode, error) {
+	route := findRoute(state.Inventory, target.Route)
+	if route == nil || !route.Enabled {
+		return Route{}, routeNode{}, fmt.Errorf("Hysteria2 ClientTarget %q does not select an enabled Route", target.ID)
+	}
+	if !contains(profile.IncludeRoutes, "*") && !contains(profile.IncludeRoutes, route.ID) {
+		return Route{}, routeNode{}, fmt.Errorf("Hysteria2 ClientTarget %q selects a Route outside its Profile", target.ID)
+	}
+	nodes, err := healthRouteNodes(state, *route)
+	if err != nil {
+		return Route{}, routeNode{}, err
+	}
+	family := target.IngressFamily
+	if family == "auto" {
+		family = "ipv4"
+	}
+	for _, node := range nodes {
+		if addressFamily(node.Values["server"]) == family {
+			return *route, node, nil
+		}
+	}
+	if target.IngressFamily == "auto" && family == "ipv4" {
+		for _, node := range nodes {
+			if addressFamily(node.Values["server"]) == "ipv6" {
+				return *route, node, nil
+			}
+		}
+	}
+	return Route{}, routeNode{}, fmt.Errorf("Hysteria2 ClientTarget %q has no %s ingress", target.ID, target.IngressFamily)
 }
 
 func SanitizedRender(result RenderResult) RenderResult {

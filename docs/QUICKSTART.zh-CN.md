@@ -40,7 +40,7 @@ agent 会按照 capability discovery 声明的字段询问：
 - direct route 需要一台专用、可重建的 Ubuntu 24.04 amd64 VPS；relay 需要两台；
 - 每台服务器的公网地址、有效 Unix SSH 用户名和本地 private-key path；
 - 希望使用 direct 还是单跳 relay 连接；
-- Mihomo/Clash Verge 兼容或 Shadowrocket ClientTarget。
+- Mihomo/Clash Verge 兼容、Shadowrocket，或无 GUI 的 Hysteria2 ClientTarget。
 
 使用 `entry-a`、`route-a`、`desktop-a` 这类不识别个人信息的 ID。真实运行值只保存在你选择的 private 目录。
 
@@ -76,7 +76,26 @@ health 会通过该 Route 运行固定版本的 Hysteria2 客户端，检查互�
 
 返回数据不会包含凭据、绝对用户目录、Provider URL、subscription token、完整 node URI 或原始 SSH 输出。
 
-## 6. 继续使用或恢复
+## 6. 让 Linux 服务器或应用使用 Route
+
+选定 Route 部署完成后，agent 可以创建无 GUI target，不需要手工编辑 Hysteria 配置：
+
+```text
+route-steward execute --private-dir ./private --operation add-client-target --context-json '{"target_id":"backend-a","profile_id":"primary","renderer":"hysteria2","route_id":"route-a","listen":"127.0.0.1:1080","ingress_family":"auto"}'
+route-steward proxy --private-dir ./private --target backend-a --check
+route-steward proxy --private-dir ./private --target backend-a
+```
+
+检查命令会临时启动固定版本的官方客户端，通过 Route 发起真实 HTTP 请求、核对声明的出口，然后停止。最后一条命令以前台进程运行；需要长期运行时，使用主机现有 service manager 监督。代理运行期间，应用可在同一个本地端口使用任一协议：
+
+```text
+HTTP_PROXY=http://127.0.0.1:1080 HTTPS_PROXY=http://127.0.0.1:1080 your-command
+curl --proxy socks5h://127.0.0.1:1080 https://example.com/
+```
+
+监听地址必须是 IP literal loopback。一个 target 明确选择一个受管 Route；它不会隐含 Provider 组合、GUI policy、对公网/局域网监听或自动安装 system service。
+
+## 7. 继续使用或恢复
 
 修改现有 Route 前先让 agent 运行 audit 和 drift。`migrate-route` 会保存并恢复 overlap-first 替换事务：替代 Route 先部署并通过 health，之后才改变受影响的客户端输出；客户端切换失败会回滚，旧远端容量不会被退役。`workflow-blocked` 可以用相同旧 Route 和替代 Server 安全重试。加密恢复使用 `route-steward backup` 和 `route-steward recover`；密码只输入本地 7-Zip prompt。
 
