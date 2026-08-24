@@ -27,6 +27,13 @@ function Get-RSTNodeValue {
     return ConvertFrom-RSTYamlScalar $match.Groups['value'].Value
 }
 
+function Get-RSTOptionalNodeValue {
+    param([Parameter(Mandatory)][string]$Body, [Parameter(Mandatory)][string]$Key)
+    $match = [regex]::Match($Body, '(?m)^\s{4,10}' + [regex]::Escape($Key) + ':\s*(?<value>.*?)\s*$')
+    if (-not $match.Success) { return $null }
+    return ConvertFrom-RSTYamlScalar $match.Groups['value'].Value
+}
+
 function ConvertTo-RSTUriComponent { param([Parameter(Mandatory)][AllowEmptyString()][string]$Value) return [Uri]::EscapeDataString($Value) }
 function Format-RSTUriHost { param([Parameter(Mandatory)][string]$Address) if ($Address.Contains(':')) { return "[$Address]" }; return $Address }
 
@@ -36,6 +43,10 @@ function ConvertTo-RSTShadowrocketUri {
     if ($type.ToLowerInvariant() -ne 'hysteria2') { throw "Node '$Name' uses unsupported type '$type'." }
     $server = Get-RSTNodeValue -Body $Body -Key 'server'
     $port = Get-RSTNodeValue -Body $Body -Key 'port'
+    $portNumber = 0
+    if (-not [int]::TryParse($port, [ref]$portNumber) -or $portNumber -lt 1 -or $portNumber -gt 65535) { throw "Node '$Name' has an invalid Hysteria2 port." }
+    $ports = [string](Get-RSTOptionalNodeValue -Body $Body -Key 'ports')
+    $endpointPort = if ($ports) { Get-RSTPortHoppingText -PortHopping (ConvertTo-RSTPortHoppingRange -Value $ports -ListenPort $portNumber) } else { $port }
     $auth = Get-RSTNodeValue -Body $Body -Key 'password'
     $sni = Get-RSTNodeValue -Body $Body -Key 'sni'
     $fingerprint = ((Get-RSTNodeValue -Body $Body -Key 'fingerprint') -replace '[:\s-]', '').ToLowerInvariant()
@@ -52,7 +63,7 @@ function ConvertTo-RSTShadowrocketUri {
         'peer=' + (ConvertTo-RSTUriComponent $sni),
         'alpn=h3','udp=1','insecure=1','pinSHA256=' + $fingerprint
     ) -join '&'
-    return 'hysteria2://{0}@{1}:{2}/?{3}#{4}' -f (ConvertTo-RSTUriComponent $auth), (Format-RSTUriHost $server), $port, $query, (ConvertTo-RSTUriComponent $Name)
+    return 'hysteria2://{0}@{1}:{2}/?{3}#{4}' -f (ConvertTo-RSTUriComponent $auth), (Format-RSTUriHost $server), $endpointPort, $query, (ConvertTo-RSTUriComponent $Name)
 }
 
 $InventoryPath = [IO.Path]::GetFullPath($InventoryPath)

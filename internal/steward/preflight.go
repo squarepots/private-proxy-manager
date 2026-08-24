@@ -165,6 +165,14 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 		if id := stringField(context, "route_id"); id != "" && route(id) != nil {
 			conflicts = append(conflicts, "route-id-already-exists")
 		}
+		if value := stringField(context, "port_hopping"); value != "" {
+			hopping, err := parsePortHoppingRange(value)
+			if err != nil {
+				conflicts = append(conflicts, "port-hopping-invalid")
+			} else if hasField(context, "listen_port") && intField(context, "listen_port", 0) != hopping.StartPort {
+				conflicts = append(conflicts, "port-hopping-must-start-at-listen-port")
+			}
+		}
 		effects = append(effects, "generate-local-route-credentials-and-update-desired-state")
 	case "add-provider":
 		require("provider_id", "url")

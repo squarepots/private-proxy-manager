@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	hysteriaClientVersion  = "v2.9.3"
+	hysteriaClientVersion  = "v2.12.2"
 	hysteriaReleaseBaseURL = "https://github.com/HyNetworks/hysteria/releases/download/app/" + hysteriaClientVersion
 	maxHysteriaBinarySize  = 64 << 20
 )
@@ -27,12 +27,12 @@ type hysteriaClientAsset struct {
 }
 
 var hysteriaClientAssets = map[string]hysteriaClientAsset{
-	"darwin/amd64":  {Name: "hysteria-darwin-amd64", SHA256: "e90560423f762e6342b875bc477e1f1d33e38e0434b3263a039a319780f314d6"},
-	"darwin/arm64":  {Name: "hysteria-darwin-arm64", SHA256: "2cba6474c629debe42c288fd512de54f55415102348a1f8e771d3c6a91b860ef"},
-	"linux/amd64":   {Name: "hysteria-linux-amd64", SHA256: "66dbdb0608f25f3057b433afe975a9fc1af2ca8e512479e294988b3ef363d6c1"},
-	"linux/arm64":   {Name: "hysteria-linux-arm64", SHA256: "938df06c5a8ed001dbc38718b5385b5fcbd721669f1163518ea8e738866865f2"},
-	"windows/amd64": {Name: "hysteria-windows-amd64.exe", SHA256: "bcd3865b09be2e5cc18d117dcf3ad687d1e6e27b0b050376b9cf4ea251b64d6f"},
-	"windows/arm64": {Name: "hysteria-windows-arm64.exe", SHA256: "14aad6e421d561139f9f5e2b4c16cec9c08ee1e610d6ea2cf6f2c9737c32af2e"},
+	"darwin/amd64":  {Name: "hysteria-darwin-amd64", SHA256: "faea12f8e0fa9cb3ae9861fd7aff27bc2cebe136c07f0de63272eea0ec255900"},
+	"darwin/arm64":  {Name: "hysteria-darwin-arm64", SHA256: "d5850b02d0952ab5f88cd9bf37d0e84585905aba107e3f977336f1047f107d9d"},
+	"linux/amd64":   {Name: "hysteria-linux-amd64", SHA256: "6493dfffd55b5883f64c76c63880ecc32988f0c568c9ca9014907877b4d55f94"},
+	"linux/arm64":   {Name: "hysteria-linux-arm64", SHA256: "ebfacc1ec3a0edfd742cd68ce17f292a6092e606b9d11f99b035c1d888f3d709"},
+	"windows/amd64": {Name: "hysteria-windows-amd64.exe", SHA256: "807ae5332a8fefeeff804923e057b6942acceaa11706ac7fa3db42f192c2fde1"},
+	"windows/arm64": {Name: "hysteria-windows-arm64.exe", SHA256: "717feb36a44e67ef9e2db6a139f8004c6cb97c1aaf4eb7d03ce4710e6fc21165"},
 }
 
 func platformHysteriaClientAsset(goos, goarch string) (hysteriaClientAsset, error) {

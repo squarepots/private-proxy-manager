@@ -38,7 +38,7 @@ function Get-RSTCapabilityCatalog {
             [ordered]@{ name = 'host_ownership'; type = 'dedicated'; required = $true }
         )
         'add-link' = @([ordered]@{ name = 'link_id'; type = 'stable-id'; required = $true },[ordered]@{ name = 'entry_server'; type = 'server-id'; required = $true },[ordered]@{ name = 'exit_server'; type = 'server-id'; required = $true })
-        'add-route' = @([ordered]@{ name = 'route_id'; type = 'stable-id'; required = $true },[ordered]@{ name = 'kind'; type = 'direct|relay'; required = $true },[ordered]@{ name = 'entry_server'; type = 'server-id'; required = $true })
+        'add-route' = @([ordered]@{ name = 'route_id'; type = 'stable-id'; required = $true },[ordered]@{ name = 'kind'; type = 'direct|relay'; required = $true },[ordered]@{ name = 'entry_server'; type = 'server-id'; required = $true },[ordered]@{ name = 'port_hopping'; type = 'udp-port-range-2-to-8'; required = $false })
         'add-provider' = @([ordered]@{ name = 'provider_id'; type = 'stable-id'; required = $true },[ordered]@{ name = 'url'; type = 'http-url'; required = $true })
         'update-provider' = @([ordered]@{ name = 'target'; type = 'provider-id'; required = $true; source = 'argument' })
         'remove-provider' = @([ordered]@{ name = 'target'; type = 'provider-id'; required = $true; source = 'argument' })
@@ -79,7 +79,7 @@ function Get-RSTDriverCapabilities {
         schema_version = 1
         product_version = Get-RSTProductVersion
         compute = @([ordered]@{ id = 'byo-ssh-ubuntu-24.04-amd64'; state = 'supported'; provisioning = 'bring-your-own'; transport = 'ssh'; package_manager = 'apt'; architecture = 'amd64'; operating_system = 'ubuntu-24.04'; host_ownership = 'dedicated' })
-        ingress = @([ordered]@{ id = 'hysteria2'; state = 'supported'; version = '2.9.3'; transport = 'udp'; address_families = @('ipv4','ipv6'); credential_model = 'local-canonical-pinned-tls' })
+        ingress = @([ordered]@{ id = 'hysteria2'; state = 'supported'; version = '2.12.2'; transport = 'udp'; address_families = @('ipv4','ipv6'); credential_model = 'local-canonical-pinned-tls'; reliability = @('salamander-obfuscation','optional-port-hopping') })
         links = @([ordered]@{ id = 'wireguard-single-hop'; state = 'supported'; hops = 1; address_family = 'ipv4' })
         providers = @([ordered]@{ id = 'mihomo-http-provider'; state = 'supported'; optional = $true; schemes = @('https','http'); health_check = $false })
         renderers = @(
@@ -251,6 +251,20 @@ function New-RSTPreflight {
                 if ($kind -eq 'relay') {
                     if (-not (Get-RSTOptional $Context 'exit_server')) { $missing.Add('exit-server') }
                     if (-not (Get-RSTOptional $Context 'link_id')) { $missing.Add('link-id') }
+                }
+                $portHoppingValue = [string](Get-RSTOptional $Context 'port_hopping')
+                if ($portHoppingValue) {
+                    try {
+                        $portHopping = ConvertTo-RSTPortHoppingRange -Value $portHoppingValue
+                        $hasListenPort = if ($Context -is [Collections.IDictionary]) { $Context.Contains('listen_port') } else { $null -ne $Context.PSObject.Properties['listen_port'] }
+                        if ($hasListenPort) {
+                            $listenPort = 0
+                            if (-not [int]::TryParse([string](Get-RSTOptional $Context 'listen_port'), [ref]$listenPort) -or $listenPort -ne [int]$portHopping.start_port) {
+                                $conflicts.Add('port-hopping-must-start-at-listen-port')
+                            }
+                        }
+                    }
+                    catch { $conflicts.Add('port-hopping-invalid') }
                 }
             }
             $effects.Add('generate-local-route-credentials-and-update-desired-state')
@@ -506,20 +520,38 @@ function Add-RSTRoute {
     $link = if ($kind -eq 'relay') { [string]$Context.link_id } else { $null }
     if ($kind -eq 'relay') { $linkObject = Get-RSTLinkById -Inventory $Inventory -Id $link; if ($linkObject.entry_server -ne $entry -or $linkObject.exit_server -ne $exit) { throw 'The Link does not match Route endpoints.' } }
     $defaultPort = if ($kind -eq 'direct') { 443 } else { $used = @($Inventory.routes | Where-Object entry_server -eq $entry | ForEach-Object { [int]$_.listen_port }); $p = 8443; while ($used -contains $p) { $p++ }; $p }
-    $port = [int](Get-RSTOptional $Context 'listen_port' $defaultPort); if ($port -lt 1 -or $port -gt 65535) { throw 'listen_port is invalid.' }
+    $portHopping = ConvertTo-RSTPortHoppingRange -Value ([string](Get-RSTOptional $Context 'port_hopping'))
+    $hasListenPort = if ($Context -is [Collections.IDictionary]) { $Context.Contains('listen_port') } else { $null -ne $Context.PSObject.Properties['listen_port'] }
+    $port = if ($portHopping -and -not $hasListenPort) { [int]$portHopping.start_port } else { [int](Get-RSTOptional $Context 'listen_port' $defaultPort) }
+    if ($port -lt 1 -or $port -gt 65535) { throw 'listen_port is invalid.' }
+    if ($portHopping) { $portHopping = ConvertTo-RSTPortHoppingRange -Value (Get-RSTPortHoppingText -PortHopping $portHopping) -ListenPort $port }
     $displayName = [string](Get-RSTOptional $Context 'display_name' $id); if ($displayName -notmatch '^[A-Za-z0-9._-]+$') { throw 'display_name must use ASCII letters, digits, dot, underscore, or dash.' }
     $managedRelative = "managed-routes/$id"; $managedDirectory = Join-Path $privateDirectory ("secrets\managed-routes\$id")
     $payloadRef = "route-payload:$id"; $credentialRef = "route-credential:$id"
-    $route = [pscustomobject][ordered]@{ id = $id; display_name = $displayName; kind = $kind; ingress = [pscustomobject][ordered]@{ driver = 'hysteria2' }; entry_server = $entry; exit_server = $exit; link = $link; listen_port = $port; enabled = $false; order = @($Inventory.routes).Count + 1; address_families = @('ipv6','ipv4'); payload_secret_ref = $payloadRef; credential_secret_ref = $credentialRef; credential_mode = 'personal-pinned'; state = 'pending' }
+    $routeProperties = [ordered]@{ id = $id; display_name = $displayName; kind = $kind; ingress = [pscustomobject][ordered]@{ driver = 'hysteria2' }; entry_server = $entry; exit_server = $exit; link = $link; listen_port = $port }
+    if ($portHopping) { $routeProperties.port_hopping = $portHopping }
+    $routeProperties.enabled = $false
+    $routeProperties.order = @($Inventory.routes).Count + 1
+    $routeProperties.address_families = @('ipv6','ipv4')
+    $routeProperties.payload_secret_ref = $payloadRef
+    $routeProperties.credential_secret_ref = $credentialRef
+    $routeProperties.credential_mode = 'personal-pinned'
+    $routeProperties.state = 'pending'
+    $route = [pscustomobject]$routeProperties
     $candidate = $Inventory | ConvertTo-Json -Depth 30 | ConvertFrom-Json
     $candidate.routes = @($candidate.routes) + $route
     $candidateEntry = @($candidate.servers | Where-Object id -eq $entry)[0]
-    $candidateEntry.firewall.rules = @($candidateEntry.firewall.rules) + [pscustomobject][ordered]@{ family = 'dual'; protocol = 'udp'; port = $port; source = 'any' }
+    $firewallRule = [ordered]@{ family = 'dual'; protocol = 'udp'; port = $port }
+    if ($portHopping) { $firewallRule.end_port = [int]$portHopping.end_port }
+    $firewallRule.source = 'any'
+    $candidateEntry.firewall.rules = @($candidateEntry.firewall.rules) + [pscustomobject]$firewallRule
     $null = Assert-RSTInventory -Inventory $candidate -PrivateDirectory $privateDirectory -SkipSecretCheck
     $secretIndex = Read-RSTSecretIndex -PrivateDirectory $privateDirectory; $indexPath = Join-Path $privateDirectory 'secrets\index.json'; $indexWritten = $false
     foreach ($ref in $payloadRef,$credentialRef) { if ($secretIndex.refs.PSObject.Properties[$ref]) { throw "Secret reference '$ref' already exists." } }
     try {
-        & (Join-Path $repoRoot 'scripts\New-ManagedRouteSecret.ps1') -RouteId $id -DisplayName $displayName -EntryIPv4 ([string]$entryServer.network.public_ipv4) -EntryIPv6 ([string](Get-RSTOptional $entryServer.network 'public_ipv6')) -Port $port -SecretDirectory $managedDirectory
+        $secretArgs = @{ RouteId = $id; DisplayName = $displayName; EntryIPv4 = [string]$entryServer.network.public_ipv4; EntryIPv6 = [string](Get-RSTOptional $entryServer.network 'public_ipv6'); Port = $port; SecretDirectory = $managedDirectory }
+        if ($portHopping) { $secretArgs.PortHoppingRange = Get-RSTPortHoppingText -PortHopping $portHopping }
+        & (Join-Path $repoRoot 'scripts\New-ManagedRouteSecret.ps1') @secretArgs
         $secretIndex.refs | Add-Member -NotePropertyName $payloadRef -NotePropertyValue ([pscustomobject][ordered]@{ type = 'client-payload'; path = "$managedRelative/client-payload.yaml" })
         $secretIndex.refs | Add-Member -NotePropertyName $credentialRef -NotePropertyValue ([pscustomobject][ordered]@{ type = 'managed-route-credential'; path = "$managedRelative/credentials.json" })
         Write-RSTJsonAtomic -Value $secretIndex -Path $indexPath; $indexWritten = $true

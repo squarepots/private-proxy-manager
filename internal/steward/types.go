@@ -82,6 +82,7 @@ type FirewallRule struct {
 	Family       string `json:"family"`
 	Protocol     string `json:"protocol"`
 	Port         int    `json:"port"`
+	EndPort      int    `json:"end_port,omitempty"`
 	Source       string `json:"source,omitempty"`
 	SourceServer string `json:"source_server,omitempty"`
 }
@@ -104,21 +105,22 @@ type Link struct {
 }
 
 type Route struct {
-	ID                  string   `json:"id"`
-	DisplayName         string   `json:"display_name"`
-	Kind                string   `json:"kind"`
-	Ingress             Ingress  `json:"ingress"`
-	EntryServer         string   `json:"entry_server"`
-	ExitServer          string   `json:"exit_server"`
-	Link                *string  `json:"link"`
-	ListenPort          int      `json:"listen_port"`
-	Enabled             bool     `json:"enabled"`
-	Order               int      `json:"order"`
-	AddressFamilies     []string `json:"address_families"`
-	PayloadSecretRef    string   `json:"payload_secret_ref"`
-	CredentialSecretRef string   `json:"credential_secret_ref"`
-	CredentialMode      string   `json:"credential_mode"`
-	State               string   `json:"state"`
+	ID                  string       `json:"id"`
+	DisplayName         string       `json:"display_name"`
+	Kind                string       `json:"kind"`
+	Ingress             Ingress      `json:"ingress"`
+	EntryServer         string       `json:"entry_server"`
+	ExitServer          string       `json:"exit_server"`
+	Link                *string      `json:"link"`
+	ListenPort          int          `json:"listen_port"`
+	PortHopping         *PortHopping `json:"port_hopping,omitempty"`
+	Enabled             bool         `json:"enabled"`
+	Order               int          `json:"order"`
+	AddressFamilies     []string     `json:"address_families"`
+	PayloadSecretRef    string       `json:"payload_secret_ref"`
+	CredentialSecretRef string       `json:"credential_secret_ref"`
+	CredentialMode      string       `json:"credential_mode"`
+	State               string       `json:"state"`
 }
 
 type Ingress struct {

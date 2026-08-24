@@ -357,7 +357,15 @@ func hysteriaClientConfig(node routeNode, listen string, includeSOCKS5 bool) ([]
 	if err != nil || len(decoded) != 32 {
 		return nil, errors.New("health node certificate fingerprint is invalid")
 	}
-	server := net.JoinHostPort(node.Values["server"], strconv.Itoa(port))
+	endpointPort := strconv.Itoa(port)
+	portHopping, err := nodePortHoppingRange(node)
+	if err != nil {
+		return nil, err
+	}
+	if portHopping != "" {
+		endpointPort = portHopping
+	}
+	server := net.JoinHostPort(node.Values["server"], endpointPort)
 	config := map[string]any{
 		"server": server,
 		"auth":   node.Values["password"],
@@ -374,6 +382,9 @@ func hysteriaClientConfig(node routeNode, listen string, includeSOCKS5 bool) ([]
 	}
 	if includeSOCKS5 {
 		config["socks5"] = map[string]string{"listen": listen}
+	}
+	if portHopping != "" {
+		config["transport"] = map[string]any{"type": "udp", "udp": map[string]string{"hopInterval": "30s"}}
 	}
 	return json.MarshalIndent(config, "", "  ")
 }

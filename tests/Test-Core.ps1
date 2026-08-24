@@ -45,10 +45,11 @@ try {
     $allocation = New-RSTLinkAllocation -Inventory $inventory
     Assert-True ($allocation.interface -eq 'wg-rst01' -and $allocation.listen_port -eq 51820 -and $allocation.subnet -eq '10.77.1.0/30') 'RST-native Link allocation is incorrect.'
 
-    $routeContext = [pscustomobject][ordered]@{ route_id = 'direct-a'; display_name = 'Direct-A'; kind = 'direct'; entry_server = 'entry-a'; listen_port = 443 }
+    $routeContext = [pscustomobject][ordered]@{ route_id = 'direct-a'; display_name = 'Direct-A'; kind = 'direct'; entry_server = 'entry-a'; listen_port = 20000; port_hopping = '20000-20003' }
     $null = Add-RSTRoute -Inventory $inventory -InventoryPath $inventoryPath -Context $routeContext
     $inventory = Read-RSTInventory -Path $inventoryPath
     Assert-True ($inventory.routes[0].ingress.driver -eq 'hysteria2') 'Route does not declare the Hysteria2 ingress driver.'
+    Assert-True ([int]$inventory.routes[0].port_hopping.start_port -eq 20000 -and [int]$inventory.routes[0].port_hopping.end_port -eq 20003) 'Route did not retain canonical bounded port hopping.'
 
     $profileContext = [pscustomobject][ordered]@{ profile_id = 'primary'; include_routes = @('direct-a'); include_providers = @() }
     $profile = Add-RSTProfile -Inventory $inventory -InventoryPath $inventoryPath -Context $profileContext

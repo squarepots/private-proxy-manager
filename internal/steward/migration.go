@@ -41,6 +41,7 @@ type migrationTransaction struct {
 	LastFailure              string         `json:"last_failure,omitempty"`
 	OldCapacityRetired       bool           `json:"old_capacity_retired"`
 	ListenPort               int            `json:"listen_port"`
+	PortHopping              *PortHopping   `json:"port_hopping,omitempty"`
 	DisplayName              string         `json:"display_name"`
 }
 
@@ -58,6 +59,7 @@ type MigrationResult struct {
 	Working                  map[string]string `json:"working"`
 	Changed                  []string          `json:"changed"`
 	LastFailure              string            `json:"last_failure,omitempty"`
+	PortHopping              *PortHopping      `json:"port_hopping,omitempty"`
 	Next                     []string          `json:"next"`
 	OldCapacityRetired       bool              `json:"old_capacity_retired"`
 	RetirementRequiresAction bool              `json:"retirement_requires_explicit_action"`
@@ -319,6 +321,13 @@ func newMigrationTransaction(state *State, sourceRoute string, input map[string]
 	if port < 1 || port > 65535 {
 		return migrationTransaction{}, errors.New("migration listen_port is invalid")
 	}
+	portHopping := (*PortHopping)(nil)
+	if source.PortHopping != nil {
+		portHopping = &PortHopping{StartPort: port, EndPort: port + source.PortHopping.EndPort - source.PortHopping.StartPort}
+		if err := validatePortHopping(port, portHopping); err != nil {
+			return migrationTransaction{}, fmt.Errorf("migration port_hopping is invalid: %w", err)
+		}
+	}
 	displayName := defaultString(stringField(input, "display_name"), source.DisplayName+"-replacement")
 	if !displayNamePattern.MatchString(displayName) {
 		return migrationTransaction{}, errors.New("migration display_name is invalid")
@@ -330,7 +339,7 @@ func newMigrationTransaction(state *State, sourceRoute string, input map[string]
 		ReplacementLink: replacementLink, ReplacementServerContext: serverContext,
 		Reason: defaultString(stringField(input, "reason"), "planned-replacement"), Phase: "planned",
 		CreatedAt: timestamp, UpdatedAt: timestamp, AffectedClientTargets: []string{}, PublicationAttempted: []string{},
-		ListenPort: port, DisplayName: displayName,
+		ListenPort: port, PortHopping: portHopping, DisplayName: displayName,
 	}, nil
 }
 
@@ -368,6 +377,9 @@ func prepareMigration(state *State, txn *migrationTransaction) error {
 	}
 	if existing := findRoute(state.Inventory, txn.ReplacementRoute); existing == nil {
 		context := map[string]any{"route_id": txn.ReplacementRoute, "display_name": txn.DisplayName, "kind": source.Kind, "entry_server": entryID, "listen_port": txn.ListenPort}
+		if txn.PortHopping != nil {
+			context["port_hopping"] = portHoppingText(txn.PortHopping)
+		}
 		if source.Kind == "relay" {
 			context["exit_server"], context["link_id"] = exitID, linkID
 		}
@@ -375,7 +387,7 @@ func prepareMigration(state *State, txn *migrationTransaction) error {
 			return err
 		}
 		txn.CreatedReplacementRoute = true
-	} else if existing.Kind != source.Kind || existing.EntryServer != entryID || existing.ExitServer != exitID || deref(existing.Link) != linkID || existing.ListenPort != txn.ListenPort {
+	} else if existing.Kind != source.Kind || existing.EntryServer != entryID || existing.ExitServer != exitID || deref(existing.Link) != linkID || existing.ListenPort != txn.ListenPort || !samePortHopping(existing.PortHopping, txn.PortHopping) {
 		return errors.New("existing replacement Route does not match the migration")
 	}
 	txn.ReplacementServerContext = nil
@@ -397,7 +409,7 @@ func verifyPreparedMigration(state *State, txn *migrationTransaction) error {
 		}
 	}
 	replacement := findRoute(state.Inventory, txn.ReplacementRoute)
-	if replacement == nil || replacement.Kind != source.Kind || replacement.EntryServer != entryID || replacement.ExitServer != exitID || deref(replacement.Link) != linkID || replacement.ListenPort != txn.ListenPort {
+	if replacement == nil || replacement.Kind != source.Kind || replacement.EntryServer != entryID || replacement.ExitServer != exitID || deref(replacement.Link) != linkID || replacement.ListenPort != txn.ListenPort || !samePortHopping(replacement.PortHopping, txn.PortHopping) {
 		return errors.New("migration replacement Route no longer matches its checkpoint")
 	}
 	for _, reference := range []string{replacement.PayloadSecretRef, replacement.CredentialSecretRef} {
@@ -578,7 +590,7 @@ func migrationResult(txn migrationTransaction) MigrationResult {
 		SchemaVersion: 1, MigrationID: txn.ID, SourceRoute: txn.SourceRoute, ReplacementServer: txn.ReplacementServer,
 		ReplacementRoute: txn.ReplacementRoute, ReplacementLink: txn.ReplacementLink, Phase: txn.Phase, Status: status,
 		Summary: summary, AffectedClientTargets: append([]string(nil), txn.AffectedClientTargets...), Working: working,
-		Changed: changed, LastFailure: txn.LastFailure, Next: next, OldCapacityRetired: txn.OldCapacityRetired,
+		Changed: changed, LastFailure: txn.LastFailure, PortHopping: clonePortHopping(txn.PortHopping), Next: next, OldCapacityRetired: txn.OldCapacityRetired,
 		RetirementRequiresAction: true,
 	}
 }
@@ -605,7 +617,7 @@ func readMigrationStateFile(path string) (*migrationState, error) {
 		if txn.ReplacementLink != nil {
 			idsValid = idsValid && stableIDPattern.MatchString(*txn.ReplacementLink)
 		}
-		if txn.ID == "" || seen[txn.ID] || !idsValid || !validMigrationPhase(txn.Phase) {
+		if txn.ID == "" || seen[txn.ID] || !idsValid || !validMigrationPhase(txn.Phase) || txn.ListenPort < 1 || txn.ListenPort > 65535 || validatePortHopping(txn.ListenPort, txn.PortHopping) != nil {
 			return nil, errors.New("private migration state contains an invalid transaction")
 		}
 		seen[txn.ID] = true
@@ -652,14 +664,18 @@ func derivedMigrationID(source, replacement, suffix string) string {
 }
 
 func migrationListenPort(inv *Inventory, source Route, replacedServer string) int {
+	width := 1
+	if source.PortHopping != nil {
+		width = source.PortHopping.EndPort - source.PortHopping.StartPort + 1
+	}
 	if source.Kind == "direct" || replacedServer == source.EntryServer {
 		return source.ListenPort
 	}
 	port := source.ListenPort + 1
-	for port <= 65535 && portUsedByEntry(inv, source.EntryServer, port) {
+	for port+width-1 <= 65535 && portRangeUsedByEntry(inv, source.EntryServer, port, port+width-1) {
 		port++
 	}
-	if port > 65535 {
+	if port+width-1 > 65535 {
 		return 0
 	}
 	return port

@@ -40,6 +40,10 @@ No. Audit checks supported server configuration, services, listeners, relay stat
 
 No. Health is an on-demand check, not a monitoring service. It contacts ipify's address endpoints and Cloudflare's trace endpoint through the proxy and stores only bounded local evidence. The normal agent result reports whether the observed exit matches; exact public IP values are returned only when explicitly requested. Packet loss is reported as unsupported because RST does not yet have a stable, safe end-to-end metric for it.
 
+## When should I use port hopping?
+
+Use optional `port_hopping` only when a network persistently throttles or filters particular UDP destination ports. RST supports one 2–8-port consecutive range beginning at the Route listener and renders it for Mihomo, Karing, Shadowrocket, and the headless official client. It does not help when UDP itself is blocked, and its health check validates a real range-configured client path rather than claiming to observe every periodic hop. See [Reliability research](RELIABILITY-RESEARCH.md).
+
 ## How does server replacement avoid interruption?
 
 `migrate-route` persists an overlap-first transaction. It creates or reuses replacement capacity, deploys it without touching current client output, requires a healthy real Hysteria2 traffic check, and only then switches and validates affected ClientTargets. A failed deployment, health check, render, or subscription publication returns `workflow-blocked`; retrying the same migration resumes deterministically. Old remote capacity is never retired automatically and remains a later explicit destructive action.

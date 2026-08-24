@@ -7,6 +7,7 @@ STATIC_V4=""
 STATIC_V6=""
 NAME="RST-Route"
 INGRESS_PORT="443"
+PORT_HOPPING_RANGE=""
 OUTPUT="/var/lib/route-steward/client-payload.yaml"
 ROTATE=0
 CREDENTIAL_DIR=""
@@ -25,6 +26,7 @@ Options:
   --ipv6 ADDRESS          Optional public IPv6 address.
   --name NAME             Safe node prefix (default: RST-Route).
   --port PORT             HY2 UDP listener (default: 443).
+  --port-hopping-range R  Optional 2..8-port UDP range beginning at --port.
   --output PATH           Root-only client payload output path.
   --credential-dir PATH   Optional locally generated canonical credential bundle.
   --rotate                Generate new Hysteria2 credentials.
@@ -46,6 +48,7 @@ while (($#)); do
     --ipv6) STATIC_V6="${2:-}"; shift 2 ;;
     --name) NAME="${2:-}"; shift 2 ;;
     --port) INGRESS_PORT="${2:-}"; shift 2 ;;
+    --port-hopping-range) PORT_HOPPING_RANGE="${2:-}"; shift 2 ;;
     --output) OUTPUT="${2:-}"; shift 2 ;;
     --credential-dir) CREDENTIAL_DIR="${2:-}"; shift 2 ;;
     --rotate) ROTATE=1; shift ;;
@@ -62,8 +65,24 @@ if [[ ! "${INGRESS_PORT}" =~ ^[0-9]{1,5}$ ]] || ((INGRESS_PORT < 1 || INGRESS_PO
   echo "Invalid HY2 port." >&2
   exit 2
 fi
+PORT_HOPPING_ENABLED=0
+HYSTERIA_LISTEN=":${INGRESS_PORT}"
+FIREWALL_PORT="${INGRESS_PORT}"
+if [[ -n "${PORT_HOPPING_RANGE}" ]]; then
+  [[ "${PORT_HOPPING_RANGE}" =~ ^([1-9][0-9]{0,4})-([1-9][0-9]{0,4})$ ]] || { echo "Invalid Hysteria2 port-hopping range." >&2; exit 2; }
+  HOP_START=$((10#${BASH_REMATCH[1]}))
+  HOP_END=$((10#${BASH_REMATCH[2]}))
+  ((HOP_START == INGRESS_PORT && HOP_END > HOP_START && HOP_END <= 65535 && HOP_END - HOP_START + 1 <= 8)) || { echo "Port hopping must start at --port and contain 2..8 UDP ports." >&2; exit 2; }
+  PORT_HOPPING_ENABLED=1
+  HYSTERIA_LISTEN=":${PORT_HOPPING_RANGE}"
+  FIREWALL_PORT="${HOP_START}:${HOP_END}"
+fi
 [[ -x "${HY_BIN}" ]] || { echo "Missing RST-managed Hysteria2 binary." >&2; exit 1; }
 for required in jq openssl; do command -v "${required}" >/dev/null 2>&1 || { echo "Missing ${required}." >&2; exit 1; }; done
+if [[ "${PORT_HOPPING_ENABLED}" -eq 1 ]] && ! command -v nft >/dev/null 2>&1 && ! command -v iptables >/dev/null 2>&1; then
+  echo "Port hopping requires nftables or iptables." >&2
+  exit 1
+fi
 
 install -d -m 0700 -o root -g root "${STATE_DIR}" "$(dirname "${OUTPUT}")"
 install -d -m 0750 -o route-steward-hysteria -g route-steward-hysteria "${HY_DIR}" "${HY_DIR}/tls" /var/lib/route-steward/hysteria
@@ -204,7 +223,7 @@ masquerade:
     headers:
       content-type: text/plain; charset=utf-8
 EOF
-sed "s/^listen: :0$/listen: :${INGRESS_PORT}/; s#cert: .*/server.crt#cert: ${HY_DIR}/tls/server.crt#; s#key: .*/server.key#key: ${HY_DIR}/tls/server.key#" "${STAGE}/hysteria-stage.yaml" >"${STAGE}/hysteria.yaml"
+sed "s/^listen: :0$/listen: ${HYSTERIA_LISTEN}/; s#cert: .*/server.crt#cert: ${HY_DIR}/tls/server.crt#; s#key: .*/server.key#key: ${HY_DIR}/tls/server.key#" "${STAGE}/hysteria-stage.yaml" >"${STAGE}/hysteria.yaml"
 
 "${HY_BIN}" --disable-update-check --log-level warn server -c "${STAGE}/hysteria-stage.yaml" >"${STAGE}/hysteria-validation.log" 2>&1 &
 HY_PID=$!
@@ -227,6 +246,22 @@ install -m 0600 -o route-steward-hysteria -g route-steward-hysteria "${STAGE}/se
 install -m 0644 -o route-steward-hysteria -g route-steward-hysteria "${STAGE}/server.crt" "${HY_DIR}/tls/server.crt"
 install -m 0600 -o root -g root "${STAGE}/credentials.json" "${STATE_FILE}"
 
+DROP_IN="/etc/systemd/system/route-steward-hysteria.service.d/20-port-hopping.conf"
+if [[ "${PORT_HOPPING_ENABLED}" -eq 1 ]]; then
+  install -d -m 0755 "$(dirname "${DROP_IN}")"
+  cat >"${DROP_IN}" <<'EOF'
+[Service]
+AmbientCapabilities=
+AmbientCapabilities=CAP_NET_BIND_SERVICE CAP_NET_ADMIN
+CapabilityBoundingSet=
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE CAP_NET_ADMIN
+RestrictAddressFamilies=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+EOF
+else
+  rm -f "${DROP_IN}"
+fi
+
 write_node() {
   local suffix="$1" address="$2"
   cat <<EOF
@@ -234,6 +269,11 @@ write_node() {
     type: hysteria2
     server: '${address}'
     port: ${INGRESS_PORT}
+EOF
+  if [[ "${PORT_HOPPING_ENABLED}" -eq 1 ]]; then
+    printf "    ports: '%s'\n" "${PORT_HOPPING_RANGE}"
+  fi
+  cat <<EOF
     password: '${HY_AUTH}'
     sni: '${STATIC_V4}'
     skip-cert-verify: true
@@ -252,8 +292,8 @@ EOF
 } >"${STAGE}/client-payload.yaml"
 install -m 0600 -o root -g root "${STAGE}/client-payload.yaml" "${OUTPUT}"
 
-ufw --force delete allow "${INGRESS_PORT}/tcp" >/dev/null 2>&1 || true
-ufw allow "${INGRESS_PORT}/udp" comment "RST ${NAME} Hysteria2" >/dev/null
+ufw --force delete allow "${FIREWALL_PORT}/tcp" >/dev/null 2>&1 || true
+ufw allow "${FIREWALL_PORT}/udp" comment "RST ${NAME} Hysteria2" >/dev/null
 systemctl daemon-reload
 systemctl enable route-steward-hysteria.service >/dev/null
 if ! systemctl is-active --quiet route-steward-hysteria.service; then
@@ -267,4 +307,5 @@ echo "CONFIGURATION_VALIDATED=1"
 echo "CREDENTIAL_ROTATED=${ROTATE}"
 echo "CERTIFICATE_CHANGED=${CERT_CHANGED}"
 echo "HYSTERIA_RESTARTED=${RESTART_REQUIRED}"
+echo "PORT_HOPPING=${PORT_HOPPING_ENABLED}"
 echo "CLIENT_PAYLOAD=${OUTPUT}"

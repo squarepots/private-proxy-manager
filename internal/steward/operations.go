@@ -156,23 +156,40 @@ func AddRoute(state *State, context map[string]any) (map[string]any, error) {
 			defaultPort++
 		}
 	}
+	hopping, err := parsePortHoppingRange(stringField(context, "port_hopping"))
+	if err != nil {
+		return nil, err
+	}
 	port := intField(context, "listen_port", defaultPort)
+	if hopping != nil && !hasField(context, "listen_port") {
+		port = hopping.StartPort
+	}
 	if port < 1 || port > 65535 {
 		return nil, errors.New("listen_port is invalid")
+	}
+	if err := validatePortHopping(port, hopping); err != nil {
+		return nil, err
+	}
+	portStart, portEnd := port, port
+	if hopping != nil {
+		portStart, portEnd = hopping.StartPort, hopping.EndPort
+	}
+	if portRangeUsedByEntry(state.Inventory, entryID, portStart, portEnd) {
+		return nil, fmt.Errorf("Route %q reuses a Hysteria2 listener or port-hopping range on Server %q", id, entryID)
 	}
 	displayName := defaultString(stringField(context, "display_name"), id)
 	if !displayNamePattern.MatchString(displayName) {
 		return nil, errors.New("display_name must use ASCII letters, digits, dot, underscore, or dash")
 	}
-	route := Route{ID: id, DisplayName: displayName, Kind: kind, Ingress: Ingress{Driver: "hysteria2"}, EntryServer: entryID, ExitServer: exitID, Link: linkID, ListenPort: port, Enabled: false, Order: len(state.Inventory.Routes) + 1, AddressFamilies: []string{"ipv6", "ipv4"}, PayloadSecretRef: "route-payload:" + id, CredentialSecretRef: "route-credential:" + id, CredentialMode: "personal-pinned", State: "pending"}
+	route := Route{ID: id, DisplayName: displayName, Kind: kind, Ingress: Ingress{Driver: "hysteria2"}, EntryServer: entryID, ExitServer: exitID, Link: linkID, ListenPort: port, PortHopping: hopping, Enabled: false, Order: len(state.Inventory.Routes) + 1, AddressFamilies: []string{"ipv6", "ipv4"}, PayloadSecretRef: "route-payload:" + id, CredentialSecretRef: "route-credential:" + id, CredentialMode: "personal-pinned", State: "pending"}
 	candidate := cloneInventory(state.Inventory)
 	candidate.Routes = append(candidate.Routes, route)
 	for i := range candidate.Servers {
 		if candidate.Servers[i].ID == entryID {
-			candidate.Servers[i].Firewall.Rules = append(candidate.Servers[i].Firewall.Rules, FirewallRule{Family: "dual", Protocol: "udp", Port: port, Source: "any"})
+			candidate.Servers[i].Firewall.Rules = append(candidate.Servers[i].Firewall.Rules, FirewallRule{Family: "dual", Protocol: "udp", Port: portStart, EndPort: portEnd, Source: "any"})
 		}
 	}
-	bundle, err := newRouteBundle(id, displayName, entry.Network.PublicIPv4, deref(entry.Network.PublicIPv6), port)
+	bundle, err := newRouteBundle(id, displayName, entry.Network.PublicIPv4, deref(entry.Network.PublicIPv6), port, portHoppingText(hopping))
 	if err != nil {
 		return nil, err
 	}
@@ -509,7 +526,7 @@ func newLinkSecret(id string) ([]byte, error) {
 	return json.MarshalIndent(map[string]any{"schema": 1, "link_id": id, "created_at": utcNow(), "entry": entry, "exit": exit}, "", "  ")
 }
 
-func newRouteBundle(id, displayName, entryIPv4, entryIPv6 string, port int) (routeBundle, error) {
+func newRouteBundle(id, displayName, entryIPv4, entryIPv6 string, port int, portHopping string) (routeBundle, error) {
 	authBytes := make([]byte, 32)
 	obfsBytes := make([]byte, 32)
 	if _, err := rand.Read(authBytes); err != nil {
@@ -550,7 +567,11 @@ func newRouteBundle(id, displayName, entryIPv4, entryIPv6 string, port int) (rou
 	}
 	var nodes strings.Builder
 	writeNode := func(suffix, address string) {
-		fmt.Fprintf(&nodes, "  - name: %s-HY2-%s\n    type: hysteria2\n    server: '%s'\n    port: %d\n    password: '%s'\n    sni: '%s'\n    skip-cert-verify: true\n    fingerprint: '%s'\n    alpn: [h3]\n    obfs: salamander\n    obfs-password: '%s'\n", displayName, suffix, address, port, auth, entryIPv4, hex.EncodeToString(fingerprint[:]), obfs)
+		ports := ""
+		if portHopping != "" {
+			ports = fmt.Sprintf("    ports: '%s'\n", portHopping)
+		}
+		fmt.Fprintf(&nodes, "  - name: %s-HY2-%s\n    type: hysteria2\n    server: '%s'\n    port: %d\n%s    password: '%s'\n    sni: '%s'\n    skip-cert-verify: true\n    fingerprint: '%s'\n    alpn: [h3]\n    obfs: salamander\n    obfs-password: '%s'\n", displayName, suffix, address, port, ports, auth, entryIPv4, hex.EncodeToString(fingerprint[:]), obfs)
 	}
 	if entryIPv6 != "" {
 		writeNode("v6", entryIPv6)
@@ -728,8 +749,16 @@ func nextLinkSlot(inv *Inventory) (int, error) {
 	return 0, errors.New("no free relay slot remains in the supported 1..99 range")
 }
 func portUsedByEntry(inv *Inventory, entry string, port int) bool {
+	return portRangeUsedByEntry(inv, entry, port, port)
+}
+
+func portRangeUsedByEntry(inv *Inventory, entry string, start, end int) bool {
 	for _, r := range inv.Routes {
-		if r.EntryServer == entry && r.ListenPort == port {
+		if r.EntryServer != entry {
+			continue
+		}
+		routeStart, routeEnd, err := routePortRange(r)
+		if err == nil && portRangesOverlap(start, end, routeStart, routeEnd) {
 			return true
 		}
 	}

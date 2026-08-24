@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português (Brasil)](README.pt-BR.md)
 
-[Quickstart](docs/QUICKSTART.md) · [FAQ](docs/FAQ.md) · [Compatibility](docs/COMPATIBILITY.md) · [Operating boundary](docs/OPERATING-BOUNDARY.md) · [Security](SECURITY.md) · [Releases](https://github.com/squarepots/route-steward/releases)
+[Quickstart](docs/QUICKSTART.md) · [FAQ](docs/FAQ.md) · [Compatibility](docs/COMPATIBILITY.md) · [Reliability research](docs/RELIABILITY-RESEARCH.md) · [Operating boundary](docs/OPERATING-BOUNDARY.md) · [Security](SECURITY.md) · [Releases](https://github.com/squarepots/route-steward/releases)
 
 [![Validation](https://github.com/squarepots/route-steward/actions/workflows/ci.yml/badge.svg)](https://github.com/squarepots/route-steward/actions/workflows/ci.yml)
 
@@ -39,6 +39,7 @@ Node.js is used only when you choose the optional Cloudflare Worker subscription
 ## What it gives you
 
 - a private Hysteria2 proxy through one server, or through an optional two-server WireGuard relay;
+- optional bounded Hysteria2 port hopping for per-port UDP throttling or filtering, with one tested client contract;
 - complete private configuration for a Mihomo/Clash Verge-compatible app, Karing, Shadowrocket, or a headless Linux/application proxy;
 - read-only server audit, real on-demand client traffic health, and typed configuration drift;
 - resumable overlap-first server replacement with health-gated client switching and no automatic retirement;

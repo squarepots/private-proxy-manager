@@ -71,6 +71,38 @@ func TestMigrationCreatesHealthyReplacementBeforeClientSwitch(t *testing.T) {
 	}
 }
 
+func TestMigrationPreservesPortHoppingClientContract(t *testing.T) {
+	state, source, input := migrationFixture(t, "direct", false)
+	current := findRoute(state.Inventory, source.ID)
+	current.ListenPort = 20000
+	current.PortHopping = &PortHopping{StartPort: 20000, EndPort: 20003}
+	entry := findServer(state.Inventory, current.EntryServer)
+	for i := range entry.Firewall.Rules {
+		if entry.Firewall.Rules[i].Protocol == "udp" && entry.Firewall.Rules[i].Port == 443 {
+			entry.Firewall.Rules[i].Port, entry.Firewall.Rules[i].EndPort = 20000, 20003
+		}
+	}
+	if err := state.Save(false); err != nil {
+		t.Fatal(err)
+	}
+	result, err := migrateRouteWith(context.Background(), state, source.ID, input, migrationTestDependencies(nil, "healthy"))
+	if err != nil || result.Status != "complete" {
+		t.Fatalf("port-hopping migration did not complete: %#v err=%v", result, err)
+	}
+	replacement := findRoute(state.Inventory, result.ReplacementRoute)
+	if replacement == nil || !samePortHopping(replacement.PortHopping, &PortHopping{StartPort: 20000, EndPort: 20003}) || !samePortHopping(result.PortHopping, replacement.PortHopping) {
+		t.Fatalf("replacement did not retain the source port-hopping contract: route=%#v result=%#v", replacement, result)
+	}
+	checkpoint, err := readMigrationStateFile(filepath.Join(state.PrivateDir, migrationStateFile))
+	if err != nil || len(checkpoint.Transactions) != 1 || !samePortHopping(checkpoint.Transactions[0].PortHopping, replacement.PortHopping) {
+		t.Fatalf("migration checkpoint did not preserve port hopping: checkpoint=%#v err=%v", checkpoint, err)
+	}
+	artifact, err := os.ReadFile(filepath.Join(state.Inventory.Delivery.Directory, "desktop.yaml"))
+	if err != nil || !strings.Contains(string(artifact), "ports: '20000-20003'") {
+		t.Fatalf("migrated client artifact omitted port hopping: err=%v artifact=%q", err, artifact)
+	}
+}
+
 func TestMigrationRetriesDeploymentWithoutDuplicatingState(t *testing.T) {
 	state, source, input := migrationFixture(t, "direct", false)
 	failed := migrationTestDependencies(errors.New("synthetic SSH failure"), "healthy")
@@ -264,6 +296,37 @@ func TestRelayMigrationCreatesMatchingReplacementLink(t *testing.T) {
 	replacement := findRoute(state.Inventory, result.ReplacementRoute)
 	if link == nil || replacement == nil || link.EntryServer != "replacement-c" || link.ExitServer != source.ExitServer || deref(replacement.Link) != link.ID {
 		t.Fatalf("relay replacement path is incorrect: link=%#v route=%#v", link, replacement)
+	}
+}
+
+func TestRelayExitMigrationAllocatesNonOverlappingPortHoppingRange(t *testing.T) {
+	state, source, input := migrationFixture(t, "relay", false)
+	current := findRoute(state.Inventory, source.ID)
+	oldPort := current.ListenPort
+	current.ListenPort = 20000
+	current.PortHopping = &PortHopping{StartPort: 20000, EndPort: 20003}
+	entry := findServer(state.Inventory, current.EntryServer)
+	for i := range entry.Firewall.Rules {
+		if entry.Firewall.Rules[i].Protocol == "udp" && entry.Firewall.Rules[i].Port == oldPort {
+			entry.Firewall.Rules[i].Port, entry.Firewall.Rules[i].EndPort = 20000, 20003
+		}
+	}
+	if err := state.Save(false); err != nil {
+		t.Fatal(err)
+	}
+	input["replace_server_id"] = current.ExitServer
+	result, err := migrateRouteWith(context.Background(), state, source.ID, input, migrationTestDependencies(nil, "healthy"))
+	if err != nil || result.Status != "complete" {
+		t.Fatalf("relay exit port-hopping migration did not complete: %#v err=%v", result, err)
+	}
+	replacement := findRoute(state.Inventory, result.ReplacementRoute)
+	expected := &PortHopping{StartPort: 20004, EndPort: 20007}
+	if replacement == nil || !samePortHopping(replacement.PortHopping, expected) || !samePortHopping(result.PortHopping, expected) {
+		t.Fatalf("relay exit migration did not reserve a same-width non-overlapping range: route=%#v result=%#v", replacement, result)
+	}
+	artifact, err := os.ReadFile(filepath.Join(state.Inventory.Delivery.Directory, "desktop.yaml"))
+	if err != nil || !strings.Contains(string(artifact), "ports: '20004-20007'") {
+		t.Fatalf("relay exit migration did not publish its replacement range: err=%v artifact=%q", err, artifact)
 	}
 }
 

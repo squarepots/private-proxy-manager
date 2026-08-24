@@ -6,6 +6,7 @@ param(
     [Parameter(Mandatory)][string]$SshKey,
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9._-]+$')][string]$Name,
     [ValidateRange(1, 65535)][int]$IngressPort = 443,
+    [string]$PortHoppingRange,
     [string]$OutputPayloadPath,
     [string]$CredentialBundleDirectory,
     [switch]$RotateCredentials,
@@ -42,7 +43,7 @@ function Get-Sha256Hex {
 }
 
 function Get-ManagedAuditExpectation {
-    param([string]$Directory, [int]$Port)
+    param([string]$Directory, [int]$Port, [string]$PortHoppingRange)
     if (-not $Directory) { return $null }
     $credentialPath = Join-Path $Directory 'credentials.json'
     $certificatePath = Join-Path $Directory 'server.crt'
@@ -54,7 +55,8 @@ function Get-ManagedAuditExpectation {
     $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPemFile($certificatePath)
     try { $fingerprint = $certificate.GetCertHashString([Security.Cryptography.HashAlgorithmName]::SHA256).ToLowerInvariant() }
     finally { $certificate.Dispose() }
-    $material = "hysteria2|port=$Port|auth=$auth|obfs=$obfs|cert=$fingerprint"
+    $hop = if ([string]::IsNullOrWhiteSpace($PortHoppingRange)) { 'none' } else { $PortHoppingRange }
+    $material = "hysteria2|port=$Port|hop=$hop|auth=$auth|obfs=$obfs|cert=$fingerprint"
     return [pscustomobject]@{ Fingerprint = $fingerprint; ConfigHash = Get-Sha256Hex -Value $material }
 }
 
@@ -63,11 +65,13 @@ $scp = Get-Command scp -ErrorAction SilentlyContinue
 if (-not $ssh -or -not $scp) { throw 'OpenSSH client commands ssh and scp are required.' }
 if (-not (Test-RSTIPv4 $ServerHost)) { throw 'ServerHost must be an IPv4 address.' }
 if ($IPv6 -and -not (Test-RSTIPv6 $IPv6)) { throw 'IPv6 must be an IPv6 address.' }
+$portHopping = ConvertTo-RSTPortHoppingRange -Value $PortHoppingRange -ListenPort $IngressPort
+$PortHoppingRange = Get-RSTPortHoppingText -PortHopping $portHopping
 if (-not $AuditOnly -and -not $OutputPayloadPath) { throw 'OutputPayloadPath is required for deployment.' }
 
 $SshKey = (Resolve-Path -LiteralPath $SshKey).Path
 if ($CredentialBundleDirectory) { $CredentialBundleDirectory = (Resolve-Path -LiteralPath $CredentialBundleDirectory).Path }
-$auditExpectation = Get-ManagedAuditExpectation -Directory $CredentialBundleDirectory -Port $IngressPort
+$auditExpectation = Get-ManagedAuditExpectation -Directory $CredentialBundleDirectory -Port $IngressPort -PortHoppingRange $PortHoppingRange
 $serverDir = Join-Path $repoRoot 'server'
 $remoteRoot = '/tmp/route-steward-' + ([Guid]::NewGuid().ToString('N'))
 $target = $ServerHost
@@ -93,6 +97,7 @@ try {
         }
 
         $configure = @('sudo','bash',"$remoteServer/configure-ingress.sh",'--ipv4',$ServerHost,'--name',$Name,'--port',[string]$IngressPort,'--output','/var/lib/route-steward/client-payload.yaml')
+        if ($PortHoppingRange) { $configure += @('--port-hopping-range',$PortHoppingRange) }
         if ($IPv6) { $configure += @('--ipv6',$IPv6) }
         if ($remoteCredentialDirectory) { $configure += @('--credential-dir',$remoteCredentialDirectory) }
         if ($RotateCredentials) { $configure += '--rotate' }
@@ -110,6 +115,7 @@ try {
     }
 
     $audit = @('sudo','bash',"$remoteServer/audit.sh",'--ingress-port',[string]$IngressPort)
+    if ($PortHoppingRange) { $audit += @('--port-hopping-range',$PortHoppingRange) }
     if ($auditExpectation) {
         $audit += @('--expected-fingerprint',[string]$auditExpectation.Fingerprint,'--expected-config-hash',[string]$auditExpectation.ConfigHash)
     }

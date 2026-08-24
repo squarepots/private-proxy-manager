@@ -40,6 +40,10 @@ inventory、凭据、生成的客户端文件、observed evidence 和 recovery a
 
 不会。health 是按需检查，不是监控服务。它会通过代理访问 ipify 地址 endpoint 和 Cloudflare trace endpoint，只保存有限的本地证据。普通 agent 结果只报告观测出口是否匹配；只有显式请求时才返回准确公网 IP。由于当前没有稳定、安全的端到端测量方法，packet loss 会明确返回 unsupported，而不是给出不可靠数字。
 
+## 什么时候该用端口跳跃？
+
+只有当网络持续对特定 UDP 目标端口限速或过滤时，才应使用可选的 `port_hopping`。RST 支持一个从 Route listener 开始、连续 2–8 个端口的范围，并为 Mihomo、Karing、Shadowrocket 和无 GUI 官方客户端渲染同一范围。它无法解决网络整体封锁 UDP 的情况；health 验证的是带该范围的真实客户端路径，而不会声称已经观察到每一次周期跳跃。详见[可靠性研究](RELIABILITY-RESEARCH.md)。
+
 ## 替换服务器如何避免中断？
 
 `migrate-route` 会保存 overlap-first 迁移事务。它创建或复用替代容量，在不改变当前客户端输出的情况下完成部署，要求真实 Hysteria2 流量 health 为 healthy，之后才切换并验证受影响的 ClientTarget。部署、health、渲染或 subscription 发布失败会返回 `workflow-blocked`；以相同旧 Route 和替代 Server 重试即可确定性恢复。旧远端容量绝不会自动退役，销毁仍是之后单独、显式的破坏性操作。

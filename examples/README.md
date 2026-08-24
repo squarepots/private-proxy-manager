@@ -6,7 +6,7 @@ Files in this directory describe the public object model with reserved example a
 
 The example demonstrates the final separation between:
 
-- Server / Link / Route infrastructure objects;
+- Server / Link / Route infrastructure objects, including an optional bounded Route port-hopping range;
 - optional Provider sources;
 - reusable Profile selections;
 - renderer-specific ClientTargets.

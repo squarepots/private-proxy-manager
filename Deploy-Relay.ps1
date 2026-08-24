@@ -10,6 +10,7 @@ param(
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9._-]+$')][string]$Name,
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9._-]+$')][string]$ViaName,
     [Parameter(Mandatory)][ValidateRange(1, 65535)][int]$IngressPort,
+    [string]$PortHoppingRange,
     [Parameter(Mandatory)][ValidateRange(1, 65535)][int]$TunnelPort,
     [Parameter(Mandatory)][ValidatePattern('^[a-z0-9][a-z0-9_-]{0,14}$')][string]$Interface,
     [Parameter(Mandatory)][string]$TunnelSubnet,
@@ -65,7 +66,7 @@ function Get-Sha256Hex {
 }
 
 function Get-ManagedRelayAuditExpectation {
-    param([string]$Directory, [int]$Port, [string]$BindInterface)
+    param([string]$Directory, [int]$Port, [string]$BindInterface, [string]$PortHoppingRange)
     if (-not $Directory) { return $null }
     $credentialPath = Join-Path $Directory 'credentials.json'
     $certificatePath = Join-Path $Directory 'server.crt'
@@ -77,7 +78,8 @@ function Get-ManagedRelayAuditExpectation {
     $certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPemFile($certificatePath)
     try { $fingerprint = $certificate.GetCertHashString([Security.Cryptography.HashAlgorithmName]::SHA256).ToLowerInvariant() }
     finally { $certificate.Dispose() }
-    $material = "hysteria2-relay|port=$Port|auth=$auth|obfs=$obfs|cert=$fingerprint|bind=$BindInterface"
+    $hop = if ([string]::IsNullOrWhiteSpace($PortHoppingRange)) { 'none' } else { $PortHoppingRange }
+    $material = "hysteria2-relay|port=$Port|hop=$hop|auth=$auth|obfs=$obfs|cert=$fingerprint|bind=$BindInterface"
     return [pscustomobject]@{ Fingerprint = $fingerprint; ConfigHash = Get-Sha256Hex -Value $material }
 }
 
@@ -98,6 +100,8 @@ if (-not (Test-RSTIPv4 $EntryHost)) { throw 'EntryHost must be an IPv4 address.'
 if (-not (Test-RSTIPv4 $ExitHost)) { throw 'ExitHost must be an IPv4 address.' }
 if ($EntryHost -eq $ExitHost) { throw 'Relay entry and exit must be different servers.' }
 if ($EntryIPv6 -and -not (Test-RSTIPv6 $EntryIPv6)) { throw 'EntryIPv6 must be an IPv6 address.' }
+$portHopping = ConvertTo-RSTPortHoppingRange -Value $PortHoppingRange -ListenPort $IngressPort
+$PortHoppingRange = Get-RSTPortHoppingText -PortHopping $portHopping
 if ($TunnelSubnet -notmatch '^10\.77\.(?:[0-9]|[1-9][0-9]|[12][0-9]{2})\.0/30$') { throw 'TunnelSubnet must use the supported 10.77.x.0/30 allocation.' }
 $entryPeerIp = ($EntryTunnelAddress -split '/', 2)[0]
 $exitPeerIp = ($ExitTunnelAddress -split '/', 2)[0]
@@ -107,7 +111,7 @@ if (-not $AuditOnly -and -not $OutputPayloadPath) { throw 'OutputPayloadPath is 
 $EntrySshKey = (Resolve-Path -LiteralPath $EntrySshKey).Path
 $ExitSshKey = (Resolve-Path -LiteralPath $ExitSshKey).Path
 if ($CredentialBundleDirectory) { $CredentialBundleDirectory = (Resolve-Path -LiteralPath $CredentialBundleDirectory).Path }
-$auditExpectation = Get-ManagedRelayAuditExpectation -Directory $CredentialBundleDirectory -Port $IngressPort -BindInterface $Interface
+$auditExpectation = Get-ManagedRelayAuditExpectation -Directory $CredentialBundleDirectory -Port $IngressPort -BindInterface $Interface -PortHoppingRange $PortHoppingRange
 
 $localSecretStage = $null
 $linkSecret = $null
@@ -183,6 +187,7 @@ try {
         Invoke-Native $ssh.Source ($exitSsh + @($exitTarget, (ConvertTo-BashCommand $exitConfigure)))
 
         $entryConfigure = @('sudo','bash',"$entryServer/configure-relay-entry.sh",'--interface',$Interface,'--local-cidr',$EntryTunnelAddress,'--peer-ip',$exitPeerIp,'--peer-public-key',$exitPublicKey,'--exit-endpoint',$ExitHost,'--tunnel-port',[string]$TunnelPort,'--ingress-port',[string]$IngressPort,'--entry-ipv4',$EntryHost,'--exit-ipv4',$ExitHost,'--name',$Name,'--via-name',$ViaName,'--output','/var/lib/route-steward/relay-client-payload.yaml','--unit-dir',"$entryServer/config")
+        if ($PortHoppingRange) { $entryConfigure += @('--port-hopping-range',$PortHoppingRange) }
         if ($EntryIPv6) { $entryConfigure += @('--entry-ipv6',$EntryIPv6) }
         if ($remoteCredentialDirectory) { $entryConfigure += @('--credential-dir',$remoteCredentialDirectory) }
         Invoke-Native $ssh.Source ($entrySsh + @($entryTarget, (ConvertTo-BashCommand $entryConfigure)))
@@ -209,6 +214,7 @@ try {
     }
 
     $entryAudit = @('sudo','bash',"$entryServer/audit-relay.sh",'--role','entry','--interface',$Interface,'--name',$Name,'--ingress-port',[string]$IngressPort,'--peer-ip',$exitPeerIp,'--expected-exit',$ExitHost)
+    if ($PortHoppingRange) { $entryAudit += @('--port-hopping-range',$PortHoppingRange) }
     if ($linkSecret) { $entryAudit += @('--expected-peer-public-key',[string]$linkSecret.exit.public_key) }
     if ($auditExpectation) { $entryAudit += @('--expected-fingerprint',[string]$auditExpectation.Fingerprint,'--expected-config-hash',[string]$auditExpectation.ConfigHash) }
     $entryOutput = @(& $ssh.Source @($entrySsh + @($entryTarget, (ConvertTo-BashCommand $entryAudit))) 2>&1 | ForEach-Object { [string]$_ })

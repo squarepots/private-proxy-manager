@@ -10,6 +10,7 @@ PEER_PUBLIC_KEY=""
 EXIT_ENDPOINT=""
 TUNNEL_PORT=""
 INGRESS_PORT=""
+PORT_HOPPING_RANGE=""
 ENTRY_IPV4=""
 ENTRY_IPV6=""
 EXIT_IPV4=""
@@ -40,6 +41,7 @@ while (($#)); do
     --exit-endpoint) EXIT_ENDPOINT="${2:-}"; shift 2 ;;
     --tunnel-port) TUNNEL_PORT="${2:-}"; shift 2 ;;
     --ingress-port) INGRESS_PORT="${2:-}"; shift 2 ;;
+    --port-hopping-range) PORT_HOPPING_RANGE="${2:-}"; shift 2 ;;
     --entry-ipv4) ENTRY_IPV4="${2:-}"; shift 2 ;;
     --entry-ipv6) ENTRY_IPV6="${2:-}"; shift 2 ;;
     --exit-ipv4) EXIT_IPV4="${2:-}"; shift 2 ;;
@@ -63,12 +65,28 @@ if [[ -n "${ENTRY_IPV6}" && ! "${ENTRY_IPV6}" =~ ^[0-9A-Fa-f:]+$ ]]; then echo "
 for port in "${TUNNEL_PORT}" "${INGRESS_PORT}"; do
   if [[ ! "${port}" =~ ^[0-9]{1,5}$ ]] || ((port < 1 || port > 65535)); then echo "A valid port is required." >&2; exit 2; fi
 done
+PORT_HOPPING_ENABLED=0
+HYSTERIA_LISTEN=":${INGRESS_PORT}"
+FIREWALL_PORT="${INGRESS_PORT}"
+if [[ -n "${PORT_HOPPING_RANGE}" ]]; then
+  [[ "${PORT_HOPPING_RANGE}" =~ ^([1-9][0-9]{0,4})-([1-9][0-9]{0,4})$ ]] || { echo "Invalid Hysteria2 port-hopping range." >&2; exit 2; }
+  HOP_START=$((10#${BASH_REMATCH[1]}))
+  HOP_END=$((10#${BASH_REMATCH[2]}))
+  ((HOP_START == INGRESS_PORT && HOP_END > HOP_START && HOP_END <= 65535 && HOP_END - HOP_START + 1 <= 8)) || { echo "Port hopping must start at --ingress-port and contain 2..8 UDP ports." >&2; exit 2; }
+  PORT_HOPPING_ENABLED=1
+  HYSTERIA_LISTEN=":${PORT_HOPPING_RANGE}"
+  FIREWALL_PORT="${HOP_START}:${HOP_END}"
+fi
 for label in "${NAME}" "${VIA_NAME}"; do
   [[ "${label}" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "A valid Route/entry name is required." >&2; exit 2; }
 done
 [[ -d "${UNIT_DIR}" ]] || { echo "Service unit directory is missing." >&2; exit 1; }
 [[ -x "${HY_BIN}" ]] || { echo "Missing RST-managed Hysteria2 binary." >&2; exit 1; }
 for required in jq openssl wg wg-quick curl; do command -v "${required}" >/dev/null 2>&1 || { echo "Missing ${required}." >&2; exit 1; }; done
+if [[ "${PORT_HOPPING_ENABLED}" -eq 1 ]] && ! command -v nft >/dev/null 2>&1 && ! command -v iptables >/dev/null 2>&1; then
+  echo "Port hopping requires nftables or iptables." >&2
+  exit 1
+fi
 
 KEY_FILE="/etc/wireguard/${INTERFACE}.key"
 [[ -s "${KEY_FILE}" ]] || { echo "WireGuard private key is missing." >&2; exit 1; }
@@ -208,7 +226,7 @@ masquerade:
     headers:
       content-type: text/plain; charset=utf-8
 EOF
-sed "s/^listen: :0$/listen: :${INGRESS_PORT}/; s#cert: .*/server.crt#cert: ${HY_DIR}/server.crt#; s#key: .*/server.key#key: ${HY_DIR}/server.key#" "${STAGE}/hysteria-stage.yaml" >"${STAGE}/hysteria.yaml"
+sed "s/^listen: :0$/listen: ${HYSTERIA_LISTEN}/; s#cert: .*/server.crt#cert: ${HY_DIR}/server.crt#; s#key: .*/server.key#key: ${HY_DIR}/server.key#" "${STAGE}/hysteria-stage.yaml" >"${STAGE}/hysteria.yaml"
 
 "${HY_BIN}" --disable-update-check --log-level warn server -c "${STAGE}/hysteria-stage.yaml" >"${STAGE}/hysteria.log" 2>&1 &
 HY_PID=$!
@@ -238,6 +256,18 @@ cat >"${DROP_IN}/10-wireguard.conf" <<EOF
 After=wg-quick@${INTERFACE}.service
 Requires=wg-quick@${INTERFACE}.service
 EOF
+PORT_HOPPING_DROP_IN="${DROP_IN}/20-port-hopping.conf"
+if [[ "${PORT_HOPPING_ENABLED}" -eq 1 ]]; then
+  cat >"${PORT_HOPPING_DROP_IN}" <<'EOF'
+[Service]
+AmbientCapabilities=
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+EOF
+else
+  rm -f "${PORT_HOPPING_DROP_IN}"
+fi
 
 write_node() {
   local suffix="$1" address="$2"
@@ -246,6 +276,11 @@ write_node() {
     type: hysteria2
     server: '${address}'
     port: ${INGRESS_PORT}
+EOF
+  if [[ "${PORT_HOPPING_ENABLED}" -eq 1 ]]; then
+    printf "    ports: '%s'\n" "${PORT_HOPPING_RANGE}"
+  fi
+  cat <<EOF
     password: '${HY_AUTH}'
     sni: '${ENTRY_IPV4}'
     skip-cert-verify: true
@@ -264,8 +299,8 @@ EOF
 } >"${STAGE}/client-payload.yaml"
 install -m 0600 -o root -g root "${STAGE}/client-payload.yaml" "${OUTPUT}"
 
-ufw --force delete allow "${INGRESS_PORT}/tcp" >/dev/null 2>&1 || true
-ufw allow "${INGRESS_PORT}/udp" comment "RST ${NAME} Hysteria2" >/dev/null
+ufw --force delete allow "${FIREWALL_PORT}/tcp" >/dev/null 2>&1 || true
+ufw allow "${FIREWALL_PORT}/udp" comment "RST ${NAME} Hysteria2" >/dev/null
 systemctl daemon-reload
 systemctl enable "route-steward-relay@${NAME}.service" >/dev/null
 if ! systemctl is-active --quiet "route-steward-relay@${NAME}.service"; then
@@ -278,4 +313,5 @@ systemctl is-active --quiet "route-steward-relay@${NAME}.service"
 echo "RELAY_ENTRY_CONFIGURED=1"
 echo "RELAY_WIREGUARD_RESTARTED=${WG_RESTART_REQUIRED}"
 echo "RELAY_HYSTERIA_RESTARTED=${RESTART_REQUIRED}"
+echo "PORT_HOPPING=${PORT_HOPPING_ENABLED}"
 echo "RELAY_CLIENT_PAYLOAD=${OUTPUT}"

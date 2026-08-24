@@ -5,6 +5,7 @@ ROLE=""
 INTERFACE=""
 NAME=""
 INGRESS_PORT=""
+PORT_HOPPING_RANGE=""
 TUNNEL_PORT=""
 SUBNET=""
 PEER_IP=""
@@ -25,6 +26,7 @@ while (($#)); do
     --interface) INTERFACE="${2:-}"; shift 2 ;;
     --name) NAME="${2:-}"; shift 2 ;;
     --ingress-port) INGRESS_PORT="${2:-}"; shift 2 ;;
+    --port-hopping-range) PORT_HOPPING_RANGE="${2:-}"; shift 2 ;;
     --tunnel-port) TUNNEL_PORT="${2:-}"; shift 2 ;;
     --subnet) SUBNET="${2:-}"; shift 2 ;;
     --peer-ip) PEER_IP="${2:-}"; shift 2 ;;
@@ -71,6 +73,18 @@ fi
 
 [[ "${NAME}" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "A valid relay Route name is required." >&2; exit 2; }
 if [[ ! "${INGRESS_PORT}" =~ ^[0-9]{1,5}$ ]] || ((INGRESS_PORT < 1 || INGRESS_PORT > 65535)); then echo "A valid proxy port is required." >&2; exit 2; fi
+PORT_HOPPING_ENABLED=0
+EXPECTED_LISTEN="${INGRESS_PORT}"
+FIREWALL_PORT="${INGRESS_PORT}"
+if [[ -n "${PORT_HOPPING_RANGE}" ]]; then
+  [[ "${PORT_HOPPING_RANGE}" =~ ^([1-9][0-9]{0,4})-([1-9][0-9]{0,4})$ ]] || { echo "Invalid Hysteria2 port-hopping range." >&2; exit 2; }
+  HOP_START=$((10#${BASH_REMATCH[1]}))
+  HOP_END=$((10#${BASH_REMATCH[2]}))
+  ((HOP_START == INGRESS_PORT && HOP_END > HOP_START && HOP_END <= 65535 && HOP_END - HOP_START + 1 <= 8)) || { echo "Port hopping must start at --ingress-port and contain 2..8 UDP ports." >&2; exit 2; }
+  PORT_HOPPING_ENABLED=1
+  EXPECTED_LISTEN="${PORT_HOPPING_RANGE}"
+  FIREWALL_PORT="${HOP_START}:${HOP_END}"
+fi
 [[ "${EXPECTED_EXIT}" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || { echo "Expected exit IPv4 is required." >&2; exit 2; }
 
 service="route-steward-relay@${NAME}.service"
@@ -85,7 +99,7 @@ jq -e '.schema == 1 and .hysteria.auth and .hysteria.obfs and (has("reality") | 
 ss -H -lun "sport = :${INGRESS_PORT}" | grep -q . || fail_category hysteria-listener-mismatch
 if ss -H -ltn "sport = :${INGRESS_PORT}" | grep -q .; then fail_category hysteria-listener-mismatch; fi
 config_listen="$(awk '/^listen:/{gsub(/^.*:/,"",$0); gsub(/[[:space:]]/,"",$0); print; exit}' "${hy_dir}/config.yaml")"
-[[ "${config_listen}" == "${INGRESS_PORT}" ]] || fail_category remote-config-mismatch
+[[ "${config_listen}" == "${EXPECTED_LISTEN}" ]] || fail_category remote-config-mismatch
 grep -Fq "bindDevice: ${INTERFACE}" "${hy_dir}/config.yaml" || fail_category remote-config-mismatch
 state_auth="$(jq -r '.hysteria.auth' "${state}")"
 state_obfs="$(jq -r '.hysteria.obfs' "${state}")"
@@ -97,14 +111,21 @@ openssl x509 -checkend 0 -noout -in "${hy_dir}/server.crt" >/dev/null 2>&1 || fa
 actual_fingerprint="$(openssl x509 -in "${hy_dir}/server.crt" -noout -fingerprint -sha256 | cut -d= -f2 | tr -d ':[:space:]' | tr 'A-F' 'a-f')"
 if [[ -n "${EXPECTED_FINGERPRINT}" && "${actual_fingerprint}" != "${EXPECTED_FINGERPRINT,,}" ]]; then fail_category certificate-mismatch; fi
 if [[ -n "${EXPECTED_CONFIG_HASH}" ]]; then
-  material="hysteria2-relay|port=${INGRESS_PORT}|auth=${state_auth}|obfs=${state_obfs}|cert=${actual_fingerprint}|bind=${INTERFACE}"
+  material="hysteria2-relay|port=${INGRESS_PORT}|hop=${PORT_HOPPING_RANGE:-none}|auth=${state_auth}|obfs=${state_obfs}|cert=${actual_fingerprint}|bind=${INTERFACE}"
   actual_hash="$(printf '%s' "${material}" | sha256sum | awk '{print $1}')"
   [[ "${actual_hash}" == "${EXPECTED_CONFIG_HASH,,}" ]] || fail_category remote-config-mismatch
 fi
 
 ufw status | grep -q '^Status: active' || fail_category firewall-network-mismatch
-ufw status | grep -Eq "(^|[[:space:]])${INGRESS_PORT}/udp([[:space:]]|$)" || fail_category firewall-network-mismatch
-if ufw status | grep -Eq "(^|[[:space:]])${INGRESS_PORT}/tcp([[:space:]]|$)"; then fail_category firewall-network-mismatch; fi
+ufw status | grep -Eq "(^|[[:space:]])${FIREWALL_PORT}/udp([[:space:]]|$)" || fail_category firewall-network-mismatch
+if ufw status | grep -Eq "(^|[[:space:]])${FIREWALL_PORT}/tcp([[:space:]]|$)"; then fail_category firewall-network-mismatch; fi
+PORT_HOPPING_DROP_IN="/etc/systemd/system/route-steward-relay@${NAME}.service.d/20-port-hopping.conf"
+if [[ "${PORT_HOPPING_ENABLED}" -eq 1 ]]; then
+  [[ -s "${PORT_HOPPING_DROP_IN}" ]] || fail_category remote-config-mismatch
+  grep -Fqx 'AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN' "${PORT_HOPPING_DROP_IN}" || fail_category remote-config-mismatch
+elif [[ -e "${PORT_HOPPING_DROP_IN}" ]]; then
+  fail_category remote-config-mismatch
+fi
 
 actual_exit="$(curl -4 --interface "${INTERFACE}" --connect-timeout 8 --max-time 15 -fsS https://checkip.amazonaws.com 2>/dev/null | tr -d '\r\n')" || fail_category undetermined
 [[ "${actual_exit}" == "${EXPECTED_EXIT}" ]] || fail_category egress-mismatch

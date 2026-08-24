@@ -114,6 +114,8 @@ client → Hysteria2 entry Server → WireGuard Link → exit Server/NAT → dec
 
 Each new Link receives isolated RST-native interface/UDP-port/subnet resources. Remote deployment and uninstall mutate RST-owned resources and named policy files, while leaving existing firewall, WireGuard, networking software, and other host state in place. The initial host preparation still has documented global effects; the supported host is dedicated and rebuildable.
 
+A Route may optionally own a bounded 2–8-port Hysteria UDP hopping range. The desired-state range, UFW rule, Hysteria listener, scoped systemd capability drop-in, desired configuration hash, canonical payload, client renderers, and migration checkpoint carry the selected value. A relay exit replacement keeps old capacity live, so it reserves a same-width non-overlapping range on the unchanged entry before the health-gated client switch. This is a deliberately narrow response to per-port UDP disruption, not a general answer to UDP-wide blocking.
+
 ## ClientTarget rendering
 
 A renderer resolves one ClientTarget, follows its Profile reference, then consumes selected canonical Route payloads and optional Providers.
@@ -122,6 +124,8 @@ A renderer resolves one ClientTarget, follows its Profile reference, then consum
 - Karing ClientTargets use the tested private Clash YAML contract and retain SHA-256 certificate pinning for every managed Hysteria2 node.
 - Shadowrocket ClientTargets render private Hysteria2 node imports or use optional target-scoped subscription delivery.
 - Hysteria2 ClientTargets select one enabled Route from their Profile, render official-client JSON, and expose same-port HTTP/SOCKS5 on an IP-literal loopback listener. They intentionally do not approximate GUI policy or Provider composition.
+
+For an enabled hopping Route, the renderer uses Hysteria's standard multi-port endpoint in every supported client contract. The headless client also uses the interoperable fixed 30-second UDP hop interval; arbitrary per-client interval controls are intentionally absent.
 
 Output filenames derive from ClientTarget IDs, not operating-system identities. With no explicit Profile policy, rendering uses the generic privacy behavior; geography-specific policy such as `balanced-cn` is opt-in only.
 

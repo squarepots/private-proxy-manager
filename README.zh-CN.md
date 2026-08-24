@@ -2,7 +2,7 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [Español](README.es.md) · [Português (Brasil)](README.pt-BR.md)
 
-[快速开始](docs/QUICKSTART.zh-CN.md) · [常见问题](docs/FAQ.zh-CN.md) · [兼容性](docs/COMPATIBILITY.md) · [运行边界](docs/OPERATING-BOUNDARY.md) · [安全](SECURITY.md) · [下载](https://github.com/squarepots/route-steward/releases)
+[快速开始](docs/QUICKSTART.zh-CN.md) · [常见问题](docs/FAQ.zh-CN.md) · [兼容性](docs/COMPATIBILITY.md) · [可靠性研究](docs/RELIABILITY-RESEARCH.md) · [运行边界](docs/OPERATING-BOUNDARY.md) · [安全](SECURITY.md) · [下载](https://github.com/squarepots/route-steward/releases)
 
 [![Validation](https://github.com/squarepots/route-steward/actions/workflows/ci.yml/badge.svg)](https://github.com/squarepots/route-steward/actions/workflows/ci.yml)
 
@@ -39,6 +39,7 @@ go install github.com/squarepots/route-steward/cmd/route-steward@latest
 ## 它能交付什么
 
 - 通过一台服务器的私有 Hysteria2 代理，或可选的两台服务器 WireGuard relay；
+- 可选、受限的 Hysteria2 端口跳跃，用于按端口的 UDP 限速或过滤，并保证同一套客户端契约；
 - 可直接用于 Mihomo/Clash Verge 兼容应用、Karing、Shadowrocket，或无 GUI Linux/应用代理的完整私有配置；
 - 只读服务器审计、按需真实客户端流量 health，以及明确的配置 drift 分类；
 - 可恢复的 overlap-first 服务器替换：通过 health 后才切换客户端，绝不自动退役旧容量；
