@@ -78,6 +78,8 @@ health 会通过该 Route 运行固定版本的 Hysteria2 客户端，检查互�
 
 ## 6. 继续使用或恢复
 
-修改现有 Route 前先让 agent 运行 audit 和 drift。当前 `migrate-route` capability 会给出 overlap-first 步骤；agent 仍须逐步执行和确认，并保留旧容量。加密恢复使用 `route-steward backup` 和 `route-steward recover`；密码只输入本地 7-Zip prompt。
+修改现有 Route 前先让 agent 运行 audit 和 drift。`migrate-route` 会保存并恢复 overlap-first 替换事务：替代 Route 先部署并通过 health，之后才改变受影响的客户端输出；客户端切换失败会回滚，旧远端容量不会被退役。`workflow-blocked` 可以用相同旧 Route 和替代 Server 安全重试。加密恢复使用 `route-steward backup` 和 `route-steward recover`；密码只输入本地 7-Zip prompt。
+
+进程或 agent 重启后，运行 `route-steward migrations --private-dir ./private` 可读取脱敏 checkpoint 和已记录的下一步。
 
 真实部署前请阅读 [Compatibility](COMPATIBILITY.md)、[Operations](../OPERATIONS.md)、[Privacy](PRIVACY.md)、[Security](../SECURITY.md) 和[运行边界](OPERATING-BOUNDARY.md)。

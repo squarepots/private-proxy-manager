@@ -9,6 +9,7 @@ The native `route-steward` executable is the canonical local machine surface. It
 - `context`: sanitized inventory schema, counts, Profiles, ClientTargets, and supported-operation summary.
 - `drift`: sanitized desired-versus-observed Route and ClientTarget-render evidence.
 - `health`: on-demand real Hysteria2 client traffic check for one deployed Route.
+- `migrations`: sanitized resumable migration checkpoints, optionally filtered by source Route.
 
 Inventory schema `1` is the first public desired-state contract.
 
@@ -23,8 +24,10 @@ Representative calls:
 ```text
 route-steward capabilities
 route-steward health --private-dir ./private --target route-a
+route-steward migrations --private-dir ./private
 route-steward preflight --private-dir ./private --operation add-server --context-stdin
 route-steward execute --private-dir ./private --operation add-server --context-stdin
+route-steward execute --private-dir ./private --operation migrate-route --target route-a --context-stdin
 route-steward mcp --private-dir ./private
 ```
 
@@ -47,7 +50,7 @@ route-steward mcp --private-dir ./private
 - `rotate-subscription-token`: explicitly approved target-scoped credential change.
 - `backup`: encrypted local recovery archive through a local password prompt.
 - `recover`: local-assisted restore into a clean private directory.
-- `migrate-route`: overlap-first workflow composed from add, deploy, audit, and render operations.
+- `migrate-route`: persisted, retry-safe overlap-first Server/Link/Route replacement with health-gated ClientTarget switching and no automatic retirement.
 
 ## Neutral bootstrap
 
@@ -64,3 +67,5 @@ Keep raw secret-bearing stderr local. Surface a sanitized cause and next action.
 Remote transport or audit failure becomes `undetermined`, not permission to repair. If a remote change succeeded before a later validation step failed, report the partial outcome accurately.
 
 Health contacts ipify's address endpoints and Cloudflare's trace endpoint through the Route. It omits exact public IP values unless the caller explicitly requests them and reports packet loss as unsupported rather than inventing an unstable metric.
+
+Migration returns `workflow-blocked` with a bounded failure code when a stage cannot complete. Retry with the same source Route and `replacement_server_id`; never change the replacement identity of an active transaction. A complete result still reports `old_capacity_retired=false`.

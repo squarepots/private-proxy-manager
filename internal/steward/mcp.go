@@ -20,6 +20,10 @@ type mcpHealthInput struct {
 	IncludePublicIP bool   `json:"include_public_ip,omitempty"`
 }
 
+type mcpMigrationStatusInput struct {
+	Target string `json:"target,omitempty"`
+}
+
 func NewMCPServer(privateDir string) *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "route-steward", Version: routesteward.Version()}, nil)
 	readOnly, notDestructive, closed, open := true, false, false, true
@@ -38,6 +42,7 @@ func NewMCPServer(privateDir string) *mcp.Server {
 	roOpen := &mcp.ToolAnnotations{ReadOnlyHint: readOnly, IdempotentHint: true, DestructiveHint: &notDestructive, OpenWorldHint: &open}
 	bootstrap := &mcp.ToolAnnotations{ReadOnlyHint: false, IdempotentHint: true, DestructiveHint: &notDestructive, OpenWorldHint: &closed}
 	execute := &mcp.ToolAnnotations{ReadOnlyHint: false, IdempotentHint: false, DestructiveHint: &notDestructive, OpenWorldHint: &open}
+	workflow := &mcp.ToolAnnotations{ReadOnlyHint: false, IdempotentHint: true, DestructiveHint: &notDestructive, OpenWorldHint: &open}
 	runSimple := func(command string) func(context.Context, json.RawMessage) Envelope {
 		return func(ctx context.Context, _ json.RawMessage) Envelope {
 			envelope, _ := RunRequest(ctx, Request{Command: command, PrivateDir: privateDir})
@@ -48,6 +53,15 @@ func NewMCPServer(privateDir string) *mcp.Server {
 	add("route_steward_bootstrap", "Initialize clean local private state. Complete state is idempotent and partial state fails closed.", empty, bootstrap, runSimple("bootstrap"))
 	add("route_steward_context", "Read sanitized project context without returning endpoints, paths, credentials, Provider URLs, or subscription tokens.", empty, ro, runSimple("context"))
 	add("route_steward_drift", "Read sanitized desired-versus-observed route and client-render drift.", empty, ro, runSimple("drift"))
+	migrationStatusSchema := json.RawMessage(`{"type":"object","additionalProperties":false,"properties":{"target":{"type":"string","minLength":1}}}`)
+	add("route_steward_migrations", "Read sanitized resumable migration checkpoints without exposing replacement addresses or paths.", migrationStatusSchema, ro, func(ctx context.Context, raw json.RawMessage) Envelope {
+		var input mcpMigrationStatusInput
+		if err := json.Unmarshal(raw, &input); err != nil {
+			return invalidMCPEnvelope("migrations", err)
+		}
+		envelope, _ := RunRequest(ctx, Request{Command: "migrations", Target: input.Target, PrivateDir: privateDir})
+		return envelope
+	})
 	healthSchema := json.RawMessage(`{"type":"object","additionalProperties":false,"required":["target"],"properties":{"target":{"type":"string","minLength":1},"include_public_ip":{"type":"boolean"}}}`)
 	add("route_steward_health", "Run an on-demand Hysteria2 client traffic check for one deployed Route. Public IP values are omitted unless explicitly requested.", healthSchema, roOpen, func(ctx context.Context, raw json.RawMessage) Envelope {
 		var input mcpHealthInput
@@ -57,7 +71,16 @@ func NewMCPServer(privateDir string) *mcp.Server {
 		envelope, _ := RunRequest(ctx, Request{Command: "health", Target: input.Target, Context: map[string]any{"include_public_ip": input.IncludePublicIP}, PrivateDir: privateDir})
 		return envelope
 	})
-	preflightOperations := []string{"status", "audit", "health", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription", "rotate-subscription-token", "backup", "migrate-route"}
+	migrationSchema := json.RawMessage(`{"type":"object","additionalProperties":false,"required":["target","context"],"properties":{"target":{"type":"string","minLength":1},"context":{"type":"object","additionalProperties":true,"required":["replacement_server_id"],"properties":{"replacement_server_id":{"type":"string","minLength":1}}}}}`)
+	add("route_steward_migrate", "Start or safely resume one overlap-first Route replacement. The old remote capacity is not retired.", migrationSchema, workflow, func(ctx context.Context, raw json.RawMessage) Envelope {
+		var input mcpOperationInput
+		if err := json.Unmarshal(raw, &input); err != nil {
+			return invalidMCPEnvelope("execute", err)
+		}
+		envelope, _ := RunRequest(ctx, Request{Command: "execute", Operation: "migrate-route", Target: input.Target, Context: input.Context, PrivateDir: privateDir})
+		return envelope
+	})
+	preflightOperations := []string{"status", "audit", "health", "migrations", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription", "rotate-subscription-token", "backup", "migrate-route"}
 	executableOperations := []string{"status", "audit", "health", "add-server", "add-link", "add-route", "add-provider", "update-provider", "remove-provider", "add-profile", "update-profile", "remove-profile", "add-client-target", "update-client-target", "remove-client-target", "deploy-route", "render-client", "publish-subscription"}
 	add("route_steward_preflight", "Evaluate context, conflicts, effects, and authorization before an operation.", mcpOperationSchema(preflightOperations), ro, func(ctx context.Context, raw json.RawMessage) Envelope {
 		var input mcpOperationInput

@@ -51,6 +51,7 @@ try {
 	Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'health').authorization_class -eq 'read-only') 'End-to-end Route health is missing or not read-only.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'rotate-subscription-token').authorization_class -eq 'credential-change') 'Target-scoped subscription rotation is not a guarded credential change.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'migrate-route').executor -eq 'workflow') 'Migration is not exposed as an overlap-first workflow.'
+    Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'migrate-route').effects -contains 'persist-resumable-migration-transaction') 'Migration does not advertise its durable retry checkpoint.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'backup').executor -eq 'local-assisted') 'Backup does not declare the local secure-prompt boundary.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'recover').requires_local_secret_prompt) 'Recovery does not declare its local password prompt.'
     foreach ($removedCapability in 'set-mode','rotate-credential','delete-server','purchase-resource') {

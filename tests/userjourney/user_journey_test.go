@@ -176,8 +176,8 @@ func TestInstalledCLIUserJourney(t *testing.T) {
 	if !bytes.Contains(rotation.Data, []byte(`"ready":false`)) {
 		t.Fatal("token rotation without subscription state was not blocked")
 	}
-	migration := h.execute(0, "migrate-route", "direct-a", map[string]any{"replacement_server_id": "replacement-c"})
-	if migration.Code != "ok" || !bytes.Contains(migration.Data, []byte(`"next"`)) || !bytes.Contains(migration.Data, []byte(`"old_capacity_retired":false`)) {
+	migration := h.execute(4, "migrate-route", "direct-a", map[string]any{"replacement_server_id": "replacement-c"})
+	if migration.Code != "workflow-blocked" || !bytes.Contains(migration.Data, []byte(`"next"`)) || !bytes.Contains(migration.Data, []byte(`"old_capacity_retired":false`)) {
 		t.Fatal("migration did not preserve overlap-first workflow ownership")
 	}
 	backup := h.execute(3, "backup", "", nil)
@@ -206,10 +206,10 @@ func TestMCPStdioUsesInstalledBinary(t *testing.T) {
 		}
 		toolCount++
 	}
-	if toolCount != 7 {
-		t.Fatalf("stdio MCP listed %d tools, want 7", toolCount)
+	if toolCount != 9 {
+		t.Fatalf("stdio MCP listed %d tools, want 9", toolCount)
 	}
-	for _, name := range []string{"route_steward_bootstrap", "route_steward_capabilities", "route_steward_context", "route_steward_drift"} {
+	for _, name := range []string{"route_steward_bootstrap", "route_steward_capabilities", "route_steward_context", "route_steward_drift", "route_steward_migrations"} {
 		result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: name, Arguments: map[string]any{}})
 		if err != nil || result.IsError {
 			t.Fatalf("stdio MCP tool %s failed: result=%#v err=%v", name, result, err)

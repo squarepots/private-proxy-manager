@@ -12,6 +12,7 @@ Route Steward (RST) is agent-native lifecycle software for self-hosted network p
 6. Read sanitized context and drift before changing an existing setup.
 7. Run scoped preflight before every mutation and execute only when `ready=true`.
 8. Validate meaningful effects; use `health` when actual client traffic matters, then report a sanitized result.
+9. Use the persisted `migrate-route` workflow for replacement; preserve the recorded source/replacement identity across retries and keep retirement separately authorized.
 
 Runtime-specific instruction files must point here and to the repository Skill instead of duplicating the product contract.
 

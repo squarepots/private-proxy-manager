@@ -51,6 +51,14 @@ func AuditRoute(ctx context.Context, state *State, routeID string) AuditEvidence
 }
 
 func DeployRoute(ctx context.Context, state *State, routeID string, skipClientValidation bool) (map[string]any, error) {
+	return deployRoute(ctx, state, routeID, skipClientValidation, true)
+}
+
+func deployRouteWithoutRender(ctx context.Context, state *State, routeID string) (map[string]any, error) {
+	return deployRoute(ctx, state, routeID, true, false)
+}
+
+func deployRoute(ctx context.Context, state *State, routeID string, skipClientValidation, renderClients bool) (map[string]any, error) {
 	route := findRoute(state.Inventory, routeID)
 	if route == nil {
 		return nil, fmt.Errorf("unknown Route %q", routeID)
@@ -76,14 +84,18 @@ func DeployRoute(ctx context.Context, state *State, routeID string, skipClientVa
 	if err := saveCandidate(state, candidate, false); err != nil {
 		return nil, err
 	}
-	render, err := RenderClients(state, "", skipClientValidation)
-	if err != nil {
-		return nil, fmt.Errorf("Route deployed, but client rendering failed: %w", err)
-	}
 	if _, err := SetObservedRoute(state, route.ID, evidence.Status, evidence.Category, deref(evidence.ActualEgressIPv4), deref(evidence.HysteriaVersion), deref(evidence.WireGuardVersion)); err != nil {
 		return nil, err
 	}
-	return map[string]any{"route": route.ID, "state": "deployed", "enabled": true, "validation": evidence.Sanitized(), "render": SanitizedRender(render)}, nil
+	result := map[string]any{"route": route.ID, "state": "deployed", "enabled": true, "validation": evidence.Sanitized()}
+	if renderClients {
+		render, err := RenderClients(state, "", skipClientValidation)
+		if err != nil {
+			return nil, fmt.Errorf("Route deployed, but client rendering failed: %w", err)
+		}
+		result["render"] = SanitizedRender(render)
+	}
+	return result, nil
 }
 
 func performRouteOperation(ctx context.Context, state *State, route Route, auditOnly bool) ([]string, error) {

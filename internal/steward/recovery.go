@@ -79,9 +79,37 @@ func CreateRecoveryArchive(state *State, sevenZipPath string) (string, error) {
 	if err := copyTree(filepath.Join(state.PrivateDir, "secrets"), filepath.Join(stage, "private", "secrets")); err != nil {
 		return "", err
 	}
+	var migrations *migrationState
+	migrationPath := filepath.Join(state.PrivateDir, migrationStateFile)
+	if regularFile(migrationPath) {
+		migrations, err = readMigrationStateFile(migrationPath)
+		if err != nil {
+			return "", err
+		}
+		if err := copyOne(migrationPath, filepath.ToSlash(filepath.Join("private", migrationStateFile))); err != nil {
+			return "", err
+		}
+	}
+	archivedSSH := map[string]bool{}
 	for _, server := range state.Inventory.Servers {
 		if err := copyOne(server.SSH.KeyPath, filepath.ToSlash(filepath.Join("ssh", server.ID, filepath.Base(server.SSH.KeyPath)))); err != nil {
 			return "", err
+		}
+		archivedSSH[server.ID] = true
+	}
+	if migrations != nil {
+		for _, txn := range migrations.Transactions {
+			if archivedSSH[txn.ReplacementServer] || txn.ReplacementServerContext == nil {
+				continue
+			}
+			keyPath := stringField(txn.ReplacementServerContext, "ssh_key_path")
+			if !regularFile(keyPath) {
+				return "", errors.New("active migration replacement SSH key is unavailable for recovery")
+			}
+			if err := copyOne(keyPath, filepath.ToSlash(filepath.Join("ssh", txn.ReplacementServer, filepath.Base(keyPath)))); err != nil {
+				return "", err
+			}
+			archivedSSH[txn.ReplacementServer] = true
 		}
 	}
 	metadata := newRecoveryMetadata()
@@ -199,6 +227,14 @@ func RestoreExtractedRecovery(sourceRoot, target string) (result map[string]any,
 	if !regularFile(filepath.Join(sourceRoot, "private", "secrets", "index.json")) {
 		return nil, errors.New("recovery archive does not contain complete canonical state")
 	}
+	var migrations *migrationState
+	migrationSource := filepath.Join(sourceRoot, "private", migrationStateFile)
+	if regularFile(migrationSource) {
+		migrations, err = readMigrationStateFile(migrationSource)
+		if err != nil {
+			return nil, err
+		}
+	}
 	parent := filepath.Dir(target)
 	if err := os.MkdirAll(parent, 0o700); err != nil {
 		return nil, err
@@ -245,6 +281,55 @@ func RestoreExtractedRecovery(sourceRoot, target string) (result map[string]any,
 		}
 		server.SSH.KeyPath = filepath.Join(target, destinationRelative)
 	}
+	if migrations != nil {
+		for i := range migrations.Transactions {
+			txn := &migrations.Transactions[i]
+			if findRoute(&inventory, txn.SourceRoute) == nil {
+				return nil, errors.New("recovered migration references a missing source Route")
+			}
+			if replacement := findServer(&inventory, txn.ReplacementServer); replacement != nil {
+				if txn.ReplacementServerContext != nil {
+					txn.ReplacementServerContext["ssh_key_path"] = replacement.SSH.KeyPath
+				}
+			} else {
+				sourceDir := filepath.Join(sourceRoot, "ssh", txn.ReplacementServer)
+				entries, readErr := os.ReadDir(sourceDir)
+				if readErr != nil {
+					return nil, errors.New("recovery archive lacks active migration replacement SSH material")
+				}
+				files := []string{}
+				for _, entry := range entries {
+					if entry.Type().IsRegular() {
+						files = append(files, entry.Name())
+					}
+				}
+				if len(files) != 1 || txn.ReplacementServerContext == nil {
+					return nil, errors.New("recovery archive has invalid active migration replacement SSH material")
+				}
+				destinationRelative := filepath.Join("ssh", txn.ReplacementServer, files[0])
+				if err := copyRegularFile(filepath.Join(sourceDir, files[0]), filepath.Join(stage, destinationRelative)); err != nil {
+					return nil, err
+				}
+				txn.ReplacementServerContext["ssh_key_path"] = filepath.Join(target, destinationRelative)
+			}
+			if findRoute(&inventory, txn.ReplacementRoute) != nil {
+				if err := applyMigrationSelection(&inventory, txn, true); err != nil {
+					return nil, err
+				}
+			}
+			if findRoute(&inventory, txn.ReplacementRoute) != nil {
+				txn.Phase = "replacement-prepared"
+			} else {
+				txn.Phase = "planned"
+			}
+			txn.PublicationAttempted = []string{}
+			txn.LastFailure = "recovery-revalidation-required"
+			txn.UpdatedAt = utcNow()
+		}
+		if err := writeJSONAtomic(filepath.Join(stage, migrationStateFile), migrations); err != nil {
+			return nil, err
+		}
+	}
 	inventory.Delivery.Directory = filepath.Join(target, "delivery")
 	inventory.Delivery.RecoveryDirectory = filepath.Join(target, "recovery")
 	inventory.Metadata.RecoveredAt = utcNow()
@@ -277,7 +362,7 @@ func RestoreExtractedRecovery(sourceRoot, target string) (result map[string]any,
 		}
 	}
 	completed = true
-	return map[string]any{"restored": true, "inventory_schema": finalState.Inventory.Schema, "servers": len(finalState.Inventory.Servers), "links": len(finalState.Inventory.Links), "routes": len(finalState.Inventory.Routes), "providers": len(finalState.Inventory.Providers), "manifest_files_verified": verified, "observed_state_reset": true, "remote_changed": false}, nil
+	return map[string]any{"restored": true, "inventory_schema": finalState.Inventory.Schema, "servers": len(finalState.Inventory.Servers), "links": len(finalState.Inventory.Links), "routes": len(finalState.Inventory.Routes), "providers": len(finalState.Inventory.Providers), "manifest_files_verified": verified, "observed_state_reset": true, "migration_state_restored": migrations != nil, "migration_revalidation_required": migrations != nil, "remote_changed": false}, nil
 }
 
 func verifyRecoveryManifest(root string) (int, error) {

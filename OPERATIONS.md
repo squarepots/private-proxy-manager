@@ -53,6 +53,7 @@ The machine surface intentionally suppresses raw secret-bearing lower-level diag
 <private>/inventory.json    canonical desired Server / Link / Route / Provider / Profile / ClientTarget state
 <private>/secrets/          canonical credentials, Provider URLs, subscription state, payloads
 <private>/observed.json     disposable sanitized remote audit evidence
+<private>/migrations.json   resumable overlap-first migration checkpoints
 <private>/delivery/         generated ClientTarget artifacts + hash-only render manifest
 <private>/recovery/         encrypted recovery artifacts
 <private>/tools/            verified disposable runtime helper cache
@@ -88,6 +89,8 @@ Initial operation families include:
 - external configuration publication: private subscription publication;
 - guarded target-scoped credential change: subscription-token rotation;
 - workflow-level migration/recovery.
+
+`route-steward migrations --private-dir <directory>` returns only sanitized checkpoint summaries. Use it after an agent or local process restart to discover the recorded replacement identity and next action without reading raw private state.
 
 Capability metadata is the source of truth when this document and code differ.
 
@@ -139,7 +142,7 @@ Use only a dedicated, rebuildable Ubuntu 24.04 amd64 host. Deployment/uninstall 
 
 An already-deployed Route is read-only audited before overwrite. If the current remote state is drifted or undetermined, deployment refuses to overwrite it until the discrepancy is understood.
 
-After deployment, the agent performs read-only audit, updates sanitized observed evidence, and records current ClientTarget render hashes.
+After ordinary deployment, the agent performs read-only audit, updates sanitized observed evidence, and records current ClientTarget render hashes. A migration deliberately suppresses deployment-time rendering until the replacement passes end-to-end health.
 
 ## Audit and drift
 
@@ -180,23 +183,24 @@ Cloud-hosted agents may see the tool arguments required for an operation, includ
 
 ## Migration
 
-Infrastructure migration is an agent-orchestrated overlap-first workflow composed from deterministic primitives:
+Infrastructure migration is a persisted, retry-safe overlap-first workflow composed from the same deterministic primitives:
 
 1. inspect current Route/dependencies;
 2. add replacement Server/Link/Route capacity as required;
 3. deploy replacement while old capacity remains enabled;
-4. audit replacement;
-5. render/update clients;
-6. confirm replacement usability;
-7. only then consume separately explicit destructive authority for old-capacity retirement if requested.
+4. audit and run a real Hysteria2 health check against the replacement;
+5. only after a healthy result, switch the relevant Profile selections, render affected ClientTargets, and republish existing subscription-backed targets;
+6. if rendering/publication fails or the process is interrupted, restore the old selection before retrying and recheck replacement health;
+7. record the completed switch while leaving old remote services and cloud capacity intact;
+8. only then consume separately explicit destructive authority for old-capacity retirement if requested.
 
-A migration request does not imply immediate cloud deletion.
+`migrate-route` can create the BYO replacement Server from supplied structured context or use an existing Server. Direct and relay Routes are supported; relay replacement creates a new matching WireGuard Link. The private `migrations.json` checkpoint makes repeated calls deterministic and records a bounded failure code rather than raw transport output. A blocked workflow returns `workflow-blocked`; retry with the same source Route and replacement Server. A migration request never implies cloud deletion.
 
 ## Backup and recovery
 
-Backup creates an encrypted local recovery artifact from canonical schema-1 private state. Decryption credentials must not be passed through model-visible command arguments or logs.
+Backup creates an encrypted local recovery artifact from canonical schema-1 private state, including any active migration checkpoint and its required SSH material. Decryption credentials must not be passed through model-visible command arguments or logs.
 
-Recovery is local-first: restore to a clean private root, verify the SHA-256 manifest, reject unsafe paths/symlinks, relocate SSH material, validate the restored current inventory, reset observed evidence, then decide whether any remote repair/deployment is needed. Chat history is never a recovery source of truth.
+Recovery is local-first: restore to a clean private root, verify the SHA-256 manifest, reject unsafe paths/symlinks, relocate SSH material, validate the restored current inventory, reset observed evidence, then decide whether any remote repair/deployment is needed. Restored migrations are marked `recovery-revalidation-required` and resume before deployment/health rather than trusting old evidence. Chat history is never a recovery source of truth.
 
 ## Contributor/debug interfaces
 

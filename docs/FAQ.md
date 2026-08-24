@@ -42,7 +42,7 @@ No. Health is an on-demand check, not a monitoring service. It contacts ipify's 
 
 ## How does server replacement avoid interruption?
 
-The current `migrate-route` capability returns an overlap-first sequence for the agent to perform. It does not yet persist a resumable migration transaction. Old capacity must remain available until the staged replacement has been separately deployed, audited, rendered, and confirmed; retirement is a later explicit action.
+`migrate-route` persists an overlap-first transaction. It creates or reuses replacement capacity, deploys it without touching current client output, requires a healthy real Hysteria2 traffic check, and only then switches and validates affected ClientTargets. A failed deployment, health check, render, or subscription publication returns `workflow-blocked`; retrying the same migration resumes deterministically. Old remote capacity is never retired automatically and remains a later explicit destructive action.
 
 ## Which hosts, topologies, and clients work?
 

@@ -37,6 +37,8 @@ Inventory schema `1` is the persisted desired-state contract:
 
 Product SemVer in `version.txt` is independent from inventory schema compatibility. Recovery accepts schema 1 and resets disposable observed evidence.
 
+Migration checkpoints use a separate private schema-1 file. Recovery preserves them and forces remote/client revalidation; no migration evidence is treated as current merely because it was archived.
+
 Clean bootstrap creates a valid neutral inventory, empty secret index, and empty observed state. It waits for actual user context before creating Profiles or ClientTargets.
 
 ## Clients and rendering
@@ -68,6 +70,8 @@ The optional `mihomo-http` Provider accepts an HTTP or HTTPS source URL stored i
 ## Audit, drift, migration, and recovery
 
 Read-only Route audit and sanitized desired-versus-observed drift cover RST service/configuration, firewall/network, WireGuard, Hysteria2 listener/certificate, egress, ClientTarget render, and undetermined state.
+
+Persisted `migrate-route` transactions support direct Route replacement and replacement of either endpoint of a relay Route. They reuse BYO SSH deployment, WireGuard Links, end-to-end health, ClientTarget rendering, and existing Shadowrocket subscription publication. Old external capacity is preserved; cloud provisioning and destructive provider retirement remain outside this supported workflow.
 
 On-demand `health` supports both direct and relay Routes. It runs the SHA-256-pinned official Hysteria2 2.9.3 client from a private local cache and checks the real client handshake, Internet access, DNS through a hostname request, declared exit identity, IPv4, optional declared IPv6, and request latency. Relay results also include the bounded WireGuard audit. Health uses ipify's address-family endpoints and Cloudflare's `/cdn-cgi/trace` endpoint; it is not continuous monitoring. Exact public IPs are omitted unless explicitly requested. Packet loss is currently reported as unsupported because no stable safe metric is implemented.
 

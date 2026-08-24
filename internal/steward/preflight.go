@@ -80,6 +80,11 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 		effects = append(effects, "read-sanitized-local-state")
 	case "drift":
 		effects = append(effects, "read-sanitized-local-and-observed-state")
+	case "migrations":
+		if target != "" && route(target) == nil {
+			conflicts = append(conflicts, "target-route-missing")
+		}
+		effects = append(effects, "read-sanitized-migration-state")
 	case "audit":
 		if target == "" {
 			missing = append(missing, "target-route")
@@ -328,15 +333,72 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 		decisions = append(decisions, "explicit-current-authorization-for-target-scoped-token-rotation")
 		effects = append(effects, "rotate-only-one-client-target-subscription-token", "require-subscription-republication", "leave-route-and-other-client-credentials-unchanged")
 	case "migrate-route":
-		if route(target) == nil {
+		source := route(target)
+		if target == "" {
 			missing = append(missing, "target-route")
+		} else if source == nil {
+			conflicts = append(conflicts, "target-route-missing")
 		}
-		if replacement := stringField(context, "replacement_server_id"); replacement == "" {
+		replacement := stringField(context, "replacement_server_id")
+		if replacement == "" {
 			missing = append(missing, "replacement-server")
-		} else if server(replacement) == nil {
-			conflicts = append(conflicts, "replacement-server-not-in-inventory")
+		} else {
+			normalized, idErr := convertID(replacement)
+			if idErr != nil {
+				conflicts = append(conflicts, "replacement-server-id-invalid")
+			} else {
+				replacement = normalized
+			}
 		}
-		effects = append(effects, "create-and-validate-overlap-before-any-retirement")
+		store, migrationErr := readMigrationState(state.PrivateDir)
+		activeSource := target
+		if source != nil {
+			activeSource = source.ID
+		}
+		if migrationErr != nil {
+			conflicts = append(conflicts, "migration-state-invalid")
+		} else if active := findMigration(store, activeSource); active != nil {
+			if replacement != "" && active.ReplacementServer != replacement {
+				conflicts = append(conflicts, "active-migration-replacement-conflict")
+			}
+		} else if source != nil && replacement != "" {
+			if source.State != "deployed" || !source.Enabled {
+				conflicts = append(conflicts, "source-route-not-deployed")
+			}
+			replaced := source.EntryServer
+			if source.Kind == "relay" {
+				replacedRaw := stringField(context, "replace_server_id")
+				if replacedRaw == "" {
+					missing = append(missing, "replace-server")
+				} else {
+					normalized, idErr := convertID(replacedRaw)
+					if idErr != nil {
+						conflicts = append(conflicts, "replace-server-id-invalid")
+					} else {
+						replaced = normalized
+						if replaced != source.EntryServer && replaced != source.ExitServer {
+							conflicts = append(conflicts, "replace-server-not-on-route")
+						}
+					}
+				}
+			}
+			if replacement == replaced {
+				conflicts = append(conflicts, "replacement-server-is-current-server")
+			}
+			if server(replacement) == nil {
+				details := objectField(context, "replacement_server")
+				if details == nil {
+					missing = append(missing, "replacement-server-details")
+				} else {
+					for _, field := range []string{"public_ipv4", "ssh_user", "ssh_key_path", "host_ownership"} {
+						if stringField(details, field) == "" {
+							missing = append(missing, "replacement-server-"+replaceUnderscore(field))
+						}
+					}
+				}
+			}
+		}
+		effects = append(effects, "persist-resumable-migration-transaction", "create-and-validate-overlap-before-any-retirement", "deploy-without-changing-client-output", "require-healthy-end-to-end-replacement-traffic", "atomically-switch-and-validate-affected-client-outputs", "keep-old-remote-capacity-unretired")
 	case "backup":
 		effects = append(effects, "write-encrypted-local-recovery-archive")
 	case "recover":
