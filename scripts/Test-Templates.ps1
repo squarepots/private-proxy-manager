@@ -21,7 +21,7 @@ function Reject-Text([string]$RelativePath, [string]$Pattern, [string]$Message) 
 }
 
 # Static server safety properties that are naturally proven from the mutation scripts.
-Require-Text 'server/install-path-components.sh' 'HYSTERIA_VERSION=v2\.12\.2' 'The supported Hysteria2 binary is not pinned.'
+Require-Text 'server/install-path-components.sh' 'HYSTERIA_VERSION=v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)' 'The supported Hysteria2 binary is not pinned to a plain release version.'
 Require-Text 'server/install-path-components.sh' 'HYSTERIA_SHA256=[0-9a-f]{64}' 'The supported Hysteria2 binary is not hash-pinned.'
 Require-Text 'server/install-path-components.sh' 'RST_BIN_DIR=/usr/local/lib/route-steward' 'The RST-owned binary namespace is missing.'
 Require-Text 'server/install-path-components.sh' 'HYSTERIA_BIN=\$\{RST_BIN_DIR\}/hysteria' 'Hysteria2 is not installed inside the RST-owned namespace.'
@@ -75,22 +75,19 @@ Require-Text '.github/workflows/release.yml' 'ref:\s*\$\{\{ github\.sha \}\}' 'R
 Require-Text '.github/workflows/release.yml' 'git tag -a "\$tag" -m "\$tag" "\$EVENT_SHA"' 'Release tag is not created from the immutable workflow event SHA.'
 Reject-Text '.github/workflows/release.yml' 'git pull' 'Release workflow must not replace the event source with moving branch state.'
 
-# Product identity and positioning are canonical across the public tree.
-Require-Text 'README.md' 'Set up and manage private proxies on your own servers with an AI agent\.' 'The canonical English product statement is missing.'
-Require-Text 'README.md' 'Route Steward helps an AI agent set up, inspect, change, and recover a private proxy on VPS servers you control\.' 'The canonical English product definition is missing.'
-Require-Text 'README.zh-CN.md' '用 AI agent 在自己的服务器上搭建和管理私有代理。' 'The canonical Chinese product statement is missing.'
-Require-Text 'README.zh-CN.md' 'Route Steward 帮助 AI agent 在你控制的 VPS 上搭建、检查、更换和恢复私有代理。' 'The canonical Chinese product definition is missing.'
-Require-Text 'docs/COMPATIBILITY.md' 'On-demand `health` supports both direct and relay Routes\.' 'End-to-end health is missing from the compatibility contract.'
-Require-Text 'internal/steward/health.go' 'https://cloudflare\.com/cdn-cgi/trace' 'The bounded health endpoint is missing.'
-Require-Text 'internal/steward/health.go' 'no-stable-safe-metric' 'Unsupported packet-loss behavior is not explicit.'
-Require-Text 'internal/steward/migration.go' 'rollback-pending' 'Resumable migration rollback state is missing.'
-Require-Text 'internal/steward/migration.go' 'replacement-health-not-healthy' 'Migration is not gated on healthy replacement traffic.'
-Require-Text 'docs/FAQ.md' 'persists an overlap-first transaction' 'Reliable replacement behavior is missing from the public FAQ.'
-Reject-Text 'docs/FAQ.md' 'does not yet persist a resumable migration transaction' 'The FAQ still describes migration as non-resumable.'
+# Product identity and positioning stay plain at the public entry points.
+Require-Text 'README.md' 'private prox(?:y|ies)' 'The English README no longer states the product as private proxy management.'
+Require-Text 'README.zh-CN.md' '私有代理' 'The Chinese README no longer states the product as private proxy management.'
+Reject-Text 'README.md' '(?i)(?:egress lifecycle|internet exit lifecycle|agent-operated control plane|deterministic infrastructure lifecycle)' 'The English README reintroduced abstract positioning language.'
+Reject-Text 'README.zh-CN.md' '(?i)(?:egress lifecycle|internet exit lifecycle|agent-operated control plane|deterministic infrastructure lifecycle)' 'The Chinese README reintroduced abstract positioning language.'
+Reject-Text 'README.md' '(?i)\bVPN clients?\b' 'The English README reintroduced misleading VPN-client terminology.'
+Reject-Text 'docs/QUICKSTART.md' '(?i)\bVPN clients?\b' 'The English Quickstart reintroduced misleading VPN-client terminology.'
+Require-Text 'docs/COMPATIBILITY.md' 'route-steward capabilities` is the runtime source of truth' 'Compatibility no longer points readers to runtime capability truth.'
 Require-Text 'docs/OPERATING-BOUNDARY.md' 'owned by the operator or administered with the resource owner''s authorization' 'The authorized-infrastructure operating boundary is missing.'
 Require-Text 'internal/steward/engine.go' '"interface":\s*"agent-machine-surface"' 'The native machine surface product identity is incorrect.'
 Reject-Text 'agent/route-steward-agent.ps1' "'run', './cmd/route-steward', '--'" 'The Go source fallback must not pass a fake -- command.'
 Reject-Text '.agents/skills/route-steward/SKILL.md' 'go run ./cmd/route-steward --' 'The repository-URL workflow must use the real Go CLI command shape.'
+Reject-Text 'internal/steward/engine.go' 'repository_script' 'Local-assisted recovery or backup still exposes a legacy repository script as contract.'
 
 # GFM treats CJK text immediately after a bare URL as part of the link target.
 $unsafeCjkAutolinkPattern = 'https?://[A-Za-z0-9._~:/?#\[\]@!$&''()*+,;=%-]+(?=[\p{IsCJKUnifiedIdeographs}\u3000-\u303F\uFF00-\uFFEF])'

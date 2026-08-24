@@ -1,6 +1,6 @@
 # Client research record
 
-Research date: 2026-08-24. This record explains the first expansion beyond the existing Mihomo/Clash Verge-compatible, Shadowrocket, and headless Hysteria2 contracts. Current application facts come from the named projects' official repositories and documentation; Route Steward support still requires an implemented renderer and tests.
+Research date: 2026-08-24. This historical decision record explains the first expansion beyond the existing Mihomo/Clash Verge-compatible, Shadowrocket, and headless Hysteria2 contracts. The current support contract remains `route-steward capabilities` and `docs/COMPATIBILITY.md`; external client facts still require fresh authoritative sources when they can change.
 
 ## Coverage before this change
 

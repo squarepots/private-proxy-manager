@@ -181,8 +181,15 @@ func TestInstalledCLIUserJourney(t *testing.T) {
 		t.Fatal("migration did not preserve overlap-first workflow ownership")
 	}
 	backup := h.execute(3, "backup", "", nil)
-	if backup.Code != "local-assistance-required" || !bytes.Contains(backup.Data, []byte(`"repository_script":"scripts/New-RecoveryArchive.ps1"`)) || !bytes.Contains(backup.Data, []byte(`"secret_prompt_rule"`)) {
-		t.Fatal("backup did not stay in the local secret-prompt boundary")
+	var backupData map[string]any
+	if err := json.Unmarshal(backup.Data, &backupData); err != nil {
+		t.Fatalf("backup returned invalid JSON data: %v", err)
+	}
+	if backup.Code != "local-assistance-required" || backupData["command"] != "route-steward backup --private-dir <directory>" || backupData["secret_prompt_rule"] == "" {
+		t.Fatalf("backup did not stay in the local secret-prompt boundary: code=%s data=%s", backup.Code, backup.Data)
+	}
+	if _, ok := backupData["repository_script"]; ok {
+		t.Fatalf("backup still exposes a legacy repository script: data=%s", backup.Data)
 	}
 }
 

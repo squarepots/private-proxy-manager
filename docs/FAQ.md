@@ -42,7 +42,7 @@ No. Health is an on-demand check, not a monitoring service. It contacts ipify's 
 
 ## When should I use port hopping?
 
-Use optional `port_hopping` only when a network persistently throttles or filters particular UDP destination ports. RST supports one 2–8-port consecutive range beginning at the Route listener and renders it for Mihomo, Karing, Shadowrocket, and the headless official client. It does not help when UDP itself is blocked, and its health check validates a real range-configured client path rather than claiming to observe every periodic hop. See [Reliability research](RELIABILITY-RESEARCH.md).
+Use optional `port_hopping` only when a network persistently throttles or filters particular UDP destination ports. RST supports one 2–8-port consecutive range beginning at the Route listener and renders it for Mihomo, Karing, Shadowrocket, and the headless official client. It does not help when UDP itself is blocked, and its health check validates a real range-configured client path rather than claiming to observe every periodic hop. See [Compatibility](COMPATIBILITY.md).
 
 ## How does server replacement avoid interruption?
 

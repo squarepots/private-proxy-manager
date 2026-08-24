@@ -44,7 +44,7 @@ The agent will ask for the facts declared by capability discovery:
 
 Use non-identifying IDs such as `entry-a`, `route-a`, and `desktop-a`. Route Steward stores real operational values only in the selected private directory.
 
-If a network persistently throttles or filters individual UDP destination ports, the agent may create a Route with `port_hopping` such as `20000-20003`. The range must contain 2–8 consecutive ports and start at `listen_port`; all supported client outputs receive the same range. It is not a remedy for a network that blocks UDP generally. Read the [reliability research record](RELIABILITY-RESEARCH.md) before enabling it.
+If a network persistently throttles or filters individual UDP destination ports, the agent may create a Route with `port_hopping` such as `20000-20003`. The range must contain 2–8 consecutive ports and start at `listen_port`; all supported client outputs receive the same range. It is not a remedy for a network that blocks UDP generally. See [Compatibility](COMPATIBILITY.md) for the current support boundary.
 
 ## 4. Let the agent operate the workflow
 

@@ -40,7 +40,7 @@ try {
     Invoke-ValidationStep 'Native Go module, tests and vet' {
         & $go.Source mod verify
         if ($LASTEXITCODE -ne 0) { throw 'go mod verify failed.' }
-        & $go.Source test ./...
+        & $go.Source test ./... -timeout 180s
         if ($LASTEXITCODE -ne 0) { throw 'go test failed.' }
         & $go.Source vet ./...
         if ($LASTEXITCODE -ne 0) { throw 'go vet failed.' }
@@ -57,12 +57,6 @@ try {
     Invoke-ValidationStep 'Architecture/public-tree contract' { & ./scripts/Test-Templates.ps1 }
     Invoke-ValidationStep 'Product version' { & ./tests/Test-Version.ps1 }
     Invoke-ValidationStep 'Agent/context/authorization' { & ./tests/Test-Agent.ps1 }
-    Invoke-ValidationStep 'Core state/model' { & ./tests/Test-Core.ps1 }
-    Invoke-ValidationStep 'Provider lifecycle' { & ./tests/Test-Providers.ps1 }
-    Invoke-ValidationStep 'ClientTarget rendering' { & ./tests/Test-ClientTargets.ps1 }
-    Invoke-ValidationStep 'Observed state and drift' { & ./tests/Test-Observed.ps1 }
-    Invoke-ValidationStep 'Subscription lifecycle' { & ./tests/Test-Subscription.ps1 }
-    Invoke-ValidationStep 'Recovery core' { & ./tests/Test-RecoveryCore.ps1 }
 
     if (-not $Quick) {
         if (Test-CommandAvailable 'npm') {

@@ -212,6 +212,6 @@ Recovery is local-first: restore to a clean private root, verify the SHA-256 man
 
 ## Contributor/debug interfaces
 
-The PowerShell libraries and entry point remain compatibility and regression surfaces for existing callers. They are not a runtime dependency or a second product UI. Remote Bash payloads remain the deployed host implementation and are embedded in the native executable.
+The PowerShell entry point remains a compatibility forwarder for older callers. It is not a runtime dependency, a second product UI, or an implementation surface for new behavior. Remote Bash payloads remain the deployed host implementation and are embedded in the native executable.
 
 When a capability is missing, extend the deterministic core and its behavior tests rather than teaching users a manual shell/SSH workaround.

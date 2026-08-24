@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-labelledby="title desc">
-  <title id="title">Route Steward private proxy lifecycle</title>
+  <title id="title">Route Steward private proxy path</title>
   <desc id="desc">A synthetic diagram shows how an AI agent uses Route Steward to set up and manage a private proxy through one server or an optional two-server relay.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
@@ -29,7 +29,7 @@
     </g>
 
     <rect x="62" y="126" width="1076" height="137" rx="18" fill="#0d1117" stroke="#30363d"/>
-    <text x="86" y="157" fill="#7d8590" font-size="13" font-weight="700" letter-spacing="1.5">CONTROL PLANE</text>
+    <text x="86" y="157" fill="#7d8590" font-size="13" font-weight="700" letter-spacing="1.5">LOCAL AGENT WORKFLOW</text>
 
     <g transform="translate(93 177)">
       <rect width="190" height="58" rx="13" fill="#10233f" stroke="#2f81f7"/>
@@ -78,7 +78,7 @@
       <text x="85" y="50" text-anchor="middle" fill="#94d9d1" font-size="12">dedicated server</text>
     </g>
     <line x1="667" y1="379" x2="822" y2="379" stroke="#8b949e" stroke-width="3" marker-end="url(#mutedArrow)"/>
-    <text x="744" y="364" text-anchor="middle" fill="#8b949e" font-size="12">direct egress</text>
+    <text x="744" y="364" text-anchor="middle" fill="#8b949e" font-size="12">proxy exit</text>
     <g transform="translate(837 346)">
       <rect width="170" height="66" rx="14" fill="#161b22" stroke="#3d444d"/>
       <text x="85" y="40" text-anchor="middle" fill="#c9d1d9" font-size="16" font-weight="700">Internet</text>
