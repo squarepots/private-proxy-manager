@@ -387,7 +387,7 @@ func AddClientTarget(state *State, context map[string]any) (map[string]any, erro
 		return nil, fmt.Errorf("unknown Profile %q", profileID)
 	}
 	renderer := stringField(context, "renderer")
-	if renderer != "mihomo" && renderer != "shadowrocket" && renderer != "hysteria2" {
+	if renderer != "mihomo" && renderer != "karing" && renderer != "shadowrocket" && renderer != "hysteria2" {
 		return nil, fmt.Errorf("unsupported ClientTarget renderer %q", renderer)
 	}
 	delivery := "file"

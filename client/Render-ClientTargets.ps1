@@ -44,18 +44,26 @@ function ConvertTo-NormalizedFingerprint {
     return $normalized
 }
 
-function ConvertTo-ShadowrocketUri {
+function Assert-ManagedHysteria2Node {
     param([Parameter(Mandatory)]$Node)
     $type = Get-NodeValue -Body $Node.Body -Key 'type' -Required
     if ($type.ToLowerInvariant() -ne 'hysteria2') { throw "Node '$($Node.Name)' uses unsupported type '$type'." }
+    foreach ($key in 'server','port','password','sni','obfs-password') { $null = Get-NodeValue -Body $Node.Body -Key $key -Required }
+    $fingerprint = ConvertTo-NormalizedFingerprint -Value (Get-NodeValue -Body $Node.Body -Key 'fingerprint' -Required) -NodeName $Node.Name
+    $obfs = Get-NodeValue -Body $Node.Body -Key 'obfs' -Required
+    if ($obfs -ne 'salamander') { throw "Node '$($Node.Name)' uses unsupported Hysteria2 obfuscation." }
+    return $fingerprint
+}
+
+function ConvertTo-ShadowrocketUri {
+    param([Parameter(Mandatory)]$Node)
+    $fingerprint = Assert-ManagedHysteria2Node -Node $Node
     $server = Get-NodeValue -Body $Node.Body -Key 'server' -Required
     $port = Get-NodeValue -Body $Node.Body -Key 'port' -Required
     $auth = Get-NodeValue -Body $Node.Body -Key 'password' -Required
     $sni = Get-NodeValue -Body $Node.Body -Key 'sni' -Required
-    $fingerprint = ConvertTo-NormalizedFingerprint -Value (Get-NodeValue -Body $Node.Body -Key 'fingerprint' -Required) -NodeName $Node.Name
     $obfs = Get-NodeValue -Body $Node.Body -Key 'obfs' -Required
     $obfsPassword = Get-NodeValue -Body $Node.Body -Key 'obfs-password' -Required
-    if ($obfs -ne 'salamander') { throw "Node '$($Node.Name)' uses unsupported Hysteria2 obfuscation." }
     $query = @(
         'auth=' + (ConvertTo-UriComponent $auth),
         'obfs=' + (ConvertTo-UriComponent $obfs),
@@ -168,10 +176,16 @@ function Resolve-MihomoCore {
     return $null
 }
 
-function Render-Mihomo {
-    param([Parameter(Mandatory)]$Inventory, [Parameter(Mandatory)]$Profile, [Parameter(Mandatory)]$ClientTarget, [Parameter(Mandatory)][string]$PrivateDirectory, [Parameter(Mandatory)][string]$OutputPath)
+function Render-Clash {
+    param([Parameter(Mandatory)]$Inventory, [Parameter(Mandatory)]$Profile, [Parameter(Mandatory)]$ClientTarget, [Parameter(Mandatory)][string]$PrivateDirectory, [Parameter(Mandatory)][string]$OutputPath, [Parameter(Mandatory)][ValidateSet('mihomo','karing')][string]$Renderer)
     $payloads = Get-ProfileRoutePayloads -Inventory $Inventory -Profile $Profile -PrivateDirectory $PrivateDirectory
     $parsed = Read-RouteNodes -PayloadPaths $payloads
+    if ($Renderer -eq 'karing') {
+        foreach ($node in $parsed.Nodes) {
+            $null = Assert-ManagedHysteria2Node -Node $node
+            if ((Get-NodeValue -Body $node.Body -Key 'skip-cert-verify' -Required) -ne 'true' -or (Get-NodeValue -Body $node.Body -Key 'alpn' -Required) -ne '[h3]') { throw "Karing ClientTarget node '$($node.Name)' must retain pinned self-signed TLS and Hysteria2 ALPN." }
+        }
+    }
     $providers = @(Get-ProfileProviders -Inventory $Inventory -Profile $Profile -PrivateDirectory $PrivateDirectory)
     $policy = [string](Get-RSTOptional $Profile 'policy' 'privacy')
     if ([string]::IsNullOrWhiteSpace($policy)) { $policy = 'privacy' }
@@ -255,7 +269,7 @@ $policyRules  - MATCH,Private Routes
         }
         else { $validation = 'unavailable' }
     }
-    return [ordered]@{ client_target = [string]$ClientTarget.id; profile = [string]$Profile.id; renderer = 'mihomo'; path = [IO.Path]::GetFullPath($OutputPath); node_count = $parsed.Nodes.Count; provider_count = $providers.Count; validation = $validation }
+    return [ordered]@{ client_target = [string]$ClientTarget.id; profile = [string]$Profile.id; renderer = $Renderer; path = [IO.Path]::GetFullPath($OutputPath); node_count = $parsed.Nodes.Count; provider_count = $providers.Count; validation = $validation }
 }
 
 function Render-Hysteria2 {
@@ -372,7 +386,8 @@ $results = [Collections.Generic.List[object]]::new()
 foreach ($target in $targets) {
     $profile = Get-RSTProfileForClientTarget -Inventory $inventory -ClientTarget $target
     switch ([string]$target.renderer) {
-        'mihomo' { $results.Add((Render-Mihomo -Inventory $inventory -Profile $profile -ClientTarget $target -PrivateDirectory $privateDirectory -OutputPath (Join-Path $OutputDirectory ($target.id + '.yaml')))) }
+        'mihomo' { $results.Add((Render-Clash -Inventory $inventory -Profile $profile -ClientTarget $target -PrivateDirectory $privateDirectory -OutputPath (Join-Path $OutputDirectory ($target.id + '.yaml')) -Renderer mihomo)) }
+        'karing' { $results.Add((Render-Clash -Inventory $inventory -Profile $profile -ClientTarget $target -PrivateDirectory $privateDirectory -OutputPath (Join-Path $OutputDirectory ($target.id + '.yaml')) -Renderer karing)) }
         'shadowrocket' { $results.Add((Render-Shadowrocket -Inventory $inventory -Profile $profile -ClientTarget $target -PrivateDirectory $privateDirectory -OutputPath (Join-Path $OutputDirectory ($target.id + '.html')))) }
         'hysteria2' { $results.Add((Render-Hysteria2 -Inventory $inventory -Profile $profile -ClientTarget $target -PrivateDirectory $privateDirectory -OutputPath (Join-Path $OutputDirectory ($target.id + '.json')))) }
         default { throw "ClientTarget '$($target.id)' uses unsupported renderer '$($target.renderer)'." }

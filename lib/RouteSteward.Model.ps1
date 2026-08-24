@@ -103,7 +103,7 @@ function Add-RSTClientTarget {
     $id = ConvertTo-RSTId ([string]$Context.target_id)
     if (Get-RSTClientTargetById -Inventory $Inventory -Id $id -AllowMissing) { throw "ClientTarget '$id' already exists." }
     $renderer = [string]$Context.renderer
-    if ($renderer -notin @('mihomo','shadowrocket','hysteria2')) { throw "Unsupported ClientTarget renderer '$renderer'." }
+    if ($renderer -notin @('mihomo','karing','shadowrocket','hysteria2')) { throw "Unsupported ClientTarget renderer '$renderer'." }
     $profileId = [string]$Context.profile_id
     $null = Get-RSTProfileById -Inventory $Inventory -Id $profileId
     $target = [ordered]@{

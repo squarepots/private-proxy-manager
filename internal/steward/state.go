@@ -374,9 +374,9 @@ func ValidateInventory(inv *Inventory, privateDir string, skipSecrets bool) erro
 			failures = append(failures, fmt.Sprintf("ClientTarget %q references an unknown Profile", t.ID))
 		}
 		switch t.Renderer {
-		case "mihomo":
+		case "mihomo", "karing":
 			if t.Delivery != "file" || t.SubscriptionSecretRef != "" {
-				failures = append(failures, fmt.Sprintf("Mihomo ClientTarget %q has invalid delivery", t.ID))
+				failures = append(failures, fmt.Sprintf("Clash-file ClientTarget %q has invalid delivery", t.ID))
 			}
 		case "shadowrocket":
 			if t.Delivery != "nodes" && t.Delivery != "subscription" {

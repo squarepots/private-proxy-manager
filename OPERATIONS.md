@@ -165,6 +165,7 @@ Renderers consume a ClientTarget plus its referenced Profile.
 Current renderers:
 
 - `mihomo` — private Hysteria2 Routes plus zero or more explicitly included generic Providers;
+- `karing` — the same deterministic private Clash YAML contract, with a Karing 1.2.23.2606 compatibility baseline and mandatory Hysteria2 certificate pinning;
 - `shadowrocket` — offline node import or target-scoped private subscription import;
 - `hysteria2` — official-client JSON for one explicitly selected managed Route, with HTTP and SOCKS5 sharing one loopback listener.
 

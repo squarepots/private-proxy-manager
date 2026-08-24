@@ -6,7 +6,7 @@ Route Steward 帮助 AI agent 在你控制的 VPS 上搭建和管理私有代理
 
 ## 开始前需要什么？
 
-你需要在 Linux、macOS 或 Windows 电脑上安装 Route Steward release binary，并使用具备工具能力的 AI agent；还需要一台具备 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS。客户端可以使用 Mihomo/Clash Verge 兼容软件、Shadowrocket，或内置的无 GUI Hysteria2 工作流。relay route 需要两台 VPS。正常使用不需要 PowerShell 或 Node.js。
+你需要在 Linux、macOS 或 Windows 电脑上安装 Route Steward release binary，并使用具备工具能力的 AI agent；还需要一台具备 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS。客户端可以使用 Mihomo/Clash Verge 兼容软件、Karing、Shadowrocket，或内置的无 GUI Hysteria2 工作流。relay route 需要两台 VPS。正常使用不需要 PowerShell 或 Node.js。
 
 ## 如何安装？
 

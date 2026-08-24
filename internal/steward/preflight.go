@@ -234,7 +234,7 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 			conflicts = append(conflicts, "client-target-profile-missing")
 		}
 		renderer := stringField(context, "renderer")
-		if renderer != "" && renderer != "mihomo" && renderer != "shadowrocket" && renderer != "hysteria2" {
+		if renderer != "" && renderer != "mihomo" && renderer != "karing" && renderer != "shadowrocket" && renderer != "hysteria2" {
 			conflicts = append(conflicts, "client-target-renderer-unsupported")
 		}
 		if renderer == "hysteria2" {

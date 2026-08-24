@@ -46,6 +46,7 @@ Clean bootstrap creates a valid neutral inventory, empty secret index, and empty
 | Capability | Supported contract |
 | --- | --- |
 | Mihomo | Private YAML output for Mihomo/Clash Verge-compatible clients |
+| Karing | Private Clash YAML imported from a local file; compatibility baseline 1.2.23.2606; Windows, macOS, Linux, iOS, Android, and tvOS |
 | Shadowrocket offline | Private node-import HTML generated without external page resources |
 | Shadowrocket subscription | Optional isolated Cloudflare Worker delivery for one ClientTarget |
 | Hysteria2 headless | Private official-client JSON plus foreground loopback HTTP/SOCKS5 runtime for one selected Route |
@@ -53,6 +54,8 @@ Clean bootstrap creates a valid neutral inventory, empty secret index, and empty
 | `balanced-cn` policy | Explicit opt-in only |
 
 A ClientTarget selects the renderer and delivery. Its referenced Profile selects Routes, optional Providers, and policy.
+
+The `karing` renderer reuses the deterministic Clash YAML contract rather than maintaining a divergent approximation. Rendering fails unless every managed Hysteria2 node retains `skip-cert-verify: true`, Hysteria2 ALPN, salamander obfuscation, and a valid SHA-256 certificate fingerprint. Import the resulting `.yaml` with Karing's local Clash-file flow; no field editing is part of the supported setup. See the [client research record](CLIENT-RESEARCH.md) for the selection evidence and rejected candidates.
 
 A `hysteria2` ClientTarget additionally selects exactly one enabled Route from its Profile, a loopback listener, and `auto`, `ipv4`, or `ipv6` ingress. `auto` prefers IPv4 and falls back to IPv6. This renderer does not compose Profile Providers or GUI policy rules. Multiple concurrently running targets need distinct local ports.
 

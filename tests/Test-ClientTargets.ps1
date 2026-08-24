@@ -27,8 +27,10 @@ try {
     $profileContext = [ordered]@{ profile_id = 'primary'; include_routes = @('direct-a'); include_providers = @() } | ConvertTo-Json -Compress
     Assert-True ((& $agent execute -PrivateDirectory $stage -Operation add-profile -ContextJson $profileContext | ConvertFrom-Json).success) 'Explicit Profile creation failed.'
     $mihomoContext = [ordered]@{ target_id = 'desktop'; profile_id = 'primary'; renderer = 'mihomo' } | ConvertTo-Json -Compress
+    $karingContext = [ordered]@{ target_id = 'mobile-cross-platform'; profile_id = 'primary'; renderer = 'karing' } | ConvertTo-Json -Compress
     $shadowContext = [ordered]@{ target_id = 'mobile'; profile_id = 'primary'; renderer = 'shadowrocket'; delivery = 'nodes' } | ConvertTo-Json -Compress
     Assert-True ((& $agent execute -PrivateDirectory $stage -Operation add-client-target -ContextJson $mihomoContext | ConvertFrom-Json).success) 'Explicit Mihomo ClientTarget creation failed.'
+    Assert-True ((& $agent execute -PrivateDirectory $stage -Operation add-client-target -ContextJson $karingContext | ConvertFrom-Json).success) 'Explicit Karing ClientTarget creation failed.'
     Assert-True ((& $agent execute -PrivateDirectory $stage -Operation add-client-target -ContextJson $shadowContext | ConvertFrom-Json).success) 'Explicit Shadowrocket ClientTarget creation failed.'
 
     $inventoryPath = Join-Path $stage 'inventory.json'
@@ -48,15 +50,20 @@ try {
 
     $privateOutput = Join-Path $stage 'private-only'
     $result = & $renderer -InventoryPath $inventoryPath -OutputDirectory $privateOutput -SkipValidation | ConvertFrom-Json
-    Assert-True ($result.success -and $result.outputs.Count -eq 3) 'Rendering did not produce all explicit ClientTargets.'
+    Assert-True ($result.success -and $result.outputs.Count -eq 4) 'Rendering did not produce all explicit ClientTargets.'
     $mihomoPath = Join-Path $privateOutput 'desktop.yaml'
+    $karingPath = Join-Path $privateOutput 'mobile-cross-platform.yaml'
     $shadowrocketPath = Join-Path $privateOutput 'mobile.html'
     $headlessPath = Join-Path $privateOutput 'backend.json'
     Assert-True (Test-Path -LiteralPath $mihomoPath) 'Mihomo ClientTarget output is missing.'
+    Assert-True (Test-Path -LiteralPath $karingPath) 'Karing ClientTarget output is missing.'
     Assert-True (Test-Path -LiteralPath $shadowrocketPath) 'Shadowrocket ClientTarget output is missing.'
     Assert-True (Test-Path -LiteralPath $headlessPath) 'Hysteria2 ClientTarget output is missing.'
 
     $mihomo = [IO.File]::ReadAllText($mihomoPath, [Text.Encoding]::UTF8)
+    $karing = [IO.File]::ReadAllText($karingPath, [Text.Encoding]::UTF8)
+    Assert-True ($karing -ceq $mihomo) 'Karing did not reuse the tested Clash YAML contract exactly.'
+    Assert-True ($karing -match '(?m)^\s+skip-cert-verify:\s*true\s*$' -and $karing -match "(?m)^\s+fingerprint:\s*'[0-9a-f]{64}'\s*$") 'Karing output weakened pinned self-signed TLS.'
     Assert-True ($mihomo -match '(?m)^\s*- name:\s*Direct-A-HY2-v[46]\s*$') 'Mihomo output is missing private Hysteria2 nodes.'
     Assert-True ($mihomo -notmatch '(?m)^proxy-providers:\s*$') 'Provider-free rendering emitted a provider section.'
     Assert-True ($mihomo -match '(?m)^\s*- MATCH,Private Routes\s*$') 'Generic private route group is missing.'
@@ -85,7 +92,7 @@ try {
     $providerMihomo = [IO.File]::ReadAllText((Join-Path $providerOutput 'desktop.yaml'), [Text.Encoding]::UTF8)
     Assert-True ($providerMihomo -match '(?m)^proxy-providers:\s*$' -and $providerMihomo -match '(?m)^\s{2}example-provider:\s*$') 'Generic Provider block is missing.'
 
-    Write-Host 'Explicit GUI/headless ClientTargets, loopback Hysteria2 rendering, neutral defaults, and Provider composition tests passed.'
+    Write-Host 'Explicit Mihomo/Karing/Shadowrocket/headless ClientTargets, pinned Karing import, neutral defaults, and Provider composition tests passed.'
 }
 finally {
     if (Test-Path -LiteralPath $stage) { Remove-Item -LiteralPath $stage -Recurse -Force }

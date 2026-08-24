@@ -35,7 +35,7 @@ Node.js só é usado quando você escolhe a entrega opcional de assinatura pelo 
 ## O que você recebe
 
 - um proxy Hysteria2 privado por um servidor ou um relay WireGuard opcional por dois;
-- configuração privada completa para um app compatível com Mihomo/Clash Verge, Shadowrocket ou um proxy sem GUI para Linux/aplicações;
+- configuração privada completa para um app compatível com Mihomo/Clash Verge, Karing, Shadowrocket ou um proxy sem GUI para Linux/aplicações;
 - auditoria de servidor somente leitura, health real e sob demanda do tráfego cliente e drift de configuração tipado;
 - substituição retomável de servidor com sobreposição, troca de clientes condicionada por health e sem aposentadoria automática;
 - recuperação local criptografada com estado privado verificado e realocável;
