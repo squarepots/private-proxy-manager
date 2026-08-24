@@ -234,8 +234,33 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 			conflicts = append(conflicts, "client-target-profile-missing")
 		}
 		renderer := stringField(context, "renderer")
-		if renderer != "" && renderer != "mihomo" && renderer != "shadowrocket" {
+		if renderer != "" && renderer != "mihomo" && renderer != "shadowrocket" && renderer != "hysteria2" {
 			conflicts = append(conflicts, "client-target-renderer-unsupported")
+		}
+		if renderer == "hysteria2" {
+			require("route_id")
+			routeID := stringField(context, "route_id")
+			selectedProfile := profile(stringField(context, "profile_id"))
+			selectedRoute := route(routeID)
+			if routeID != "" && (selectedRoute == nil || !selectedRoute.Enabled) {
+				conflicts = append(conflicts, "headless-route-not-enabled")
+			}
+			if routeID != "" && selectedProfile != nil && !contains(selectedProfile.IncludeRoutes, "*") && !contains(selectedProfile.IncludeRoutes, routeID) {
+				conflicts = append(conflicts, "headless-route-outside-profile")
+			}
+			if listen := stringField(context, "listen"); listen != "" {
+				if _, err := normalizeProxyListen(listen); err != nil {
+					conflicts = append(conflicts, "headless-listen-not-loopback")
+				}
+			}
+			if family := stringField(context, "ingress_family"); family != "" && family != "auto" && family != "ipv4" && family != "ipv6" {
+				conflicts = append(conflicts, "headless-ingress-family-unsupported")
+			}
+			if delivery := stringField(context, "delivery"); delivery != "" && delivery != "file" {
+				conflicts = append(conflicts, "headless-delivery-unsupported")
+			}
+		} else if anyField(context, "route_id", "listen", "ingress_family") {
+			conflicts = append(conflicts, "headless-fields-require-hysteria2-renderer")
 		}
 		effects = append(effects, "add-local-client-target")
 	case "update-client-target":
@@ -244,11 +269,37 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 		} else if clientTarget(target) == nil {
 			conflicts = append(conflicts, "target-client-target-missing")
 		}
-		if !anyField(context, "profile_id", "delivery") {
+		if !anyField(context, "profile_id", "delivery", "route_id", "listen", "ingress_family") {
 			missing = append(missing, "client-target-change")
 		}
 		if id := stringField(context, "profile_id"); id != "" && profile(id) == nil {
 			conflicts = append(conflicts, "client-target-profile-missing")
+		}
+		if current := clientTarget(target); current != nil {
+			if current.Renderer == "hysteria2" {
+				profileID := defaultString(stringField(context, "profile_id"), current.Profile)
+				routeID := defaultString(stringField(context, "route_id"), current.Route)
+				listen := defaultString(stringField(context, "listen"), current.Listen)
+				family := defaultString(stringField(context, "ingress_family"), current.IngressFamily)
+				selectedProfile, selectedRoute := profile(profileID), route(routeID)
+				if selectedRoute == nil || !selectedRoute.Enabled {
+					conflicts = append(conflicts, "headless-route-not-enabled")
+				}
+				if selectedProfile != nil && !contains(selectedProfile.IncludeRoutes, "*") && !contains(selectedProfile.IncludeRoutes, routeID) {
+					conflicts = append(conflicts, "headless-route-outside-profile")
+				}
+				if _, err := normalizeProxyListen(listen); err != nil {
+					conflicts = append(conflicts, "headless-listen-not-loopback")
+				}
+				if family != "auto" && family != "ipv4" && family != "ipv6" {
+					conflicts = append(conflicts, "headless-ingress-family-unsupported")
+				}
+				if delivery := stringField(context, "delivery"); delivery != "" && delivery != "file" {
+					conflicts = append(conflicts, "headless-delivery-unsupported")
+				}
+			} else if anyField(context, "route_id", "listen", "ingress_family") {
+				conflicts = append(conflicts, "headless-fields-require-hysteria2-renderer")
+			}
 		}
 		effects = append(effects, "update-local-client-target")
 	case "remove-client-target":

@@ -25,7 +25,7 @@ When the user gives you the repository or asks to use RST:
 8. Establish that the selected infrastructure and network resources are operator-controlled or administered with owner authorization.
 9. Gather only the facts required for the user's desired Route and ClientTarget.
 10. Run scoped preflight and execute only when `ready=true`.
-11. Audit and render after meaningful changes; run `health` when actual client traffic matters, then report the outcome without secret-bearing details.
+11. Audit and render after meaningful changes; run `health` when Route traffic matters, or `proxy --check` for a headless Hysteria2 ClientTarget, then report the outcome without secret-bearing details.
 12. For Server replacement, use the resumable `migrate-route` workflow. Retry `workflow-blocked` with the same source/replacement identity; never retire old external capacity without a separate explicit destructive request.
 
 Representative machine calls are in [references/operations.md](references/operations.md). These are internal operations, not commands the user must learn.

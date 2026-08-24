@@ -48,10 +48,13 @@ Clean bootstrap creates a valid neutral inventory, empty secret index, and empty
 | Mihomo | Private YAML output for Mihomo/Clash Verge-compatible clients |
 | Shadowrocket offline | Private node-import HTML generated without external page resources |
 | Shadowrocket subscription | Optional isolated Cloudflare Worker delivery for one ClientTarget |
+| Hysteria2 headless | Private official-client JSON plus foreground loopback HTTP/SOCKS5 runtime for one selected Route |
 | Default policy | Generic privacy DNS/routing behavior |
 | `balanced-cn` policy | Explicit opt-in only |
 
 A ClientTarget selects the renderer and delivery. Its referenced Profile selects Routes, optional Providers, and policy.
+
+A `hysteria2` ClientTarget additionally selects exactly one enabled Route from its Profile, a loopback listener, and `auto`, `ipv4`, or `ipv6` ingress. `auto` prefers IPv4 and falls back to IPv6. This renderer does not compose Profile Providers or GUI policy rules. Multiple concurrently running targets need distinct local ports.
 
 ## Providers
 
@@ -74,6 +77,8 @@ Read-only Route audit and sanitized desired-versus-observed drift cover RST serv
 Persisted `migrate-route` transactions support direct Route replacement and replacement of either endpoint of a relay Route. They reuse BYO SSH deployment, WireGuard Links, end-to-end health, ClientTarget rendering, and existing Shadowrocket subscription publication. Old external capacity is preserved; cloud provisioning and destructive provider retirement remain outside this supported workflow.
 
 On-demand `health` supports both direct and relay Routes. It runs the SHA-256-pinned official Hysteria2 2.9.3 client from a private local cache and checks the real client handshake, Internet access, DNS through a hostname request, declared exit identity, IPv4, optional declared IPv6, and request latency. Relay results also include the bounded WireGuard audit. Health uses ipify's address-family endpoints and Cloudflare's `/cdn-cgi/trace` endpoint; it is not continuous monitoring. Exact public IPs are omitted unless explicitly requested. Packet loss is currently reported as unsupported because no stable safe metric is implemented.
+
+`route-steward proxy` uses the same verified Hysteria2 2.9.3 cache and generated private JSON. `--check` starts the target temporarily, makes a real HTTP request through its loopback proxy, compares the observed IPv4 exit with the selected Route, omits the address from output, and stops. Run mode stays in the foreground so the operator's service manager owns restart policy. Public/LAN listeners, automatic multi-Route failover, Provider composition, and service installation are outside this renderer contract.
 
 Migration uses an overlap-first workflow composed from add, deploy, audit, and render operations. Encrypted recovery verifies the archive manifest and path safety, relocates SSH material, validates schema-1 state, resets observed evidence, and performs no remote mutation by itself.
 

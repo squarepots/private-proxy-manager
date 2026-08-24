@@ -6,7 +6,7 @@ Route Steward helps an AI agent set up and manage a private proxy on VPS servers
 
 ## What do I need before I start?
 
-You need the Route Steward release binary on a Linux, macOS, or Windows computer with a tool-capable AI agent, a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access, and either Mihomo/Clash Verge-compatible software or Shadowrocket. A relay route uses two VPS hosts. PowerShell and Node.js are not required for normal use.
+You need the Route Steward release binary on a Linux, macOS, or Windows computer with a tool-capable AI agent and a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access. You can use Mihomo/Clash Verge-compatible software, Shadowrocket, or the built-in headless Hysteria2 workflow. A relay route uses two VPS hosts. PowerShell and Node.js are not required for normal use.
 
 ## How do I install it?
 
@@ -43,6 +43,10 @@ No. Health is an on-demand check, not a monitoring service. It contacts ipify's 
 ## How does server replacement avoid interruption?
 
 `migrate-route` persists an overlap-first transaction. It creates or reuses replacement capacity, deploys it without touching current client output, requires a healthy real Hysteria2 traffic check, and only then switches and validates affected ClientTargets. A failed deployment, health check, render, or subscription publication returns `workflow-blocked`; retrying the same migration resumes deterministically. Old remote capacity is never retired automatically and remains a later explicit destructive action.
+
+## Can a Linux server, script, or backend use a Route without a GUI app?
+
+Yes. A `hysteria2` ClientTarget selects one enabled Route and a loopback port. `route-steward proxy --target <id> --check` proves real HTTP traffic and exit identity; without `--check`, the command runs a local HTTP/SOCKS5 proxy in the foreground. Set an application's `HTTP_PROXY`, `HTTPS_PROXY`, or SOCKS5 setting to that loopback address. RST writes the official-client JSON automatically; it does not install a system service or expose the proxy to the LAN.
 
 ## Which hosts, topologies, and clients work?
 

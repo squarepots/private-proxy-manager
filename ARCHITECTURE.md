@@ -37,7 +37,7 @@ The core never branches on model/vendor identity. Runtime-specific files delegat
 - **Provider** — optional upstream third-party node source. Initial source type: generic `mihomo-http`.
 - **Policy** — reusable client routing/DNS behavior where a renderer needs it.
 - **Profile** — reusable selection of Routes, optional Providers, and Policy. It is not a renderer or device identity.
-- **ClientTarget** — concrete renderer/delivery identity referencing a Profile. Initial renderers: `mihomo` and `shadowrocket`.
+- **ClientTarget** — concrete renderer/delivery identity referencing a Profile. Current renderers: `mihomo`, `shadowrocket`, and headless `hysteria2`.
 - **Private subscription** — optional target-scoped delivery state for one Shadowrocket ClientTarget.
 
 These concepts make the core deterministic. They are not concepts the user must learn before using the product.
@@ -120,10 +120,13 @@ A renderer resolves one ClientTarget, follows its Profile reference, then consum
 
 - Mihomo ClientTargets use file delivery and may compose managed Routes with explicitly selected generic Providers.
 - Shadowrocket ClientTargets render private Hysteria2 node imports or use optional target-scoped subscription delivery.
+- Hysteria2 ClientTargets select one enabled Route from their Profile, render official-client JSON, and expose same-port HTTP/SOCKS5 on an IP-literal loopback listener. They intentionally do not approximate GUI policy or Provider composition.
 
 Output filenames derive from ClientTarget IDs, not operating-system identities. With no explicit Profile policy, rendering uses the generic privacy behavior; geography-specific policy such as `balanced-cn` is opt-in only.
 
 The agent path records a hash-only render manifest after successful rendering. Stale/missing output becomes `client-render-stale` without exposing private client material.
+
+The native `proxy` command renders the Hysteria2 target and uses the same pinned, checksum-verified official client as Route health. Check mode proves a real HTTP request exits through the declared Route; run mode remains foreground so process supervision is an operator concern rather than a second RST daemon/state layer.
 
 ## Private subscription delivery
 

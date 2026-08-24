@@ -40,7 +40,7 @@ The agent will ask for the facts declared by capability discovery:
 - one dedicated, rebuildable Ubuntu 24.04 amd64 VPS for a direct route, or two for a relay;
 - each server's public address, valid Unix SSH username, and local private-key path;
 - the desired direct or single-hop relay connection;
-- a Mihomo/Clash Verge-compatible or Shadowrocket client target.
+- a Mihomo/Clash Verge-compatible, Shadowrocket, or headless Hysteria2 client target.
 
 Use non-identifying IDs such as `entry-a`, `route-a`, and `desktop-a`. Route Steward stores real operational values only in the selected private directory.
 
@@ -76,7 +76,26 @@ Health runs a pinned Hysteria2 client through the Route, checks Internet and DNS
 
 Returned data omits credentials, absolute home paths, Provider URLs, subscription tokens, live node URIs, and raw SSH output.
 
-## 6. Continue or recover
+## 6. Use a Route from a Linux server or application
+
+After the selected Route is deployed, the agent can create a headless target without editing a Hysteria configuration by hand:
+
+```text
+route-steward execute --private-dir ./private --operation add-client-target --context-json '{"target_id":"backend-a","profile_id":"primary","renderer":"hysteria2","route_id":"route-a","listen":"127.0.0.1:1080","ingress_family":"auto"}'
+route-steward proxy --private-dir ./private --target backend-a --check
+route-steward proxy --private-dir ./private --target backend-a
+```
+
+The check starts the pinned official client temporarily, sends a real HTTP request through the Route, verifies the declared exit, and stops. The final command runs in the foreground; supervise it with the host's existing service manager for persistent use. While it is running, an application can use either protocol on the same local port:
+
+```text
+HTTP_PROXY=http://127.0.0.1:1080 HTTPS_PROXY=http://127.0.0.1:1080 your-command
+curl --proxy socks5h://127.0.0.1:1080 https://example.com/
+```
+
+The listener must be an IP-literal loopback address. One target selects one managed Route; Provider composition, GUI policy, public/LAN listening, and automatic service installation are not implied.
+
+## 7. Continue or recover
 
 Ask the agent to run audit and drift before changing an existing route. `migrate-route` persists and resumes an overlap-first replacement: the replacement is deployed and health-checked before affected client output changes, failed client switching is rolled back, and old remote capacity is not retired. A `workflow-blocked` result is safe to retry with the same Route and replacement Server. Encrypted recovery uses `route-steward backup` and `route-steward recover`; enter the password only in the local 7-Zip prompt.
 

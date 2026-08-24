@@ -387,7 +387,7 @@ func AddClientTarget(state *State, context map[string]any) (map[string]any, erro
 		return nil, fmt.Errorf("unknown Profile %q", profileID)
 	}
 	renderer := stringField(context, "renderer")
-	if renderer != "mihomo" && renderer != "shadowrocket" {
+	if renderer != "mihomo" && renderer != "shadowrocket" && renderer != "hysteria2" {
 		return nil, fmt.Errorf("unsupported ClientTarget renderer %q", renderer)
 	}
 	delivery := "file"
@@ -402,12 +402,23 @@ func AddClientTarget(state *State, context map[string]any) (map[string]any, erro
 		}
 	}
 	target := ClientTarget{ID: id, Profile: profileID, Renderer: renderer, Delivery: delivery, QR: qr}
+	if renderer == "hysteria2" {
+		target.Route = stringField(context, "route_id")
+		target.Listen = defaultString(stringField(context, "listen"), "127.0.0.1:1080")
+		target.IngressFamily = defaultString(stringField(context, "ingress_family"), "auto")
+	}
 	candidate := cloneInventory(state.Inventory)
 	candidate.ClientTargets = append(candidate.ClientTargets, target)
 	if err := saveCandidate(state, candidate, false); err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": id, "profile": profileID, "renderer": renderer, "delivery": delivery, "remote_changed": false}, nil
+	result := map[string]any{"id": id, "profile": profileID, "renderer": renderer, "delivery": delivery, "remote_changed": false}
+	if renderer == "hysteria2" {
+		result["route"] = target.Route
+		result["listen"] = target.Listen
+		result["ingress_family"] = target.IngressFamily
+	}
+	return result, nil
 }
 
 func UpdateClientTarget(state *State, target string, context map[string]any) (map[string]any, error) {
@@ -426,10 +437,27 @@ func UpdateClientTarget(state *State, target string, context map[string]any) (ma
 		}
 		t.Delivery = delivery
 	}
+	if t.Renderer == "hysteria2" {
+		if hasField(context, "route_id") {
+			t.Route = stringField(context, "route_id")
+		}
+		if hasField(context, "listen") {
+			t.Listen = stringField(context, "listen")
+		}
+		if hasField(context, "ingress_family") {
+			t.IngressFamily = stringField(context, "ingress_family")
+		}
+	}
 	if err := saveCandidate(state, candidate, false); err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": t.ID, "profile": t.Profile, "renderer": t.Renderer, "delivery": t.Delivery, "remote_changed": false}, nil
+	result := map[string]any{"id": t.ID, "profile": t.Profile, "renderer": t.Renderer, "delivery": t.Delivery, "remote_changed": false}
+	if t.Renderer == "hysteria2" {
+		result["route"] = t.Route
+		result["listen"] = t.Listen
+		result["ingress_family"] = t.IngressFamily
+	}
+	return result, nil
 }
 
 func RemoveClientTarget(state *State, target string) (map[string]any, error) {

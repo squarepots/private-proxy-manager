@@ -258,6 +258,54 @@ $policyRules  - MATCH,Private Routes
     return [ordered]@{ client_target = [string]$ClientTarget.id; profile = [string]$Profile.id; renderer = 'mihomo'; path = [IO.Path]::GetFullPath($OutputPath); node_count = $parsed.Nodes.Count; provider_count = $providers.Count; validation = $validation }
 }
 
+function Render-Hysteria2 {
+    param([Parameter(Mandatory)]$Inventory, [Parameter(Mandatory)]$Profile, [Parameter(Mandatory)]$ClientTarget, [Parameter(Mandatory)][string]$PrivateDirectory, [Parameter(Mandatory)][string]$OutputPath)
+    $routeId = [string](Get-RSTOptional $ClientTarget 'route')
+    $routes = @($Inventory.routes | Where-Object id -eq $routeId)
+    if ($routes.Count -ne 1 -or (Get-RSTOptional $routes[0] 'enabled' $true) -eq $false) { throw "Hysteria2 ClientTarget '$($ClientTarget.id)' does not select an enabled Route." }
+    $included = @(Get-RSTOptional $Profile 'include_routes' @('*'))
+    if ($included -notcontains '*' -and $included -notcontains $routeId) { throw "Hysteria2 ClientTarget '$($ClientTarget.id)' selects a Route outside its Profile." }
+    $listen = [string](Get-RSTOptional $ClientTarget 'listen')
+    if (-not (Test-RSTLoopbackListener $listen)) { throw "Hysteria2 ClientTarget '$($ClientTarget.id)' must use a loopback listener." }
+    $payload = Resolve-RSTSecret -Reference ([string]$routes[0].payload_secret_ref) -PrivateDirectory $PrivateDirectory
+    $parsed = Read-RouteNodes -PayloadPaths @($payload)
+    $family = [string](Get-RSTOptional $ClientTarget 'ingress_family' 'auto')
+    $candidates = @($parsed.Nodes | ForEach-Object {
+        $server = Get-NodeValue -Body $_.Body -Key 'server' -Required
+        $address = $null
+        if (-not [Net.IPAddress]::TryParse($server, [ref]$address)) { throw "Node '$($_.Name)' does not use a literal ingress address." }
+        [pscustomobject]@{ Node = $_; Server = $server; Family = if ($address.AddressFamily -eq [Net.Sockets.AddressFamily]::InterNetworkV6) { 'ipv6' } else { 'ipv4' } }
+    })
+    $selected = $null
+    if ($family -eq 'auto') {
+        $selected = @($candidates | Where-Object Family -eq 'ipv4' | Select-Object -First 1)
+        if (-not $selected.Count) { $selected = @($candidates | Where-Object Family -eq 'ipv6' | Select-Object -First 1) }
+    }
+    elseif ($family -in @('ipv4','ipv6')) { $selected = @($candidates | Where-Object Family -eq $family | Select-Object -First 1) }
+    else { throw "Hysteria2 ClientTarget '$($ClientTarget.id)' has an unsupported ingress family." }
+    if (-not $selected.Count) { throw "Hysteria2 ClientTarget '$($ClientTarget.id)' has no '$family' ingress." }
+    $node = $selected[0].Node
+    $port = Get-NodeValue -Body $node.Body -Key 'port' -Required
+    $portNumber = 0
+    if (-not [int]::TryParse($port, [ref]$portNumber) -or $portNumber -lt 1 -or $portNumber -gt 65535) { throw "Node '$($node.Name)' has an invalid port." }
+    $auth = Get-NodeValue -Body $node.Body -Key 'password' -Required
+    $sni = Get-NodeValue -Body $node.Body -Key 'sni' -Required
+    $fingerprint = ConvertTo-NormalizedFingerprint -Value (Get-NodeValue -Body $node.Body -Key 'fingerprint' -Required) -NodeName $node.Name
+    $obfs = Get-NodeValue -Body $node.Body -Key 'obfs' -Required
+    if ($obfs -ne 'salamander') { throw "Node '$($node.Name)' uses unsupported Hysteria2 obfuscation." }
+    $config = [ordered]@{
+        server = ('{0}:{1}' -f (Format-UriHost $selected[0].Server), $portNumber)
+        auth = $auth
+        tls = [ordered]@{ sni = $sni; insecure = $true; pinSHA256 = $fingerprint }
+        obfs = [ordered]@{ type = 'salamander'; salamander = [ordered]@{ password = (Get-NodeValue -Body $node.Body -Key 'obfs-password' -Required) } }
+        http = [ordered]@{ listen = $listen }
+        socks5 = [ordered]@{ listen = $listen }
+    }
+    [IO.File]::WriteAllText($OutputPath, ($config | ConvertTo-Json -Depth 10), [Text.UTF8Encoding]::new($false))
+    Protect-RSTPath -Path $OutputPath
+    return [ordered]@{ client_target = [string]$ClientTarget.id; profile = [string]$Profile.id; renderer = 'hysteria2'; path = [IO.Path]::GetFullPath($OutputPath); node_count = 1; validation = 'official-json-structure-checked' }
+}
+
 function Get-SubscriptionUrl {
     param([Parameter(Mandatory)]$ClientTarget, [Parameter(Mandatory)][string]$PrivateDirectory)
     $reference = [string](Get-RSTOptional $ClientTarget 'subscription_secret_ref')
@@ -326,6 +374,7 @@ foreach ($target in $targets) {
     switch ([string]$target.renderer) {
         'mihomo' { $results.Add((Render-Mihomo -Inventory $inventory -Profile $profile -ClientTarget $target -PrivateDirectory $privateDirectory -OutputPath (Join-Path $OutputDirectory ($target.id + '.yaml')))) }
         'shadowrocket' { $results.Add((Render-Shadowrocket -Inventory $inventory -Profile $profile -ClientTarget $target -PrivateDirectory $privateDirectory -OutputPath (Join-Path $OutputDirectory ($target.id + '.html')))) }
+        'hysteria2' { $results.Add((Render-Hysteria2 -Inventory $inventory -Profile $profile -ClientTarget $target -PrivateDirectory $privateDirectory -OutputPath (Join-Path $OutputDirectory ($target.id + '.json')))) }
         default { throw "ClientTarget '$($target.id)' uses unsupported renderer '$($target.renderer)'." }
     }
 }

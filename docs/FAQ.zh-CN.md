@@ -6,7 +6,7 @@ Route Steward 帮助 AI agent 在你控制的 VPS 上搭建和管理私有代理
 
 ## 开始前需要什么？
 
-你需要在 Linux、macOS 或 Windows 电脑上安装 Route Steward release binary，并使用具备工具能力的 AI agent；还需要一台具备 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS，以及 Mihomo/Clash Verge 兼容软件或 Shadowrocket。relay route 需要两台 VPS。正常使用不需要 PowerShell 或 Node.js。
+你需要在 Linux、macOS 或 Windows 电脑上安装 Route Steward release binary，并使用具备工具能力的 AI agent；还需要一台具备 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS。客户端可以使用 Mihomo/Clash Verge 兼容软件、Shadowrocket，或内置的无 GUI Hysteria2 工作流。relay route 需要两台 VPS。正常使用不需要 PowerShell 或 Node.js。
 
 ## 如何安装？
 
@@ -43,6 +43,10 @@ inventory、凭据、生成的客户端文件、observed evidence 和 recovery a
 ## 替换服务器如何避免中断？
 
 `migrate-route` 会保存 overlap-first 迁移事务。它创建或复用替代容量，在不改变当前客户端输出的情况下完成部署，要求真实 Hysteria2 流量 health 为 healthy，之后才切换并验证受影响的 ClientTarget。部署、health、渲染或 subscription 发布失败会返回 `workflow-blocked`；以相同旧 Route 和替代 Server 重试即可确定性恢复。旧远端容量绝不会自动退役，销毁仍是之后单独、显式的破坏性操作。
+
+## Linux 服务器、脚本或 backend 能否不用 GUI app 直接使用 Route？
+
+可以。`hysteria2` ClientTarget 会选择一个已启用 Route 和一个 loopback 端口。`route-steward proxy --target <id> --check` 会验证真实 HTTP 流量和出口身份；不带 `--check` 时，命令以前台进程运行本地 HTTP/SOCKS5 代理。应用只需把 `HTTP_PROXY`、`HTTPS_PROXY` 或 SOCKS5 指向这个 loopback 地址。RST 自动生成官方客户端 JSON；它不会安装 system service，也不会把代理开放到局域网。
 
 ## 支持哪些主机、topology 和客户端？
 

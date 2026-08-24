@@ -385,6 +385,21 @@ func ValidateInventory(inv *Inventory, privateDir string, skipSecrets bool) erro
 			if (t.Delivery == "subscription") != (t.SubscriptionSecretRef != "") {
 				failures = append(failures, fmt.Sprintf("Shadowrocket ClientTarget %q has inconsistent subscription state", t.ID))
 			}
+		case "hysteria2":
+			if t.Delivery != "file" || t.SubscriptionSecretRef != "" {
+				failures = append(failures, fmt.Sprintf("Hysteria2 ClientTarget %q has invalid delivery", t.ID))
+			}
+			profile := findProfile(inv, t.Profile)
+			route := findRoute(inv, t.Route)
+			if route == nil || !route.Enabled || profile == nil || (!contains(profile.IncludeRoutes, "*") && !contains(profile.IncludeRoutes, t.Route)) {
+				failures = append(failures, fmt.Sprintf("Hysteria2 ClientTarget %q has invalid Route selection", t.ID))
+			}
+			if _, err := normalizeProxyListen(t.Listen); err != nil {
+				failures = append(failures, fmt.Sprintf("Hysteria2 ClientTarget %q has invalid loopback listener", t.ID))
+			}
+			if t.IngressFamily != "auto" && t.IngressFamily != "ipv4" && t.IngressFamily != "ipv6" {
+				failures = append(failures, fmt.Sprintf("Hysteria2 ClientTarget %q has invalid ingress family", t.ID))
+			}
 		default:
 			failures = append(failures, fmt.Sprintf("ClientTarget %q has unsupported renderer", t.ID))
 		}

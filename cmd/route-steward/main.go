@@ -17,7 +17,7 @@ func main() { os.Exit(run()) }
 
 func run() int {
 	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: route-steward <capabilities|bootstrap|context|drift|health|migrations|preflight|execute|mcp|backup|recover|version>")
+		fmt.Fprintln(os.Stderr, "usage: route-steward <capabilities|bootstrap|context|drift|health|migrations|proxy|preflight|execute|mcp|backup|recover|version>")
 		return 2
 	}
 	command := os.Args[1]
@@ -27,6 +27,44 @@ func run() int {
 	}
 	defaults := defaultPrivateDir()
 	switch command {
+	case "proxy":
+		fs := newFlags("proxy")
+		privateDir := fs.String("private-dir", defaults, "private state directory")
+		target := fs.String("target", "", "Hysteria2 ClientTarget id")
+		check := fs.Bool("check", false, "validate real proxy traffic and exit")
+		if err := fs.Parse(os.Args[2:]); err != nil {
+			return 2
+		}
+		if *target == "" {
+			fmt.Fprintln(os.Stderr, "--target is required")
+			return 2
+		}
+		state, err := steward.LoadState(absolute(*privateDir))
+		if err != nil {
+			envelope, exit := steward.SanitizedFailure("proxy", err)
+			writeEnvelope(envelope)
+			return exit
+		}
+		if *check {
+			result, err := steward.CheckClientProxy(context.Background(), state, *target)
+			if err != nil {
+				envelope, exit := steward.SanitizedFailure("proxy", err)
+				writeEnvelope(envelope)
+				return exit
+			}
+			success := result.Status == "healthy"
+			code, exit := "ok", 0
+			if !success {
+				code, exit = "proxy-check-failed", 4
+			}
+			writeEnvelope(steward.Envelope{SchemaVersion: 1, Command: "proxy", Success: success, Code: code, Data: result})
+			return exit
+		}
+		if err := steward.RunClientProxy(context.Background(), state, *target); err != nil {
+			fmt.Fprintln(os.Stderr, "Route Steward client proxy stopped locally.")
+			return 1
+		}
+		return 0
 	case "migrations":
 		fs := newFlags("migrations")
 		privateDir := fs.String("private-dir", defaults, "private state directory")

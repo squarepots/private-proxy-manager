@@ -103,16 +103,21 @@ function Add-RSTClientTarget {
     $id = ConvertTo-RSTId ([string]$Context.target_id)
     if (Get-RSTClientTargetById -Inventory $Inventory -Id $id -AllowMissing) { throw "ClientTarget '$id' already exists." }
     $renderer = [string]$Context.renderer
-    if ($renderer -notin @('mihomo','shadowrocket')) { throw "Unsupported ClientTarget renderer '$renderer'." }
+    if ($renderer -notin @('mihomo','shadowrocket','hysteria2')) { throw "Unsupported ClientTarget renderer '$renderer'." }
     $profileId = [string]$Context.profile_id
     $null = Get-RSTProfileById -Inventory $Inventory -Id $profileId
     $target = [ordered]@{
         id = $id
         profile = $profileId
         renderer = $renderer
-        delivery = if ($renderer -eq 'mihomo') { 'file' } else { [string](Get-RSTOptional $Context 'delivery' 'nodes') }
+        delivery = if ($renderer -eq 'shadowrocket') { [string](Get-RSTOptional $Context 'delivery' 'nodes') } else { 'file' }
     }
     if ($renderer -eq 'shadowrocket') { $target.qr = Get-RSTOptional $Context 'qr' ([ordered]@{ default_mode = 'batch'; target_utf8_bytes = 2400; size_px = 220; max_viewport_height = 40 }) }
+    if ($renderer -eq 'hysteria2') {
+        $target.route = [string](Get-RSTOptional $Context 'route_id')
+        $target.listen = [string](Get-RSTOptional $Context 'listen' '127.0.0.1:1080')
+        $target.ingress_family = [string](Get-RSTOptional $Context 'ingress_family' 'auto')
+    }
     $candidate = $Inventory | ConvertTo-Json -Depth 30 | ConvertFrom-Json
     $candidate.client_targets = @($candidate.client_targets) + [pscustomobject]$target
     Save-RSTInventory -Inventory $candidate -InventoryPath $InventoryPath
@@ -127,6 +132,11 @@ function Update-RSTClientTarget {
     if ($Context.PSObject.Properties['delivery']) {
         if ((Get-RSTOptional $target 'subscription_secret_ref') -and [string]$Context.delivery -ne 'subscription') { throw 'A subscription-backed ClientTarget must revoke its subscription state before changing delivery mode.' }
         $target.delivery = [string]$Context.delivery
+    }
+    if ([string]$target.renderer -eq 'hysteria2') {
+        if ($Context.PSObject.Properties['route_id']) { $target.route = [string]$Context.route_id }
+        if ($Context.PSObject.Properties['listen']) { $target.listen = [string]$Context.listen }
+        if ($Context.PSObject.Properties['ingress_family']) { $target.ingress_family = [string]$Context.ingress_family }
     }
     Save-RSTInventory -Inventory $candidate -InventoryPath $InventoryPath
     return $target
