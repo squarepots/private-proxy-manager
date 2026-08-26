@@ -119,3 +119,26 @@ jobs:
         run: npm run deploy:dry-run
       - name: Dependency audit
         run: npm audit --audit-level=low
+
+  ci:
+    name: CI
+    if: ${{ always() }}
+    needs: [go, static, windows-validation, release-candidate, worker]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every validation job to pass
+        env:
+          GO_RESULT: ${{ needs.go.result }}
+          STATIC_RESULT: ${{ needs.static.result }}
+          WINDOWS_VALIDATION_RESULT: ${{ needs.windows-validation.result }}
+          RELEASE_CANDIDATE_RESULT: ${{ needs.release-candidate.result }}
+          WORKER_RESULT: ${{ needs.worker.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for result in "$GO_RESULT" "$STATIC_RESULT" "$WINDOWS_VALIDATION_RESULT" "$RELEASE_CANDIDATE_RESULT" "$WORKER_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              echo "A validation job did not succeed: $result" >&2
+              exit 1
+            fi
+          done
