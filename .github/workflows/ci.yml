@@ -126,6 +126,8 @@ jobs:
     needs: [go, static, windows-validation, release-candidate, worker]
     runs-on: ubuntu-24.04
     steps:
+      - name: Intentional CI failure for ruleset verification
+        run: exit 1
       - name: Require every validation job to pass
         env:
           GO_RESULT: ${{ needs.go.result }}
