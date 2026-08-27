@@ -46,6 +46,9 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Localized documentation drafts outside README
+docs/*.zh-CN.md
+
 # Local Go toolchain and compiled binaries
 .tools/
 bin/
