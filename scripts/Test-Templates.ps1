@@ -20,6 +20,16 @@ function Reject-Text([string]$RelativePath, [string]$Pattern, [string]$Message) 
     if ($text -match $Pattern) { $script:failures.Add("${RelativePath}: $Message") }
 }
 
+function Require-IgnoredPath([string]$RelativePath) {
+    & git -C $repo check-ignore --quiet --no-index -- $RelativePath
+    if ($LASTEXITCODE -ne 0) { $script:failures.Add("${RelativePath}: generated or private path is not ignored.") }
+}
+
+function Reject-IgnoredPath([string]$RelativePath) {
+    & git -C $repo check-ignore --quiet --no-index -- $RelativePath
+    if ($LASTEXITCODE -eq 0) { $script:failures.Add("${RelativePath}: repository source path is unexpectedly ignored.") }
+}
+
 # Static server safety properties that are naturally proven from the mutation scripts.
 Require-Text 'server/install-path-components.sh' 'HYSTERIA_VERSION=v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)' 'The supported Hysteria2 binary is not pinned to a plain release version.'
 Require-Text 'server/install-path-components.sh' 'HYSTERIA_SHA256=[0-9a-f]{64}' 'The supported Hysteria2 binary is not hash-pinned.'
@@ -74,6 +84,31 @@ Require-Text 'scripts/Build-ReleaseArtifacts.sh' 'linux/amd64 linux/arm64 darwin
 Require-Text '.github/workflows/release.yml' 'ref:\s*\$\{\{ github\.sha \}\}' 'Release checkout is not pinned to the workflow event SHA.'
 Require-Text '.github/workflows/release.yml' 'git tag -a "\$tag" -m "\$tag" "\$EVENT_SHA"' 'Release tag is not created from the immutable workflow event SHA.'
 Reject-Text '.github/workflows/release.yml' 'git pull' 'Release workflow must not replace the event source with moving branch state.'
+foreach ($ignoredPath in @(
+    'private/inventory.json',
+    'nested/private/secrets/index.json',
+    'migrations.json',
+    'dist/route-steward_1.6.0_linux_amd64.tar.gz',
+    'bin/route-steward.exe',
+    'route-steward.exe',
+    'coverage/coverage.out',
+    'worker/node_modules/example/package.json',
+    'worker/dist/index.js',
+    'worker/.wrangler/state.json',
+    'worker/.dev.vars.local',
+    '.env.local',
+    'credentials.json',
+    'go.work',
+    'docs/notes.zh-CN.md'
+)) { Require-IgnoredPath $ignoredPath }
+foreach ($sourcePath in @(
+    '.env.example',
+    'credentials-guide.md',
+    'README.zh-CN.md',
+    'docs/TEST-PLAN.md',
+    'mcp/src/index.ts',
+    'worker/src/index.ts'
+)) { Reject-IgnoredPath $sourcePath }
 
 # Product identity and positioning stay plain at the public entry points.
 Require-Text 'README.md' 'private prox(?:y|ies)' 'The English README no longer states the product as private proxy management.'
