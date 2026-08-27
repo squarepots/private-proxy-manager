@@ -89,6 +89,14 @@ Reject-Text 'agent/route-steward-agent.ps1' "'run', './cmd/route-steward', '--'"
 Reject-Text '.agents/skills/route-steward/SKILL.md' 'go run ./cmd/route-steward --' 'The repository-URL workflow must use the real Go CLI command shape.'
 Reject-Text 'internal/steward/engine.go' 'repository_script' 'Local-assisted recovery or backup still exposes a legacy repository script as contract.'
 
+$trackedChineseDocs = @(& git -C $repo ls-files -- 'docs/*.zh-CN.md' | Where-Object { Test-Path -LiteralPath (Join-Path $repo $_) -PathType Leaf })
+if ($LASTEXITCODE -ne 0) {
+    $failures.Add('Unable to enumerate tracked localized documentation.')
+}
+elseif ($trackedChineseDocs.Count) {
+    $failures.Add('Chinese localized documentation is limited to README.zh-CN.md; remove tracked docs/*.zh-CN.md: ' + ($trackedChineseDocs -join ', '))
+}
+
 # GFM treats CJK text immediately after a bare URL as part of the link target.
 $unsafeCjkAutolinkPattern = 'https?://[A-Za-z0-9._~:/?#\[\]@!$&''()*+,;=%-]+(?=[\p{IsCJKUnifiedIdeographs}\u3000-\u303F\uFF00-\uFFEF])'
 $markdownFiles = @(& git -C $repo ls-files -- '*.md')
