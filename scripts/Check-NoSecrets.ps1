@@ -37,8 +37,20 @@ $violations = [Collections.Generic.List[string]]::new()
 
 foreach ($relative in $files) {
     $normalized = $relative.Replace('\', '/')
-    if ($normalized -match '(^|/)(private|exports|delivery|secrets)(/|$)' -or
-        $normalized -match '(?i)((?:^|/)(?:payload|client)(?:[-_.][^/]*)?\.ya?ml$|(?:^|/)[^/]+-(?:nodes|import|subscription)\.(?:txt|html)$|inventory\.json$|observed\.json$|client-render-manifest\.json$|RECOVERY-METADATA\.json$|SHA256SUMS$|\.zip$|\.7z$|\.pem$|\.pfx$|\.p12$|\.key$)') {
+    $forbiddenGeneratedOrSecretPath = (
+        $normalized -match '(^|/)(private|exports|delivery|secrets|node_modules|dist|coverage|output|\.cache|\.playwright-cli|\.wrangler|\.ssh|AppData|[^/]+\.clash-backup)(/|$)' -or
+        $normalized -match '^(?:\.tools|bin)/' -or
+        $normalized -match '(?i)(?:^|/)(?:payload|client)(?:[-_.][^/]*)?\.ya?ml$' -or
+        $normalized -match '(?i)(?:^|/)[^/]+-(?:nodes|import|subscription)\.(?:txt|html)$' -or
+        $normalized -match '(?i)(?:^|/)(?:inventory|observed|migrations|client-render-manifest|RECOVERY-METADATA|worker-secrets)\.json$' -or
+        $normalized -match '(?i)(?:^|/)(?:SHA256SUMS|cache\.db|profiles\.yaml|credentials(?:\.[^/]+)?|(?:coverage|cover)\.out|coverage\.html)$' -or
+        $normalized -match '(?i)(?:^|/)\.env(?:\.(?!example$)[^/]+)?$' -or
+        $normalized -match '(?i)(?:^|/)\.dev\.vars(?:\..+)?$' -or
+        $normalized -match '(?i)(?:^|/)worker-configuration\.d\.ts$' -or
+        $normalized -match '(?i)(?:^|/)route-steward(?:\.exe)?$' -or
+        $normalized -match '(?i)\.(?:tar|tar\.gz|tgz|tar\.xz|tar\.bz2|tar\.zst|zip|7z|pem|pfx|p12|key|crt|cer|log|decrypted\.yaml|runtime\.yaml|tfstate(?:\..+)?|coverprofile|prof|pprof|test|test\.exe)$'
+    )
+    if ($forbiddenGeneratedOrSecretPath) {
         $violations.Add("forbidden generated/secret path: $relative")
         continue
     }

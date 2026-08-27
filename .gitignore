@@ -2,12 +2,17 @@
 private/
 exports/
 delivery/
+secrets/
 .cache/
 .playwright-cli/
 output/
-**/private/
-**/exports/
-**/delivery/
+inventory.json
+observed.json
+migrations.json
+client-render-manifest.json
+worker-secrets.json
+RECOVERY-METADATA.json
+SHA256SUMS
 *-client.yaml
 *-nodes.txt
 *-import.html
@@ -21,6 +26,12 @@ payload.yaml
 *.pfx
 *.crt
 *.cer
+*.tar
+*.tar.gz
+*.tgz
+*.tar.xz
+*.tar.bz2
+*.tar.zst
 *.zip
 *.7z
 *.log
@@ -34,7 +45,8 @@ cache.db
 profiles.yaml
 *.clash-backup/
 .ssh/
-credentials*
+credentials
+credentials.*
 *.tfstate*
 .env
 .env.*
@@ -42,21 +54,41 @@ credentials*
 
 # Editors and operating systems
 .DS_Store
+._*
 Thumbs.db
+Desktop.ini
 .idea/
 .vscode/
+.vs/
+*.swp
+*.swo
+*~
 
 # Localized documentation drafts outside README
 docs/*.zh-CN.md
 
 # Local Go toolchain and compiled binaries
-.tools/
-bin/
+/.tools/
+/bin/
+/dist/
+/route-steward
+/route-steward.exe
+/go.work
+/go.work.sum
+coverage/
+coverage.out
+cover.out
+coverage.html
+*.coverprofile
+*.prof
+*.pprof
+*.test
+*.test.exe
 
 # Cloudflare Worker local dependencies and state
 node_modules/
 worker/dist/
-worker/.wrangler/
+.wrangler/
 worker/worker-configuration.d.ts
 worker/.dev.vars
 worker/.dev.vars.*
