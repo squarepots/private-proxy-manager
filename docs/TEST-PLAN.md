@@ -22,19 +22,21 @@ infrastructure tests that require explicit operator authorization.
 
 Goal: confirm that the executable exposes the native Go machine surface.
 
-Source checkout:
+Normal URL-first use:
+
+```powershell
+route-steward capabilities
+```
+
+The executable must come from an installed binary or a Release archive verified against `SHA256SUMS`.
+
+Source-development checkout with Go 1.27 already available:
 
 ```powershell
 go run ./cmd/route-steward capabilities
 ```
 
-Portable repository toolchain on Windows:
-
-```powershell
-.\.tools\go\bin\go.exe run ./cmd/route-steward capabilities
-```
-
-Installed or built binary:
+Installed or locally built binary:
 
 ```powershell
 .\bin\route-steward.exe capabilities
@@ -53,7 +55,8 @@ Pass criteria:
 
 Goal: verify the native control plane, schemas, renderers, preflight logic, MCP
 surface, migration state machine, recovery behavior, and sanitized failure
-boundaries.
+boundaries. This path requires Go 1.27 and is for source development; normal
+users should not install Go just to operate Route Steward.
 
 Commands:
 
@@ -268,6 +271,9 @@ Pass criteria:
 
 - Each ClientTarget uses the expected Profile and Route selection.
 - Disabled Routes do not appear in output.
+- Mihomo process-name routing, when configured, creates an `Applications`
+  selection group and puts `PROCESS-NAME` rules after private-address direct
+  rules and before geography rules.
 - Karing output retains `skip-cert-verify: true`, ALPN, salamander obfuscation,
   and SHA-256 fingerprint.
 - A headless target selects exactly one enabled Route. Concurrent local runtimes
@@ -328,8 +334,10 @@ Before marking a PR ready:
 
 ## Local Environment Notes
 
-- Source validation requires Go 1.27. This repository can use
-  `.tools/go/bin/go.exe` on Windows when present.
+- Source validation requires Go 1.27. The validation scripts may use an existing
+  `go` on `PATH` or an already-present repository-local toolchain, but they do
+  not download or install Go. Normal operation should use a verified Release
+  binary.
 - Worker validation requires Node 24, npm, and the pinned Worker dependencies.
 - ShellCheck is required in hosted CI. A local machine without ShellCheck cannot
   fully replace CI.

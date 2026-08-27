@@ -245,6 +245,13 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 		if renderer != "" && renderer != "mihomo" && renderer != "karing" && renderer != "shadowrocket" && renderer != "hysteria2" {
 			conflicts = append(conflicts, "client-target-renderer-unsupported")
 		}
+		if hasField(context, "mihomo_process_names") {
+			if renderer != "" && renderer != "mihomo" {
+				conflicts = append(conflicts, "mihomo-process-names-require-mihomo-renderer")
+			} else if _, err := mihomoProcessNamesFromContext(context); err != nil {
+				conflicts = append(conflicts, "mihomo-process-names-invalid")
+			}
+		}
 		if renderer == "hysteria2" {
 			require("route_id")
 			routeID := stringField(context, "route_id")
@@ -277,13 +284,20 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 		} else if clientTarget(target) == nil {
 			conflicts = append(conflicts, "target-client-target-missing")
 		}
-		if !anyField(context, "profile_id", "delivery", "route_id", "listen", "ingress_family") {
+		if !anyField(context, "profile_id", "delivery", "route_id", "listen", "ingress_family", "mihomo_process_names") {
 			missing = append(missing, "client-target-change")
 		}
 		if id := stringField(context, "profile_id"); id != "" && profile(id) == nil {
 			conflicts = append(conflicts, "client-target-profile-missing")
 		}
 		if current := clientTarget(target); current != nil {
+			if hasField(context, "mihomo_process_names") {
+				if current.Renderer != "mihomo" {
+					conflicts = append(conflicts, "mihomo-process-names-require-mihomo-renderer")
+				} else if _, err := mihomoProcessNamesFromContext(context); err != nil {
+					conflicts = append(conflicts, "mihomo-process-names-invalid")
+				}
+			}
 			if current.Renderer == "hysteria2" {
 				profileID := defaultString(stringField(context, "profile_id"), current.Profile)
 				routeID := defaultString(stringField(context, "route_id"), current.Route)

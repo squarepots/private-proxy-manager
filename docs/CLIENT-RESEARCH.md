@@ -27,3 +27,19 @@ Primary evidence:
 - v2rayN supports Hysteria2 subscriptions but does not close the iOS/Android platform gap, and its current certificate-validation semantics are still changing. It remains protocol-compatible, not Route Steward-supported. Evidence: [official subscription formats](https://github.com/2dust/v2rayN/wiki/Description-of-subscription) and [current Hysteria2 subscription regression](https://github.com/2dust/v2rayN/issues/9985).
 
 Adding either client later requires a complete import artifact that preserves certificate identity plus an app-specific maintained validation contract.
+
+## Mihomo process-name routing
+
+Research date: 2026-08-28.
+
+The selected behavior is a Mihomo-only ClientTarget feature for app- or game-specific routing in Clash Verge-compatible clients. The reusable Profile continues to select Routes, Providers, and policy; concrete process names are target-specific local client behavior and remain private.
+
+Mihomo's official route-rule documentation lists `PROCESS-NAME` as a rule type and states that route rules are matched from top to bottom by priority. Its general configuration documents `find-process-mode: strict` as the default process matching mode, and the TUN documentation covers process/package-related routing inputs. RST therefore renders plain `PROCESS-NAME` rules, sets `find-process-mode: strict`, and places those rules after private-address direct rules but before geography rules so LAN/private destinations stay direct while selected processes can be manually routed through either `DIRECT` or the selected Profile route.
+
+RST intentionally does not expose process paths, wildcards, regular expressions, or app-specific hard-coded defaults. Process names are limited to plain executable/package names, are accepted only on Mihomo ClientTargets, and appear in sanitized context only as counts.
+
+Primary evidence:
+
+- [Mihomo route rules and `PROCESS-NAME`](https://wiki.metacubex.one/en/config/rules/)
+- [Mihomo process matching mode](https://wiki.metacubex.one/en/config/general/#process-matching-mode)
+- [Mihomo TUN configuration](https://wiki.metacubex.one/en/config/inbound/tun/)

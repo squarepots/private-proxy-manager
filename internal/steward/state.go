@@ -389,6 +389,13 @@ func ValidateInventory(inv *Inventory, privateDir string, skipSecrets bool) erro
 		if !profileSet[t.Profile] {
 			failures = append(failures, fmt.Sprintf("ClientTarget %q references an unknown Profile", t.ID))
 		}
+		if len(t.MihomoProcessNames) > 0 {
+			if t.Renderer != "mihomo" {
+				failures = append(failures, fmt.Sprintf("ClientTarget %q has Mihomo process names but is not a Mihomo renderer", t.ID))
+			} else if _, err := validateMihomoProcessNames(t.MihomoProcessNames); err != nil {
+				failures = append(failures, fmt.Sprintf("ClientTarget %q has invalid Mihomo process names", t.ID))
+			}
+		}
 		switch t.Renderer {
 		case "mihomo", "karing":
 			if t.Delivery != "file" || t.SubscriptionSecretRef != "" {

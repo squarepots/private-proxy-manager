@@ -46,7 +46,7 @@ Clean bootstrap creates a valid neutral inventory, empty secret index, and empty
 
 | Capability | Supported contract |
 | --- | --- |
-| Mihomo | Private YAML output for Mihomo/Clash Verge-compatible clients |
+| Mihomo | Private YAML output for Mihomo/Clash Verge-compatible clients, with optional target-scoped `PROCESS-NAME` routing |
 | Karing | Private Clash YAML imported from a local file; compatibility baseline 1.2.23.2606; Windows, macOS, Linux, iOS, Android, and tvOS |
 | Shadowrocket offline | Private node-import HTML generated without external page resources |
 | Shadowrocket subscription | Optional isolated Cloudflare Worker delivery for one ClientTarget |
@@ -55,6 +55,8 @@ Clean bootstrap creates a valid neutral inventory, empty secret index, and empty
 | `balanced-cn` policy | Explicit opt-in only |
 
 A ClientTarget selects the renderer and delivery. Its referenced Profile selects Routes, optional Providers, and policy.
+
+The Mihomo renderer may also carry `mihomo_process_names` on the ClientTarget. Values are limited to plain executable/package names and are not accepted on Profiles or other renderers. When present, rendering sets Mihomo's process matching mode to `strict`, creates an `Applications` select group with `DIRECT` and `Private Routes`, and emits `PROCESS-NAME` rules after private-address direct rules and before geography rules. Sanitized context reports only process-name counts; concrete process names remain private.
 
 The `karing` renderer reuses the deterministic Clash YAML contract rather than maintaining a divergent approximation. Rendering fails unless every managed Hysteria2 node retains `skip-cert-verify: true`, Hysteria2 ALPN, salamander obfuscation, and a valid SHA-256 certificate fingerprint. Import the resulting `.yaml` with Karing's local Clash-file flow; no field editing is part of the supported setup. See the [client research record](CLIENT-RESEARCH.md) for the selection evidence and rejected candidates.
 

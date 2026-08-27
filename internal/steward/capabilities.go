@@ -33,8 +33,8 @@ func Capabilities() []Capability {
 		capability("add-profile", "agent", true, "local-write", "Add a reusable route/provider/policy selection Profile.", []ContextField{field("profile_id", "stable-id", true)}, "update-local-profile"),
 		capability("update-profile", "agent", true, "local-write", "Update a Profile selection without changing renderer identity.", []ContextField{target("profile-id", true)}, "update-local-profile"),
 		capability("remove-profile", "agent", true, "local-write", "Remove a Profile only when no ClientTarget references it.", []ContextField{target("profile-id", true)}, "remove-local-profile"),
-		capability("add-client-target", "agent", true, "local-write", "Add a renderer-backed ClientTarget that references a reusable Profile.", []ContextField{field("target_id", "stable-id", true), field("profile_id", "profile-id", true), field("renderer", "mihomo|karing|shadowrocket|hysteria2", true), {Name: "route_id", Type: "route-id", Required: false, When: "renderer is hysteria2"}, {Name: "listen", Type: "loopback-listener", Required: false, When: "renderer is hysteria2"}, {Name: "ingress_family", Type: "auto|ipv4|ipv6", Required: false, When: "renderer is hysteria2"}}, "update-local-client-target"),
-		capability("update-client-target", "agent", true, "local-write", "Update ClientTarget delivery/profile selection within the supported renderer contract.", []ContextField{target("client-target-id", true)}, "update-local-client-target"),
+		capability("add-client-target", "agent", true, "local-write", "Add a renderer-backed ClientTarget that references a reusable Profile.", []ContextField{field("target_id", "stable-id", true), field("profile_id", "profile-id", true), field("renderer", "mihomo|karing|shadowrocket|hysteria2", true), {Name: "mihomo_process_names", Type: "process-name-list-0-to-32", Required: false, When: "renderer is mihomo"}, {Name: "route_id", Type: "route-id", Required: false, When: "renderer is hysteria2"}, {Name: "listen", Type: "loopback-listener", Required: false, When: "renderer is hysteria2"}, {Name: "ingress_family", Type: "auto|ipv4|ipv6", Required: false, When: "renderer is hysteria2"}}, "update-local-client-target"),
+		capability("update-client-target", "agent", true, "local-write", "Update ClientTarget delivery/profile selection within the supported renderer contract.", []ContextField{target("client-target-id", true), field("profile_id", "profile-id", false), field("delivery", "file|subscription", false), {Name: "mihomo_process_names", Type: "process-name-list-0-to-32", Required: false, When: "current renderer is mihomo"}, {Name: "route_id", Type: "route-id", Required: false, When: "current renderer is hysteria2"}, {Name: "listen", Type: "loopback-listener", Required: false, When: "current renderer is hysteria2"}, {Name: "ingress_family", Type: "auto|ipv4|ipv6", Required: false, When: "current renderer is hysteria2"}}, "update-local-client-target"),
 		capability("remove-client-target", "agent", true, "local-write", "Remove a ClientTarget after any target-scoped subscription state is revoked.", []ContextField{target("client-target-id", true)}, "remove-local-client-target"),
 		capability("deploy-route", "core", true, "remote-write", "Deploy one existing desired Route.", []ContextField{target("route-id", true)}, "mutate-supported-dedicated-hosts", "render-private-client-artifacts"),
 		capability("render-client", "core", true, "local-write", "Render supported client artifacts from canonical state.", []ContextField{target("client-target-id", false)}, "write-private-client-artifacts"),
@@ -77,7 +77,7 @@ func DriverCapabilities() map[string]any {
 		"links":                 []any{map[string]any{"id": "wireguard-single-hop", "state": "supported", "hops": 1, "address_family": "ipv4"}},
 		"providers":             []any{map[string]any{"id": "mihomo-http-provider", "state": "supported", "optional": true, "schemes": []string{"https", "http"}, "health_check": false}},
 		"health_checks":         []any{map[string]any{"id": "hysteria2-client-traffic", "state": "supported", "routes": []string{"direct", "relay"}, "on_demand": true, "external_endpoints": []string{"cloudflare-trace", "ipify"}, "packet_loss": "unsupported"}},
-		"renderers":             []any{map[string]any{"id": "mihomo", "state": "supported", "clients": []string{"Clash Verge-compatible Mihomo clients"}}, map[string]any{"id": "karing", "state": "supported", "compatibility_baseline": karingCompatibilityBaseline, "delivery": []string{"private-clash-yaml"}, "platforms": []string{"windows", "macos", "linux", "ios", "android", "tvos"}, "tls_identity": "sha256-certificate-pinning"}, map[string]any{"id": "shadowrocket", "state": "supported", "delivery": []string{"node-import", "private-subscription"}}, map[string]any{"id": "hysteria2", "state": "supported", "delivery": []string{"private-json"}, "local_modes": []string{"http", "socks5"}, "runtime": "verified-official-client"}},
+		"renderers":             []any{map[string]any{"id": "mihomo", "state": "supported", "clients": []string{"Clash Verge-compatible Mihomo clients"}, "process_routing": map[string]any{"field": "mihomo_process_names", "rule": "PROCESS-NAME", "mode": "find-process-mode strict", "policy_group": "Applications", "process_name_limit": maxMihomoProcessNames, "rule_position": "after-private-direct-before-geography"}}, map[string]any{"id": "karing", "state": "supported", "compatibility_baseline": karingCompatibilityBaseline, "delivery": []string{"private-clash-yaml"}, "platforms": []string{"windows", "macos", "linux", "ios", "android", "tvos"}, "tls_identity": "sha256-certificate-pinning"}, map[string]any{"id": "shadowrocket", "state": "supported", "delivery": []string{"node-import", "private-subscription"}}, map[string]any{"id": "hysteria2", "state": "supported", "delivery": []string{"private-json"}, "local_modes": []string{"http", "socks5"}, "runtime": "verified-official-client"}},
 		"client_proxy":          []any{map[string]any{"id": "hysteria2-loopback", "state": "supported", "command": "proxy", "check": "real-http-exit-identity", "listen_scope": "loopback-only"}},
 		"subscription_delivery": []any{map[string]any{"id": "cloudflare-worker", "state": "supported", "optional": true, "role": "private-config-delivery-only"}},
 	}
@@ -99,9 +99,15 @@ func SanitizedContext(inv *Inventory) map[string]any {
 	for _, p := range inv.Profiles {
 		profiles = append(profiles, map[string]string{"id": p.ID, "policy": p.Policy})
 	}
-	targets := make([]map[string]string, 0, len(inv.ClientTargets))
+	targets := make([]map[string]any, 0, len(inv.ClientTargets))
+	processNameCount := 0
 	for _, t := range inv.ClientTargets {
-		targets = append(targets, map[string]string{"id": t.ID, "profile": t.Profile, "renderer": t.Renderer, "delivery": t.Delivery})
+		processNameCount += len(t.MihomoProcessNames)
+		target := map[string]any{"id": t.ID, "profile": t.Profile, "renderer": t.Renderer, "delivery": t.Delivery}
+		if t.Renderer == "mihomo" {
+			target["mihomo_process_name_count"] = len(t.MihomoProcessNames)
+		}
+		targets = append(targets, target)
 	}
 	operations := make([]map[string]string, 0, len(Capabilities()))
 	for _, c := range Capabilities() {
@@ -110,7 +116,7 @@ func SanitizedContext(inv *Inventory) map[string]any {
 	return map[string]any{
 		"schema_version":       1,
 		"inventory_schema":     inv.Schema,
-		"counts":               map[string]int{"servers": len(inv.Servers), "links": len(inv.Links), "routes": len(inv.Routes), "enabled_routes": enabledRoutes, "providers": len(inv.Providers), "enabled_providers": enabledProviders, "profiles": len(inv.Profiles), "client_targets": len(inv.ClientTargets)},
+		"counts":               map[string]int{"servers": len(inv.Servers), "links": len(inv.Links), "routes": len(inv.Routes), "enabled_routes": enabledRoutes, "providers": len(inv.Providers), "enabled_providers": enabledProviders, "profiles": len(inv.Profiles), "client_targets": len(inv.ClientTargets), "mihomo_process_names": processNameCount},
 		"profiles":             profiles,
 		"client_targets":       targets,
 		"supported_operations": operations,

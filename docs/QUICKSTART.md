@@ -2,24 +2,25 @@
 
 Route Steward helps an AI agent set up and manage a private proxy on VPS servers you control. The normal interface is one native executable for Linux, macOS, and Windows.
 
-## 1. Install the executable
+## 1. Install the Release executable
 
 Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases), verify it against `SHA256SUMS`, and place `route-steward` (or `route-steward.exe`) on your `PATH`.
 
-Developers can install from source with Go 1.27:
+Normal use does not require Go, PowerShell, or Node.js, and Route Steward does not install Go for you. Developers working from source need Go 1.27 and can use the same CLI through the source checkout:
 
 ```text
-go install github.com/squarepots/route-steward/cmd/route-steward@latest
+go run ./cmd/route-steward capabilities
+go test ./...
 ```
 
-Normal use does not require PowerShell or Node.js. Node.js is needed only for the optional Cloudflare Worker subscription publisher.
+Node.js is needed only for the optional Cloudflare Worker subscription publisher.
 
 ## 2. Give the repository to an agent
 
 Paste this into Codex or another agent that can read files and run local commands:
 
 ```text
-Open https://github.com/squarepots/route-steward and help me set up and manage a private proxy on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use the release binary or build the Go CLI. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
+Open https://github.com/squarepots/route-steward and help me set up and manage a private proxy on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use an installed Route Steward Release binary or download the correct Release archive and verify it against SHA256SUMS. Do not ask me to install Go for normal use. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
 ```
 
 The agent should begin with:
@@ -31,7 +32,7 @@ route-steward context --private-dir ./private
 route-steward drift --private-dir ./private
 ```
 
-For a source checkout, the same interface is available as `go run ./cmd/route-steward <command>`.
+For source development with Go 1.27 already available, the same interface is available as `go run ./cmd/route-steward <command>`.
 
 ## 3. Prepare the first proxy
 
@@ -86,6 +87,15 @@ route-steward execute --private-dir ./private --operation render-client --target
 ```
 
 In Karing, choose Add Profile, import a local Clash file, and select `<private>/delivery/karing-mobile.yaml`. Do not edit certificate, obfuscation, or routing fields; the generated file is the supported artifact and contains live credentials.
+
+For a Mihomo/Clash Verge-compatible target that needs app- or game-specific routing, keep the Profile reusable and add process names only to the Mihomo ClientTarget:
+
+```text
+route-steward execute --private-dir ./private --operation add-client-target --context-json '{"target_id":"desktop-apps","profile_id":"primary","renderer":"mihomo","mihomo_process_names":["launcher.exe","com.example.app"]}'
+route-steward execute --private-dir ./private --operation render-client --target desktop-apps
+```
+
+The generated private YAML adds an `Applications` policy group where the operator can manually choose `DIRECT` or `Private Routes`. Only the count of configured process names appears in sanitized context; the concrete names remain in private state and the private client artifact.
 
 ## 6. Use a Route from a Linux server or application
 

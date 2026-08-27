@@ -13,7 +13,7 @@ Route Steward は、管理する VPS 上のプライベートプロキシを AI 
 ## URL を AI agent に渡す
 
 ```text
-https://github.com/squarepots/route-steward を開き、自分のサーバーにプライベートプロキシを構築して管理するのを手伝ってください。必要なら clone し、AGENTS.md と .agents/skills/route-steward/SKILL.md を読んでから、公開バイナリを使うか Go CLI をビルドしてください。インフラ情報を尋ねる前に capabilities を実行してください。専用ホストの要件とシステムへの影響を説明し、運用状態を非公開に保ち、変更前には毎回 preflight を実行し、機密情報を除いた結果だけを返してください。
+https://github.com/squarepots/route-steward を開き、自分のサーバーにプライベートプロキシを構築して管理するのを手伝ってください。必要なら clone し、AGENTS.md と .agents/skills/route-steward/SKILL.md を読んでから、インストール済みの Route Steward Release バイナリを使うか、正しい Release アーカイブをダウンロードして SHA256SUMS で検証してください。通常利用のために Go のインストールを求めないでください。インフラ情報を尋ねる前に capabilities を実行してください。専用ホストの要件とシステムへの影響を説明し、運用状態を非公開に保ち、変更前には毎回 preflight を実行し、機密情報を除いた結果だけを返してください。
 ```
 
 ```text
@@ -22,10 +22,11 @@ route-steward bootstrap --private-dir ./private
 route-steward context --private-dir ./private
 ```
 
-通常利用に PowerShell や Node.js は不要です。[Releases](https://github.com/squarepots/route-steward/releases) から Linux、macOS、Windows 用バイナリを取得するか、Go 1.27 でインストールできます。
+通常利用に PowerShell、Node.js、Go ツールチェーンは不要です。[Releases](https://github.com/squarepots/route-steward/releases) から Linux、macOS、Windows 用の検証済みバイナリを取得してください。ソース開発には Go 1.27 が必要です。
 
 ```text
-go install github.com/squarepots/route-steward/cmd/route-steward@latest
+go run ./cmd/route-steward capabilities
+go test ./...
 ```
 
 Node.js は任意の Cloudflare Worker subscription delivery を選ぶ場合だけ必要です。
@@ -33,7 +34,7 @@ Node.js は任意の Cloudflare Worker subscription delivery を選ぶ場合だ�
 ## 得られるもの
 
 - 1 台のサーバーを使うプライベート Hysteria2 プロキシ、または 2 台を使う任意の WireGuard relay
-- Mihomo/Clash Verge 互換アプリ、Karing、Shadowrocket、または GUI 不要の Linux/アプリケーションプロキシ用の完全な private 設定
+- Mihomo/Clash Verge 互換アプリ（任意のプロセス別選択ルールを含む）、Karing、Shadowrocket、または GUI 不要の Linux/アプリケーションプロキシ用の完全な private 設定
 - read-only のサーバー audit、オンデマンドの実クライアント通信 health、設定 drift
 - health 確認後にクライアントを切り替え、旧容量を自動退役しない再開可能な overlap-first サーバー交換
 - 検証済みで移動可能な private state による暗号化ローカル復旧

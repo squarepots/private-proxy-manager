@@ -13,7 +13,7 @@ O Route Steward ajuda um agente de IA a configurar, inspecionar, trocar e recupe
 ## Entregue a URL a um agente de IA
 
 ```text
-Abra https://github.com/squarepots/route-steward e ajude-me a configurar e gerenciar um proxy privado nos meus próprios servidores. Clone o repositório se necessário, leia AGENTS.md e .agents/skills/route-steward/SKILL.md e depois use o binário publicado ou compile a CLI em Go. Execute capabilities antes de pedir dados de infraestrutura. Explique os requisitos de host dedicado e os efeitos no sistema, mantenha o estado operacional privado, execute preflight antes de cada mudança e devolva apenas resultados sanitizados.
+Abra https://github.com/squarepots/route-steward e ajude-me a configurar e gerenciar um proxy privado nos meus próprios servidores. Clone o repositório se necessário, leia AGENTS.md e .agents/skills/route-steward/SKILL.md e depois use um binário Release do Route Steward já instalado ou baixe o arquivo Release correto e verifique-o com SHA256SUMS. Não me peça para instalar Go no uso normal. Execute capabilities antes de pedir dados de infraestrutura. Explique os requisitos de host dedicado e os efeitos no sistema, mantenha o estado operacional privado, execute preflight antes de cada mudança e devolva apenas resultados sanitizados.
 ```
 
 ```text
@@ -22,10 +22,11 @@ route-steward bootstrap --private-dir ./private
 route-steward context --private-dir ./private
 ```
 
-O uso normal não exige PowerShell nem Node.js. Baixe o binário verificado para Linux, macOS ou Windows em [Releases](https://github.com/squarepots/route-steward/releases), ou instale pelo código-fonte com Go 1.27:
+O uso normal não exige PowerShell, Node.js nem a ferramenta Go. Baixe o binário verificado para Linux, macOS ou Windows em [Releases](https://github.com/squarepots/route-steward/releases). O desenvolvimento a partir do código-fonte exige Go 1.27:
 
 ```text
-go install github.com/squarepots/route-steward/cmd/route-steward@latest
+go run ./cmd/route-steward capabilities
+go test ./...
 ```
 
 Node.js só é usado quando você escolhe a entrega opcional de assinatura pelo Cloudflare Worker.
@@ -33,7 +34,7 @@ Node.js só é usado quando você escolhe a entrega opcional de assinatura pelo 
 ## O que você recebe
 
 - um proxy Hysteria2 privado por um servidor ou um relay WireGuard opcional por dois;
-- configuração privada completa para um app compatível com Mihomo/Clash Verge, Karing, Shadowrocket ou um proxy sem GUI para Linux/aplicações;
+- configuração privada completa para um app compatível com Mihomo/Clash Verge, incluindo regras opcionais por processo, Karing, Shadowrocket ou um proxy sem GUI para Linux/aplicações;
 - auditoria de servidor somente leitura, health real e sob demanda do tráfego cliente e drift de configuração tipado;
 - substituição retomável de servidor com sobreposição, troca de clientes condicionada por health e sem aposentadoria automática;
 - recuperação local criptografada com estado privado verificado e realocável;

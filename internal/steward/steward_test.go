@@ -3,6 +3,7 @@ package steward
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -251,6 +252,125 @@ func TestWindowsMihomoDiscoveryKeepsClashVergeLocations(t *testing.T) {
 	t.Setenv("LOCALAPPDATA", filepath.Join(root, "LocalAppData"))
 	if found := findMihomo(); filepath.Clean(found) != filepath.Clean(executable) {
 		t.Fatalf("Clash Verge Mihomo was not discovered: %q", found)
+	}
+}
+
+func TestMihomoProcessRoutingIsTargetScopedAndSanitized(t *testing.T) {
+	privateDir := filepath.Join(t.TempDir(), "private")
+	state, _, err := Bootstrap(privateDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AddServer(state, map[string]any{"server_id": "entry-a", "public_ipv4": "192.0.2.10", "ssh_user": "ubuntu", "ssh_key_path": filepath.Join(privateDir, "fixture.pem"), "host_ownership": "dedicated"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AddRoute(state, map[string]any{"route_id": "direct-a", "display_name": "Direct-A", "kind": "direct", "entry_server": "entry-a", "listen_port": 443}); err != nil {
+		t.Fatal(err)
+	}
+	for i := range state.Inventory.Routes {
+		state.Inventory.Routes[i].Enabled = true
+		state.Inventory.Routes[i].State = "deployed"
+	}
+	if err := state.Save(false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AddProfile(state, map[string]any{"profile_id": "primary", "policy": "balanced-cn", "include_routes": []any{"direct-a"}}); err != nil {
+		t.Fatal(err)
+	}
+	wrongRenderer, err := NewPreflight("add-client-target", "", state, map[string]any{"target_id": "karing", "profile_id": "primary", "renderer": "karing", "mihomo_process_names": []any{"launcher.exe"}}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wrongRenderer.Ready || !contains(wrongRenderer.Conflicts, "mihomo-process-names-require-mihomo-renderer") {
+		t.Fatalf("Mihomo process names were accepted for another renderer: %#v", wrongRenderer)
+	}
+	unsafeName, err := NewPreflight("add-client-target", "", state, map[string]any{"target_id": "desktop", "profile_id": "primary", "renderer": "mihomo", "mihomo_process_names": []any{`C:\Games\app.exe`}}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unsafeName.Ready || !contains(unsafeName.Conflicts, "mihomo-process-names-invalid") {
+		t.Fatalf("unsafe process name passed preflight: %#v", unsafeName)
+	}
+	tooMany := make([]any, maxMihomoProcessNames+1)
+	for i := range tooMany {
+		tooMany[i] = fmt.Sprintf("app-%02d.exe", i)
+	}
+	tooManyPreflight, err := NewPreflight("add-client-target", "", state, map[string]any{"target_id": "desktop", "profile_id": "primary", "renderer": "mihomo", "mihomo_process_names": tooMany}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tooManyPreflight.Ready || !contains(tooManyPreflight.Conflicts, "mihomo-process-names-invalid") {
+		t.Fatalf("oversized process list passed preflight: %#v", tooManyPreflight)
+	}
+	context := map[string]any{"target_id": "desktop", "profile_id": "primary", "renderer": "mihomo", "mihomo_process_names": []any{"launcher.exe", "com.example.app", "Launcher.exe"}}
+	preflight, err := NewPreflight("add-client-target", "", state, context, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !preflight.Ready {
+		t.Fatalf("valid Mihomo process routing preflight failed: %#v", preflight)
+	}
+	if _, err := AddClientTarget(state, context); err != nil {
+		t.Fatal(err)
+	}
+	if len(state.Inventory.ClientTargets[0].MihomoProcessNames) != 2 {
+		t.Fatalf("process names were not normalized and de-duplicated: %#v", state.Inventory.ClientTargets[0].MihomoProcessNames)
+	}
+	render, err := RenderClients(state, "desktop", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if render.Outputs[0].NodeCount != 1 {
+		t.Fatalf("unexpected render output: %#v", render.Outputs[0])
+	}
+	yamlBytes, err := os.ReadFile(filepath.Join(privateDir, "delivery", "desktop.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	yaml := string(yamlBytes)
+	for _, fragment := range []string{
+		"find-process-mode: strict\n",
+		"  - name: Applications\n    type: select\n    proxies:\n      - DIRECT\n      - Private Routes\n",
+		"  - PROCESS-NAME,com.example.app,Applications\n",
+		"  - PROCESS-NAME,launcher.exe,Applications\n",
+	} {
+		if !strings.Contains(yaml, fragment) {
+			t.Fatalf("Mihomo process routing output missed %q:\n%s", fragment, yaml)
+		}
+	}
+	privateRule := strings.Index(yaml, "  - IP-CIDR6,fe80::/10,DIRECT,no-resolve\n")
+	processRule := strings.Index(yaml, "  - PROCESS-NAME,com.example.app,Applications\n")
+	geoRule := strings.Index(yaml, "  - GEOSITE,CN,DIRECT\n")
+	if privateRule < 0 || processRule < 0 || geoRule < 0 || !(privateRule < processRule && processRule < geoRule) {
+		t.Fatalf("process rules were not ordered after private direct and before geography:\n%s", yaml)
+	}
+	sanitized := SanitizedContext(state.Inventory)
+	encoded, _ := json.Marshal(sanitized)
+	if strings.Contains(string(encoded), "launcher.exe") || strings.Contains(string(encoded), "com.example.app") {
+		t.Fatalf("sanitized context leaked process names: %s", encoded)
+	}
+	counts := sanitized["counts"].(map[string]int)
+	if counts["mihomo_process_names"] != 2 {
+		t.Fatalf("sanitized context did not expose only the process-name count: %#v", sanitized)
+	}
+	targets := sanitized["client_targets"].([]map[string]any)
+	if targets[0]["mihomo_process_name_count"] != 2 {
+		t.Fatalf("sanitized target did not expose process-name count: %#v", targets[0])
+	}
+	if _, err := UpdateClientTarget(state, "desktop", map[string]any{"mihomo_process_names": []any{}}); err != nil {
+		t.Fatal(err)
+	}
+	cleared, err := RenderClients(state, "desktop", true)
+	if err != nil || cleared.Outputs[0].ClientTarget != "desktop" {
+		t.Fatalf("render after clearing process routing failed: %#v err=%v", cleared, err)
+	}
+	clearedYAMLBytes, err := os.ReadFile(filepath.Join(privateDir, "delivery", "desktop.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	clearedYAML := string(clearedYAMLBytes)
+	if strings.Contains(clearedYAML, "Applications") || strings.Contains(clearedYAML, "PROCESS-NAME") {
+		t.Fatalf("cleared Mihomo process routing still rendered process rules:\n%s", clearedYAML)
 	}
 }
 
