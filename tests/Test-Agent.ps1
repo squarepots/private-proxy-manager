@@ -20,6 +20,8 @@ try {
         if (Test-Path -LiteralPath $portableGo -PathType Leaf) { $go = [pscustomobject]@{ Source = $portableGo } }
     }
     Assert-True ($null -ne $go) 'Go is unavailable for the source-checkout compatibility test.'
+    $goVersion = (& $go.Source env GOVERSION 2>$null | Out-String).Trim()
+    Assert-True ($LASTEXITCODE -eq 0 -and $goVersion -match '^go1\.27(?:\.|$)') "Go 1.27 is required for the source-checkout compatibility test; found '$goVersion'."
     Push-Location $repo
     try {
         $sourceVersion = (& $go.Source run ./cmd/route-steward version | Out-String).Trim()
@@ -81,6 +83,8 @@ try {
 	Assert-True ($capabilities.data.drivers.health_checks[0].id -eq 'hysteria2-client-traffic' -and $capabilities.data.drivers.health_checks[0].packet_loss -eq 'unsupported') 'Health capability truth is incomplete.'
     Assert-True ($capabilities.data.drivers.compute[0].transport -eq 'ssh') 'BYO SSH compute capability truth is missing.'
     Assert-True (@($capabilities.data.drivers.renderers | Where-Object id -eq 'mihomo').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'karing').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'shadowrocket').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'hysteria2').Count -eq 1) 'Client renderer capability truth is incomplete.'
+    $mihomoCapability = @($capabilities.data.drivers.renderers | Where-Object id -eq 'mihomo')[0]
+    Assert-True ($mihomoCapability.process_routing.rule -eq 'PROCESS-NAME' -and $mihomoCapability.process_routing.field -eq 'mihomo_process_names' -and $mihomoCapability.process_routing.process_name_limit -eq 32) 'Mihomo process-routing capability contract is incomplete.'
     $karingCapability = @($capabilities.data.drivers.renderers | Where-Object id -eq 'karing')[0]
     Assert-True ($karingCapability.compatibility_baseline -match '^(0|[1-9][0-9]*)\.' -and $karingCapability.tls_identity -eq 'sha256-certificate-pinning' -and @($karingCapability.platforms).Count -eq 6) 'Karing capability contract is incomplete.'
 
@@ -125,9 +129,10 @@ try {
     $profileContext = [ordered]@{ profile_id = 'primary'; include_routes = @('direct-a'); include_providers = @() } | ConvertTo-Json -Compress
     $addProfile = & $agent execute -PrivateDirectory $stage -Operation add-profile -ContextJson $profileContext | ConvertFrom-Json
     Assert-True ($addProfile.success -and $addProfile.data.result.id -eq 'primary') 'Explicit Profile creation failed.'
-    $targetContext = [ordered]@{ target_id = 'desktop'; profile_id = 'primary'; renderer = 'mihomo' } | ConvertTo-Json -Compress
+    $targetContext = [ordered]@{ target_id = 'desktop'; profile_id = 'primary'; renderer = 'mihomo'; mihomo_process_names = @('launcher.exe', 'com.example.app', 'Launcher.exe') } | ConvertTo-Json -Compress
     $addTarget = & $agent execute -PrivateDirectory $stage -Operation add-client-target -ContextJson $targetContext | ConvertFrom-Json
     Assert-True ($addTarget.success -and $addTarget.data.result.renderer -eq 'mihomo') 'Explicit ClientTarget creation failed.'
+    Assert-True ($addTarget.data.result.mihomo_process_name_count -eq 2) 'Mihomo process names were not de-duplicated in the sanitized result.'
 
     $deployPreflight = & $agent preflight -PrivateDirectory $stage -Operation deploy-route -Target direct-a | ConvertFrom-Json
     Assert-True ($deployPreflight.data.ready) 'A fully prepared local Route did not pass deploy preflight.'
@@ -136,6 +141,9 @@ try {
     $contextText = $context | ConvertTo-Json -Depth 20
     Assert-True ($context.data.inventory_schema -eq 1 -and -not $context.data.PSObject.Properties['mode']) 'Sanitized context did not preserve schema state or still exposed a deprecated mode.'
     Assert-True (-not ($contextText -match '192\.0\.2\.10|fixture\.pem|2001:db8')) 'Agent context leaked private infrastructure data.'
+    Assert-True ($context.data.counts.mihomo_process_names -eq 2) 'Sanitized context did not expose Mihomo process-name count.'
+    Assert-True (@($context.data.client_targets | Where-Object id -eq 'desktop')[0].mihomo_process_name_count -eq 2) 'Sanitized ClientTarget did not expose Mihomo process-name count.'
+    Assert-True (-not ($contextText -match 'launcher\.exe|com\.example\.app')) 'Agent context leaked concrete Mihomo process names.'
 
     [IO.File]::WriteAllText($archiveFixture, 'fixture-only-for-preflight', [Text.UTF8Encoding]::new($false))
     $recoveryContext = [ordered]@{ archive_path = $archiveFixture } | ConvertTo-Json -Compress

@@ -9,11 +9,11 @@ Keep these concepts separate:
 - `Profile` — reusable Route / Provider / policy selection. It is not a renderer and not a device identity.
 - `ClientTarget` — references one Profile and declares the renderer/delivery contract for a concrete client output.
 
-Multiple ClientTargets may reuse one Profile. Renderer behavior comes only from `ClientTarget.renderer`; Profiles contain reusable selection state and no renderer compatibility marker.
+Multiple ClientTargets may reuse one Profile. Renderer behavior comes only from `ClientTarget.renderer`; Profiles contain reusable selection state and no renderer compatibility marker. Mihomo process routing is renderer-specific ClientTarget state; sanitized context reports only counts.
 
 ## Current first-class renderers
 
-- `mihomo`: file output for Mihomo-compatible clients such as Clash Verge-compatible clients.
+- `mihomo`: file output for Mihomo-compatible clients such as Clash Verge-compatible clients. Optional process routing belongs to `ClientTarget.mihomo_process_names`, not to a reusable Profile.
 - `karing`: private Clash YAML for Karing, compatibility baseline 1.2.23.2606. Import the generated `.yaml` through Karing's local Clash-file flow without editing it. The renderer requires the managed SHA-256 certificate pin on every Hysteria2 node.
 - `shadowrocket`: offline node import, or optional target-scoped private subscription delivery.
 - `hysteria2`: private official-client JSON for a Linux server, backend, script, or CI job. It selects one enabled Route from the referenced Profile and exposes HTTP and SOCKS5 on one loopback-only listener.
@@ -31,6 +31,10 @@ External documentation can establish that a client understands a format/protocol
 Third-party `Provider` nodes are optional. A private-only setup with zero Providers must render successfully.
 
 When a Profile explicitly includes Providers, compose only those enabled Provider IDs. Do not impose provider-specific grouping, naming, health checking, or routing policy that was not declared by the Profile.
+
+## Mihomo process routing
+
+Use `mihomo_process_names` only for a Mihomo ClientTarget. It accepts plain executable or package names such as `launcher.exe` or `com.example.app`; do not use paths, wildcards, regular expressions, display names, or app-specific hard-coded values. Rendering adds an `Applications` select group with `DIRECT` and `Private Routes`, sets `find-process-mode: strict`, and places `PROCESS-NAME` rules after private-address direct rules and before geography rules.
 
 The `hysteria2` renderer deliberately uses one explicitly selected managed Route. It does not compose Providers or apply GUI routing policy, and `auto` ingress selection prefers IPv4 before falling back to IPv6. Use distinct listener ports when multiple local proxies run concurrently.
 

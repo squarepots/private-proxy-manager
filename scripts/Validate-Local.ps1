@@ -28,7 +28,9 @@ try {
         $portableGo = Join-Path $repo '.tools\go\bin\go.exe'
         if (Test-Path -LiteralPath $portableGo -PathType Leaf) { $go = [pscustomobject]@{ Source = $portableGo } }
     }
-    if (-not $go) { throw 'Go 1.27 is required to validate a source checkout.' }
+    if (-not $go) { throw 'Go 1.27 is required to validate a source-development checkout. Normal users should use a verified Route Steward Release binary; this validation script does not install Go.' }
+    $goVersion = (& $go.Source env GOVERSION 2>$null | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or $goVersion -notmatch '^go1\.27(?:\.|$)') { throw "Go 1.27 is required to validate a source-development checkout; found '$goVersion'." }
     $gofmtName = 'gofmt'
     if ($env:OS -eq 'Windows_NT') { $gofmtName = 'gofmt.exe' }
     $gofmt = Join-Path (Split-Path -Parent $go.Source) $gofmtName

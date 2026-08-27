@@ -71,7 +71,7 @@ Inventory schema `1` is the current persisted desired-state compatibility bounda
 - **Route** declares `ingress.driver=hysteria2`.
 - **Provider** declares `source_type=mihomo-http` and a local `source_secret_ref`.
 - **Profile** selects Routes, optional Providers, and policy.
-- **ClientTarget** references a Profile and owns renderer/delivery identity.
+- **ClientTarget** references a Profile and owns renderer/delivery identity. Renderer-specific fields, such as Mihomo process names, stay on the ClientTarget rather than the reusable Profile.
 
 RST does not publish conversion logic for development-only schemas that were never public. Recovery accepts the current public desired-state schema only. There is no independent persisted `model_version` axis.
 
@@ -164,12 +164,14 @@ Renderers consume a ClientTarget plus its referenced Profile.
 
 Current renderers:
 
-- `mihomo` — private Hysteria2 Routes plus zero or more explicitly included generic Providers;
+- `mihomo` — private Hysteria2 Routes plus zero or more explicitly included generic Providers, with optional target-scoped process-name rules;
 - `karing` — the same deterministic private Clash YAML contract, with a Karing 1.2.23.2606 compatibility baseline and mandatory Hysteria2 certificate pinning;
 - `shadowrocket` — offline node import or target-scoped private subscription import;
 - `hysteria2` — official-client JSON for one explicitly selected managed Route, with HTTP and SOCKS5 sharing one loopback listener.
 
 A Provider is optional. A clean private-only setup must render without one. Blank Profile policy uses generic privacy behavior; geography-specific policies are explicit opt-ins.
+
+Mihomo process routing uses `ClientTarget.mihomo_process_names`, accepts only plain executable/package names, and is rejected for every other renderer. Generated Mihomo YAML sets `find-process-mode: strict`, adds an `Applications` select group with `DIRECT` and `Private Routes`, and emits `PROCESS-NAME` rules after private-address direct rules and before geography rules. Sanitized context reports only the number of configured process names.
 
 The headless renderer defaults to `127.0.0.1:1080` and `auto` ingress selection (IPv4 first, then IPv6). Public/LAN listeners fail closed. It does not silently compose Profile Providers or GUI policy, and separate concurrent targets need separate local ports.
 

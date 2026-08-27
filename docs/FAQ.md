@@ -6,11 +6,11 @@ Route Steward helps an AI agent set up and manage a private proxy on VPS servers
 
 ## What do I need before I start?
 
-You need the Route Steward release binary on a Linux, macOS, or Windows computer with a tool-capable AI agent and a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access. You can use Mihomo/Clash Verge-compatible software, Karing, Shadowrocket, or the built-in headless Hysteria2 workflow. A relay route uses two VPS hosts. PowerShell and Node.js are not required for normal use.
+You need the Route Steward Release binary on a Linux, macOS, or Windows computer with a tool-capable AI agent and a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access. You can use Mihomo/Clash Verge-compatible software, Karing, Shadowrocket, or the built-in headless Hysteria2 workflow. A relay route uses two VPS hosts. Go, PowerShell, and Node.js are not required for normal use.
 
 ## How do I install it?
 
-Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases), verify it with `SHA256SUMS`, and place the executable on your `PATH`. Developers can use `go install github.com/squarepots/route-steward/cmd/route-steward@latest` with Go 1.27.
+Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases), verify it with `SHA256SUMS`, and place the executable on your `PATH` or set `RST_ROUTE_STEWARD_BIN`. Developers working from a source checkout need Go 1.27; Route Steward does not install Go automatically.
 
 ## Why must the server be dedicated?
 
@@ -18,7 +18,7 @@ Initial setup prepares the whole host. It changes UFW defaults, swap/fstab, SSH,
 
 ## Can I start by giving the GitHub link to an AI agent?
 
-Yes. Use the prompt in the [Quickstart](QUICKSTART.md). A capable agent can clone the repository, read its instructions, obtain or build the executable, inspect machine-readable capabilities, explain prerequisites, and then gather the minimum context for your route.
+Yes. Use the prompt in the [Quickstart](QUICKSTART.md). A capable agent can clone the repository, read its instructions, use an installed verified Release binary or help verify a downloaded Release archive, inspect machine-readable capabilities, explain prerequisites, and then gather the minimum context for your route. Building from source is a developer path, not a normal-user prerequisite.
 
 ## Will the AI model see my server details?
 
@@ -43,6 +43,10 @@ No. Health is an on-demand check, not a monitoring service. It contacts ipify's 
 ## When should I use port hopping?
 
 Use optional `port_hopping` only when a network persistently throttles or filters particular UDP destination ports. RST supports one 2–8-port consecutive range beginning at the Route listener and renders it for Mihomo, Karing, Shadowrocket, and the headless official client. It does not help when UDP itself is blocked, and its health check validates a real range-configured client path rather than claiming to observe every periodic hop. See [Compatibility](COMPATIBILITY.md).
+
+## Can Mihomo route one application or game differently?
+
+Yes, for Mihomo/Clash Verge-compatible ClientTargets only. Add plain process names such as `launcher.exe` or Android package names to `mihomo_process_names` on the ClientTarget. The generated YAML creates an `Applications` policy group so the operator can manually choose `DIRECT` or the selected Profile route. Profiles remain reusable and do not store app-specific process names.
 
 ## How does server replacement avoid interruption?
 

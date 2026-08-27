@@ -407,6 +407,13 @@ func AddClientTarget(state *State, context map[string]any) (map[string]any, erro
 	if renderer != "mihomo" && renderer != "karing" && renderer != "shadowrocket" && renderer != "hysteria2" {
 		return nil, fmt.Errorf("unsupported ClientTarget renderer %q", renderer)
 	}
+	if hasField(context, "mihomo_process_names") && renderer != "mihomo" {
+		return nil, errors.New("mihomo_process_names requires the mihomo renderer")
+	}
+	processNames, err := mihomoProcessNamesFromContext(context)
+	if err != nil {
+		return nil, err
+	}
 	delivery := "file"
 	var qr json.RawMessage
 	if renderer == "shadowrocket" {
@@ -419,6 +426,9 @@ func AddClientTarget(state *State, context map[string]any) (map[string]any, erro
 		}
 	}
 	target := ClientTarget{ID: id, Profile: profileID, Renderer: renderer, Delivery: delivery, QR: qr}
+	if renderer == "mihomo" {
+		target.MihomoProcessNames = processNames
+	}
 	if renderer == "hysteria2" {
 		target.Route = stringField(context, "route_id")
 		target.Listen = defaultString(stringField(context, "listen"), "127.0.0.1:1080")
@@ -430,6 +440,9 @@ func AddClientTarget(state *State, context map[string]any) (map[string]any, erro
 		return nil, err
 	}
 	result := map[string]any{"id": id, "profile": profileID, "renderer": renderer, "delivery": delivery, "remote_changed": false}
+	if renderer == "mihomo" {
+		result["mihomo_process_name_count"] = len(target.MihomoProcessNames)
+	}
 	if renderer == "hysteria2" {
 		result["route"] = target.Route
 		result["listen"] = target.Listen
@@ -454,6 +467,16 @@ func UpdateClientTarget(state *State, target string, context map[string]any) (ma
 		}
 		t.Delivery = delivery
 	}
+	if hasField(context, "mihomo_process_names") {
+		if t.Renderer != "mihomo" {
+			return nil, errors.New("mihomo_process_names requires the mihomo renderer")
+		}
+		processNames, err := mihomoProcessNamesFromContext(context)
+		if err != nil {
+			return nil, err
+		}
+		t.MihomoProcessNames = processNames
+	}
 	if t.Renderer == "hysteria2" {
 		if hasField(context, "route_id") {
 			t.Route = stringField(context, "route_id")
@@ -469,6 +492,9 @@ func UpdateClientTarget(state *State, target string, context map[string]any) (ma
 		return nil, err
 	}
 	result := map[string]any{"id": t.ID, "profile": t.Profile, "renderer": t.Renderer, "delivery": t.Delivery, "remote_changed": false}
+	if t.Renderer == "mihomo" {
+		result["mihomo_process_name_count"] = len(t.MihomoProcessNames)
+	}
 	if t.Renderer == "hysteria2" {
 		result["route"] = t.Route
 		result["listen"] = t.Listen

@@ -155,6 +155,7 @@ type ClientTarget struct {
 	Profile               string          `json:"profile"`
 	Renderer              string          `json:"renderer"`
 	Delivery              string          `json:"delivery"`
+	MihomoProcessNames    []string        `json:"mihomo_process_names,omitempty"`
 	Route                 string          `json:"route,omitempty"`
 	Listen                string          `json:"listen,omitempty"`
 	IngressFamily         string          `json:"ingress_family,omitempty"`

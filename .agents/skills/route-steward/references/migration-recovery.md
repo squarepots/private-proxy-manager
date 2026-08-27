@@ -21,7 +21,7 @@ The old Route is removed from client selection only after the replacement is hea
 
 The encrypted recovery archive contains schema-1 desired state, secrets, SSH material, and any active migration checkpoint. Observed and render evidence can be regenerated. Restored migration stages are moved back to a revalidation point; query `migrations`, then resume the same source/replacement identity so deployment, audit, and health run again.
 
-Create an archive with `route-steward backup --private-dir <directory>`. Restore it into a clean destination with `route-steward recover --archive <path> --private-dir <directory>`. From a source checkout, replace `route-steward` with `go run ./cmd/route-steward`. The archive password is accepted only by the local 7-Zip prompt, never Agent/MCP JSON, process arguments, repository files, environment variables, or chat. Do not advertise old repository scripts as part of the recovery contract.
+Create an archive with `route-steward backup --private-dir <directory>`. Restore it into a clean destination with `route-steward recover --archive <path> --private-dir <directory>`. From a source-development checkout with Go 1.27 already available, replace `route-steward` with `go run ./cmd/route-steward`. The archive password is accepted only by the local 7-Zip prompt, never Agent/MCP JSON, process arguments, repository files, environment variables, or chat. Do not advertise old repository scripts as part of the recovery contract.
 
 Recovery sequence:
 
