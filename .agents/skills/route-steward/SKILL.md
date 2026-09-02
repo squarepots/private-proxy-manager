@@ -17,7 +17,7 @@ When the user gives you the repository or asks to use RST:
 
 1. Open or safely clone the supplied repository.
 2. Read root `AGENTS.md` and this Skill.
-3. Run `route-steward capabilities`. For normal URL-first use, prefer an installed Release binary or download the correct Release archive, verify it against `SHA256SUMS`, and use that executable. Do not ask the user to install Go and do not perform a system-level Go install. In a source-development checkout with Go 1.27 already available, use `go run ./cmd/route-steward capabilities`. Do not infer support from external product features.
+3. Run `route-steward capabilities`. For normal URL-first use, prefer an installed Release binary or obtain the matching OS/architecture archive from GitHub Releases using the existing environment, and use that executable. Do not ask the user to install Go and do not perform a system-level Go install. In a source-development checkout with Go 1.27 already available, use `go run ./cmd/route-steward capabilities`. Do not infer support from external product features.
 4. Run `go test ./...` before accepting real infrastructure context from a changed source-development checkout.
 5. Bootstrap only if private state is absent.
 6. Inspect sanitized context and drift before changing existing state.
@@ -47,7 +47,7 @@ If preflight is blocked:
 - `Link`: single-hop WireGuard connection between two Servers.
 - `Route`: direct or relay network path with Hysteria2 ingress.
 - `Provider`: optional generic Mihomo HTTP node source stored as a local secret.
-- `Profile`: reusable Route, Provider, and policy selection.
+- `Profile`: reusable Route, Provider, and explicit China/service routing selection.
 - `ClientTarget`: renderer and delivery identity referencing a Profile.
 - `desired`: canonical inventory schema 1.
 - `observed`: disposable sanitized audit evidence.

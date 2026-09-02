@@ -45,7 +45,7 @@ route-steward mcp --private-dir ./private
 - `add-link`: local WireGuard Link allocation and canonical keys.
 - `add-route`: local Hysteria2 Route allocation and canonical credentials.
 - `add-provider`, `update-provider`, `remove-provider`: optional generic Provider lifecycle.
-- `add-profile`, `update-profile`, `remove-profile`: reusable selection lifecycle.
+- `add-profile`, `update-profile`, `remove-profile`: reusable Route/Provider and explicit China/service routing lifecycle.
 - `add-client-target`, `update-client-target`, `remove-client-target`: renderer/delivery lifecycle.
 - `deploy-route`: deterministic remote deployment followed by audit and rendering.
 - `render-client`: private artifacts and hash-only render evidence.
@@ -57,7 +57,7 @@ route-steward mcp --private-dir ./private
 
 ## Neutral bootstrap
 
-Bootstrap does not select geography, Provider, policy, Profile, client, subscription delivery, or AI vendor. Gather actual context and create only the objects the user needs.
+Bootstrap does not select geography, Provider, Profile routing, client, subscription delivery, or AI vendor. Gather actual context and create only the objects the user needs.
 
 ## Remote ownership
 

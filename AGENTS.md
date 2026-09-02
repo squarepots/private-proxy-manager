@@ -5,7 +5,7 @@ Route Steward (RST) is agent-native lifecycle software for self-hosted network p
 ## First actions
 
 1. Read `.agents/skills/route-steward/SKILL.md`.
-2. Run `route-steward capabilities` before assuming support. For normal URL-first use, prefer an installed Release binary and verify the downloaded archive against `SHA256SUMS`; do not ask the user to install Go or perform a system-level Go install. Use `go run ./cmd/route-steward capabilities` only in a source-development checkout with Go 1.27 already available.
+2. Run `route-steward capabilities` before assuming support. For normal URL-first use, prefer an installed Release binary or obtain the matching OS/architecture archive from GitHub Releases using the existing environment; do not ask the user to install Go or perform a system-level Go install. Use `go run ./cmd/route-steward capabilities` only in a source-development checkout with Go 1.27 already available.
 3. Run `go test ./...` before using a changed source-development checkout with real infrastructure.
 4. Establish the operating boundary from `docs/OPERATING-BOUNDARY.md` for the selected infrastructure and network resources.
 5. Bootstrap only when private state is absent.
@@ -28,7 +28,7 @@ Keep the schema-1 object boundaries explicit:
 - Link: `driver=wireguard`, single hop;
 - Route: `ingress.driver=hysteria2`, direct or relay;
 - Provider: optional `source_type=mihomo-http`;
-- Profile: reusable Route, Provider, and policy selection;
+- Profile: reusable Route, Provider, and explicit China/service routing selection;
 - ClientTarget: renderer and delivery identity referencing a Profile.
 
 Clean bootstrap is neutral. Gather actual context before creating Profiles or ClientTargets.

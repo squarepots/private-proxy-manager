@@ -29,6 +29,17 @@ jobs:
         run: go mod verify
       - name: Test native control plane
         run: go test ./...
+      - name: Test pinned Mihomo provider/global compatibility
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mihomo_version='1.19.27'
+          mihomo_asset="mihomo-linux-amd64-v1-v${mihomo_version}.gz"
+          mihomo_path="$RUNNER_TEMP/mihomo"
+          curl --fail --location --retry 3 "https://github.com/MetaCubeX/mihomo/releases/download/v${mihomo_version}/${mihomo_asset}" | gzip -d > "$mihomo_path"
+          chmod +x "$mihomo_path"
+          RST_MIHOMO_TEST_BINARY="$mihomo_path" go test ./internal/steward -run '^TestMihomoGlobalCompatibility$' -count=1
       - name: Vet native control plane
         run: go vet ./...
       - name: Check Go formatting

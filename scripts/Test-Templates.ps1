@@ -121,7 +121,17 @@ Require-Text 'docs/COMPATIBILITY.md' 'route-steward capabilities` is the runtime
 Require-Text 'docs/OPERATING-BOUNDARY.md' 'owned by the operator or administered with the resource owner''s authorization' 'The authorized-infrastructure operating boundary is missing.'
 Require-Text 'internal/steward/engine.go' '"interface":\s*"agent-machine-surface"' 'The native machine surface product identity is incorrect.'
 Require-Text 'README.md' 'Do not ask me to install Go for normal use' 'The README URL-first prompt no longer keeps Go out of the normal-user path.'
-Require-Text 'docs/QUICKSTART.md' 'verify it against `SHA256SUMS`' 'The Quickstart no longer makes Release archive verification explicit.'
+Require-Text 'docs/QUICKSTART.md' 'matching Release archive from GitHub Releases' 'The Quickstart no longer explains the normal Release archive path.'
+Reject-Text 'README.md' 'SHA256SUMS' 'The English README retains the retired release checksum ceremony.'
+Reject-Text 'README.zh-CN.md' 'SHA256SUMS' 'The Chinese README retains the retired release checksum ceremony.'
+Reject-Text 'README.es.md' 'SHA256SUMS' 'The Spanish README retains the retired release checksum ceremony.'
+Reject-Text 'README.ja.md' 'SHA256SUMS' 'The Japanese README retains the retired release checksum ceremony.'
+Reject-Text 'README.pt-BR.md' 'SHA256SUMS' 'The Brazilian Portuguese README retains the retired release checksum ceremony.'
+Reject-Text 'docs/QUICKSTART.md' 'SHA256SUMS' 'The Quickstart retains the retired release checksum ceremony.'
+Reject-Text 'docs/FAQ.md' 'SHA256SUMS' 'The FAQ retains the retired release checksum ceremony.'
+Reject-Text 'AGENTS.md' 'SHA256SUMS' 'The canonical Agent instructions retain the retired release checksum ceremony.'
+Reject-Text '.agents/skills/route-steward/SKILL.md' 'SHA256SUMS' 'The repository Skill retains the retired release checksum ceremony.'
+Reject-Text 'agent/route-steward-agent.ps1' 'SHA256SUMS' 'The compatibility forwarder retains the retired release checksum ceremony.'
 Require-Text 'AGENTS.md' 'do not ask the user to install Go or perform a system-level Go install' 'The canonical Agent instructions no longer prohibit blind Go installation.'
 Require-Text '.agents/skills/route-steward/SKILL.md' 'do not perform a system-level Go install' 'The repository Skill no longer prohibits blind Go installation.'
 Require-Text 'agent/route-steward-agent.ps1' 'this script does not install Go' 'The compatibility forwarder no longer tells users that Go installation is outside its behavior.'
@@ -134,6 +144,7 @@ Reject-Text 'README.es.md' 'go install github\.com/squarepots/route-steward/cmd/
 Reject-Text 'README.ja.md' 'go install github\.com/squarepots/route-steward/cmd/route-steward@latest' 'The Japanese README still advertises Go install as a normal-user path.'
 Reject-Text 'README.pt-BR.md' 'go install github\.com/squarepots/route-steward/cmd/route-steward@latest' 'The Brazilian Portuguese README still advertises Go install as a normal-user path.'
 Require-Text 'docs/COMPATIBILITY.md' 'target-scoped `PROCESS-NAME` routing' 'Compatibility no longer documents Mihomo process routing.'
+Require-Text 'docs/FAQ.md' 'Provider nodes nested under `Private Routes` are not lost' 'FAQ no longer explains explicit Mihomo GLOBAL Provider visibility.'
 Require-Text 'OPERATIONS.md' 'ClientTarget\.mihomo_process_names' 'Operations no longer keeps Mihomo process routing on the ClientTarget.'
 Require-Text 'internal/steward/capabilities.go' '"rule": "PROCESS-NAME"' 'Capability discovery no longer exposes the Mihomo PROCESS-NAME rule contract.'
 Require-Text 'internal/steward/render.go' 'PROCESS-NAME,%s,Applications' 'The Mihomo renderer no longer emits PROCESS-NAME rules into the Applications group.'
@@ -172,7 +183,7 @@ if (Test-Path -LiteralPath $examplePath -PathType Leaf) {
 }
 else { $failures.Add('examples/inventory.example.json: required file is missing.') }
 
-$psFiles = Get-ChildItem -Path $repo -Recurse -Filter '*.ps1' | Where-Object { $_.FullName -notmatch '[\\/](?:private|\.cache|node_modules)[\\/]' }
+$psFiles = Get-ChildItem -Path $repo -Recurse -Filter '*.ps1' -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -notmatch '[\\/](?:private|\.cache|node_modules)[\\/]' }
 $strictUtf8 = [Text.UTF8Encoding]::new($false, $true)
 foreach ($file in $psFiles) {
     $bytes = [IO.File]::ReadAllBytes($file.FullName)

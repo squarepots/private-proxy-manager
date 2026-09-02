@@ -28,23 +28,25 @@ try {
         $portableGo = Join-Path $repo '.tools\go\bin\go.exe'
         if (Test-Path -LiteralPath $portableGo -PathType Leaf) { $go = [pscustomobject]@{ Source = $portableGo } }
     }
-    if (-not $go) { throw 'Go 1.27 is required to validate a source-development checkout. Normal users should use a verified Route Steward Release binary; this validation script does not install Go.' }
+    if (-not $go) { throw 'Go 1.27 is required to validate a source-development checkout. Normal users should use a matching Route Steward Release binary; this validation script does not install Go.' }
     $goVersion = (& $go.Source env GOVERSION 2>$null | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $goVersion -notmatch '^go1\.27(?:\.|$)') { throw "Go 1.27 is required to validate a source-development checkout; found '$goVersion'." }
     $gofmtName = 'gofmt'
     if ($env:OS -eq 'Windows_NT') { $gofmtName = 'gofmt.exe' }
     $gofmt = Join-Path (Split-Path -Parent $go.Source) $gofmtName
+    $goPackages = @('.', './client', './cmd/...', './internal/...', './server', './worker', './tests/...')
     Invoke-ValidationStep 'Native Go formatting' {
-        $goFiles = @(Get-ChildItem -Path $repo -Recurse -Filter '*.go' -File | Where-Object { $_.FullName -notmatch '[\\/](?:\.tools|bin)[\\/]' } | ForEach-Object FullName)
+        $goFiles = @(git -C $repo ls-files --cached --others --exclude-standard -- '*.go' | ForEach-Object { Join-Path $repo $_ })
+        if ($LASTEXITCODE -ne 0) { throw 'Could not enumerate public Go files for formatting.' }
         $unformatted = @(& $gofmt -l @goFiles)
         if ($LASTEXITCODE -ne 0 -or $unformatted.Count) { throw ('Go formatting failed: ' + ($unformatted -join ', ')) }
     }
     Invoke-ValidationStep 'Native Go module, tests and vet' {
         & $go.Source mod verify
         if ($LASTEXITCODE -ne 0) { throw 'go mod verify failed.' }
-        & $go.Source test ./... -timeout 180s
+        & $go.Source test @goPackages -timeout 180s
         if ($LASTEXITCODE -ne 0) { throw 'go test failed.' }
-        & $go.Source vet ./...
+        & $go.Source vet @goPackages
         if ($LASTEXITCODE -ne 0) { throw 'go vet failed.' }
     }
     Invoke-ValidationStep 'Native executable' {

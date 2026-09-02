@@ -70,7 +70,7 @@ Inventory schema `1` is the current persisted desired-state compatibility bounda
 - **Link** declares `driver=wireguard`.
 - **Route** declares `ingress.driver=hysteria2`.
 - **Provider** declares `source_type=mihomo-http` and a local `source_secret_ref`.
-- **Profile** selects Routes, optional Providers, and policy.
+- **Profile** selects Routes, optional Providers, and explicit China/service routing.
 - **ClientTarget** references a Profile and owns renderer/delivery identity. Renderer-specific fields, such as Mihomo process names, stay on the ClientTarget rather than the reusable Profile.
 
 RST does not publish conversion logic for development-only schemas that were never public. Recovery accepts the current public desired-state schema only. There is no independent persisted `model_version` axis.
@@ -99,7 +99,7 @@ Capability metadata is the source of truth when this document and code differ.
 Clean bootstrap creates valid schema-1 local state with:
 
 - no Server, Link, Route, or Provider assumptions;
-- an available policy catalog but no selected policy/Profile;
+- no selected Profile or routing policy assumptions;
 - no ClientTarget, device, application, or subscription assumption;
 - empty secret index and observed state;
 - private delivery/recovery directories under the selected private root.
@@ -130,7 +130,7 @@ A generic Provider is optional. Its URL is stored only in local secret storage. 
 
 ### Profile / ClientTarget
 
-Profile lifecycle changes reusable selection only. A new Profile does not silently select a geography-specific policy. ClientTarget lifecycle changes concrete renderer/delivery identity. Removing a Profile is blocked while a ClientTarget references it. Removing a subscription-backed ClientTarget is blocked until its external subscription state has been explicitly retired/revoked.
+Profile lifecycle changes reusable Route/Provider selection and explicit `routing.china_direct`/service bindings only. A new Profile defaults to no China-direct rules and no service bindings. A service binding must name an enabled Route already included in the Profile; the supported services are `openai` and `youtube`. ClientTarget lifecycle changes concrete renderer/delivery identity. Removing a Profile is blocked while a ClientTarget references it. Removing a subscription-backed ClientTarget is blocked until its external subscription state has been explicitly retired/revoked.
 
 ## Deployment ownership
 
@@ -169,9 +169,9 @@ Current renderers:
 - `shadowrocket` — offline node import or target-scoped private subscription import;
 - `hysteria2` — official-client JSON for one explicitly selected managed Route, with HTTP and SOCKS5 sharing one loopback listener.
 
-A Provider is optional. A clean private-only setup must render without one. Blank Profile policy uses generic privacy behavior; geography-specific policies are explicit opt-ins.
+A Provider is optional. A clean private-only setup must render without one. New Profiles use explicit routing with `china_direct=false` by default. A schema-1 Profile without `routing` remains readable through the legacy fallback (`balanced-cn` means China direct; `privacy` or blank means no China-direct rules), but explicit routing wins.
 
-Mihomo process routing uses `ClientTarget.mihomo_process_names`, accepts only plain executable/package names, and is rejected for every other renderer. Generated Mihomo YAML sets `find-process-mode: strict`, adds an `Applications` select group with `DIRECT` and `Private Routes`, and emits `PROCESS-NAME` rules after private-address direct rules and before geography rules. Sanitized context reports only the number of configured process names.
+Mihomo process routing uses `ClientTarget.mihomo_process_names`, accepts only plain executable/package names, and is rejected for every other renderer. Generated Mihomo YAML sets `find-process-mode: strict`, adds an `Applications` select group with `DIRECT` and `Private Routes`, and emits `PROCESS-NAME` rules after private-address direct rules and before Profile service/China rules. It also emits an explicit `GLOBAL` selector with managed nodes, `DIRECT`, `REJECT`, and included Provider sets. Sanitized context reports only the number of configured process names. TUN, system-proxy, auto-route, interface detection, and DNS-hijack remain client-owned.
 
 The headless renderer defaults to `127.0.0.1:1080` and `auto` ingress selection (IPv4 first, then IPv6). Public/LAN listeners fail closed. It does not silently compose Profile Providers or GUI policy, and separate concurrent targets need separate local ports.
 

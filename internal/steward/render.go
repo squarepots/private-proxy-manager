@@ -23,9 +23,10 @@ import (
 )
 
 type routeNode struct {
-	Name   string
-	Values map[string]string
-	Body   string
+	Name    string
+	RouteID string
+	Values  map[string]string
+	Body    string
 }
 
 type renderManifest struct {
@@ -152,6 +153,9 @@ func SanitizedRender(result RenderResult) RenderResult {
 }
 
 func renderClash(state *State, profile Profile, target ClientTarget, outputPath, renderer string, skipValidation bool) (RenderOutput, error) {
+	if err := validateProfileRouting(state.Inventory, profile); err != nil {
+		return RenderOutput{}, fmt.Errorf("Profile %q has invalid routing: %w", profile.ID, err)
+	}
 	nodes, bodies, err := profileNodes(state, profile)
 	if err != nil {
 		return RenderOutput{}, err
@@ -174,10 +178,7 @@ func renderClash(state *State, profile Profile, target ClientTarget, outputPath,
 	if err != nil {
 		return RenderOutput{}, err
 	}
-	policy := profile.Policy
-	if policy == "" {
-		policy = "privacy"
-	}
+	routing := effectiveProfileRouting(profile)
 	var providerBlock, providerUse strings.Builder
 	if len(providers) > 0 {
 		providerBlock.WriteString("proxy-providers:\n")
@@ -188,6 +189,20 @@ func renderClash(state *State, profile Profile, target ClientTarget, outputPath,
 		providerUse.WriteString("    use:\n")
 		for _, provider := range providers {
 			fmt.Fprintf(&providerUse, "      - %s\n", yamlQuote(provider.ID))
+		}
+	}
+	var globalGroup strings.Builder
+	if renderer == "mihomo" {
+		globalGroup.WriteString("  - name: GLOBAL\n    type: select\n    proxies:\n      - Private Routes\n")
+		for _, node := range nodes {
+			fmt.Fprintf(&globalGroup, "      - %s\n", yamlQuote(node.Name))
+		}
+		globalGroup.WriteString("      - DIRECT\n      - REJECT\n")
+		if len(providers) > 0 {
+			globalGroup.WriteString("    use:\n")
+			for _, provider := range providers {
+				fmt.Fprintf(&globalGroup, "      - %s\n", yamlQuote(provider.ID))
+			}
 		}
 	}
 	var nodeLines strings.Builder
@@ -203,13 +218,27 @@ func renderClash(state *State, profile Profile, target ClientTarget, outputPath,
 			fmt.Fprintf(&processRules, "  - PROCESS-NAME,%s,Applications\n", name)
 		}
 	}
-	dns := "dns:\n  enable: true\n  ipv6: true\n  listen: 0.0.0.0:1053\n  enhanced-mode: fake-ip\n  fake-ip-range: 198.18.0.1/16\n  use-system-hosts: false\n  respect-rules: true\n  default-nameserver:\n    - https://1.1.1.1/dns-query\n    - https://8.8.8.8/dns-query\n  proxy-server-nameserver:\n    - https://1.1.1.1/dns-query\n    - https://8.8.8.8/dns-query\n  nameserver:\n    - 'https://1.1.1.1/dns-query#Private Routes'\n    - 'https://8.8.8.8/dns-query#Private Routes'\n"
-	policyRules := ""
-	if policy == "balanced-cn" {
-		dns += "  nameserver-policy:\n    'geosite:private,cn':\n      - https://223.5.5.5/dns-query\n      - https://1.12.12.12/dns-query\n"
-		policyRules = "  - DOMAIN-SUFFIX,cn,DIRECT\n  - GEOSITE,CN,DIRECT\n  - GEOIP,CN,DIRECT,no-resolve\n"
+	dns := "dns:\n  enable: true\n  ipv6: true\n  enhanced-mode: fake-ip\n  fake-ip-range: 198.18.0.1/16\n  use-system-hosts: false\n  respect-rules: true\n  default-nameserver:\n    - https://1.1.1.1/dns-query\n    - https://8.8.8.8/dns-query\n  proxy-server-nameserver:\n    - https://1.1.1.1/dns-query\n    - https://8.8.8.8/dns-query\n  nameserver:\n    - 'https://1.1.1.1/dns-query#Private Routes'\n    - 'https://8.8.8.8/dns-query#Private Routes'\n"
+	var serviceGroups, serviceRules strings.Builder
+	createdGroups := map[string]bool{}
+	for _, binding := range routing.ServiceRoutes {
+		groupName := profileRouteGroupName(binding.Route)
+		if !createdGroups[groupName] {
+			serviceGroups.WriteString("  - name: " + groupName + "\n    type: select\n    proxies:\n")
+			for _, node := range nodes {
+				if node.RouteID == binding.Route {
+					fmt.Fprintf(&serviceGroups, "      - %s\n", yamlQuote(node.Name))
+				}
+			}
+			createdGroups[groupName] = true
+		}
+		fmt.Fprintf(&serviceRules, "  - GEOSITE,%s,%s\n", binding.Service, groupName)
 	}
-	text := "# route-steward: agent-native\n# Private file: contains live proxy credentials.\nmode: rule\n" + processMode + "ipv6: true\nprofile:\n  store-selected: true\n  store-fake-ip: true\ntun:\n  enable: true\n  stack: mixed\n  auto-route: true\n  strict-route: true\n  auto-detect-interface: true\n  dns-hijack:\n    - any:53\n\n" + dns + "\nproxies:\n" + strings.Join(bodies, "\n") + "\n\n" + providerBlock.String() + "proxy-groups:\n  - name: Private Routes\n    type: select\n    proxies:\n" + nodeLines.String() + providerUse.String() + processGroup.String() + "rules:\n  - DOMAIN,localhost,DIRECT\n  - DOMAIN-SUFFIX,local,DIRECT\n  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve\n  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve\n  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve\n  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve\n  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve\n  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve\n  - IP-CIDR6,::1/128,DIRECT,no-resolve\n  - IP-CIDR6,fc00::/7,DIRECT,no-resolve\n  - IP-CIDR6,fe80::/10,DIRECT,no-resolve\n" + processRules.String() + policyRules + "  - MATCH,Private Routes\n"
+	chinaRules := ""
+	if routing.ChinaDirect {
+		chinaRules = "  - DOMAIN-SUFFIX,cn,DIRECT\n  - GEOSITE,CN,DIRECT\n  - GEOIP,CN,DIRECT,no-resolve\n"
+	}
+	text := "# route-steward: agent-native\n# Private file: contains live proxy credentials.\nmode: rule\n" + processMode + "ipv6: true\nprofile:\n  store-selected: true\n  store-fake-ip: true\n\n" + dns + "\nproxies:\n" + strings.Join(bodies, "\n") + "\n\n" + providerBlock.String() + "proxy-groups:\n  - name: Private Routes\n    type: select\n    proxies:\n" + nodeLines.String() + providerUse.String() + globalGroup.String() + serviceGroups.String() + processGroup.String() + "rules:\n  - DOMAIN,localhost,DIRECT\n  - DOMAIN-SUFFIX,local,DIRECT\n  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve\n  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve\n  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve\n  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve\n  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve\n  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve\n  - IP-CIDR6,::1/128,DIRECT,no-resolve\n  - IP-CIDR6,fc00::/7,DIRECT,no-resolve\n  - IP-CIDR6,fe80::/10,DIRECT,no-resolve\n" + processRules.String() + serviceRules.String() + chinaRules + "  - MATCH,Private Routes\n"
 	if err := writeFileAtomic(outputPath, []byte(text), 0o600); err != nil {
 		return RenderOutput{}, err
 	}
@@ -319,13 +348,23 @@ func profileProviders(state *State, profile Profile) ([]providerRender, error) {
 		}
 		out = append(out, providerRender{ID: provider.ID, URL: value, Interval: provider.IntervalSeconds})
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, nil
+}
+
+func profileRouteGroupName(routeID string) string {
+	return "RST-Route-" + routeID
 }
 
 func profileNodes(state *State, profile Profile) ([]routeNode, []string, error) {
 	all := contains(profile.IncludeRoutes, "*")
 	routes := append([]Route(nil), state.Inventory.Routes...)
-	sort.Slice(routes, func(i, j int) bool { return routes[i].Order < routes[j].Order })
+	sort.Slice(routes, func(i, j int) bool {
+		if routes[i].Order == routes[j].Order {
+			return routes[i].ID < routes[j].ID
+		}
+		return routes[i].Order < routes[j].Order
+	})
 	nodes := []routeNode{}
 	bodies := []string{}
 	for _, route := range routes {
@@ -346,6 +385,9 @@ func profileNodes(state *State, profile Profile) ([]routeNode, []string, error) 
 		parsed, body, err := parseRoutePayload(string(data))
 		if err != nil {
 			return nil, nil, fmt.Errorf("Route %q: %w", route.ID, err)
+		}
+		for i := range parsed {
+			parsed[i].RouteID = route.ID
 		}
 		nodes = append(nodes, parsed...)
 		bodies = append(bodies, body)

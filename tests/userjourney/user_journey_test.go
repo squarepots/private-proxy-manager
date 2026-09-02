@@ -95,7 +95,7 @@ func TestInstalledCLIUserJourney(t *testing.T) {
 	h.mustExecute("add-provider", "", map[string]any{"provider_id": "spare", "url": "https://spare.example.invalid/list.yaml"})
 	h.mustExecute("update-provider", "spare", map[string]any{"display_name": "Temporary"})
 	h.mustExecute("remove-provider", "spare", nil)
-	h.mustExecute("add-profile", "", map[string]any{"profile_id": "primary", "policy": "privacy", "include_routes": []any{"*"}, "include_providers": []any{"optional-a"}})
+	h.mustExecute("add-profile", "", map[string]any{"profile_id": "primary", "include_routes": []any{"*"}, "include_providers": []any{"optional-a"}, "routing": map[string]any{"china_direct": false, "service_routes": []any{}}})
 	h.mustExecute("add-profile", "", map[string]any{"profile_id": "temporary", "policy": "privacy"})
 	h.mustExecute("update-profile", "temporary", map[string]any{"include_routes": []any{"direct-a"}})
 

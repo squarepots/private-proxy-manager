@@ -62,7 +62,6 @@ jobs:
             fi
             if release_json="$(gh release view "$tag" --json isDraft,assets 2>/dev/null)"; then
               expected_assets=(
-                SHA256SUMS
                 "route-steward_${version}_darwin_amd64.tar.gz"
                 "route-steward_${version}_darwin_arm64.tar.gz"
                 "route-steward_${version}_linux_amd64.tar.gz"

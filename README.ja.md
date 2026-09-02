@@ -13,7 +13,7 @@ Route Steward は、管理する VPS 上のプライベートプロキシを AI 
 ## URL を AI agent に渡す
 
 ```text
-https://github.com/squarepots/route-steward を開き、自分のサーバーにプライベートプロキシを構築して管理するのを手伝ってください。必要なら clone し、AGENTS.md と .agents/skills/route-steward/SKILL.md を読んでから、インストール済みの Route Steward Release バイナリを使うか、正しい Release アーカイブをダウンロードして SHA256SUMS で検証してください。通常利用のために Go のインストールを求めないでください。インフラ情報を尋ねる前に capabilities を実行してください。専用ホストの要件とシステムへの影響を説明し、運用状態を非公開に保ち、変更前には毎回 preflight を実行し、機密情報を除いた結果だけを返してください。
+https://github.com/squarepots/route-steward を開き、自分のサーバーにプライベートプロキシを構築して管理するのを手伝ってください。必要なら clone し、AGENTS.md と .agents/skills/route-steward/SKILL.md を読んでから、インストール済みの Route Steward Release バイナリを使うか、既存の環境で GitHub Releases から正しい Release アーカイブを取得してください。通常利用のために Go のインストールを求めないでください。インフラ情報を尋ねる前に capabilities を実行してください。専用ホストの要件とシステムへの影響を説明し、運用状態を非公開に保ち、変更前には毎回 preflight を実行し、機密情報を除いた結果だけを返してください。
 ```
 
 ```text
@@ -22,7 +22,7 @@ route-steward bootstrap --private-dir ./private
 route-steward context --private-dir ./private
 ```
 
-通常利用に PowerShell、Node.js、Go ツールチェーンは不要です。[Releases](https://github.com/squarepots/route-steward/releases) から Linux、macOS、Windows 用の検証済みバイナリを取得してください。ソース開発には Go 1.27 が必要です。
+通常利用に PowerShell、Node.js、Go ツールチェーンは不要です。[Releases](https://github.com/squarepots/route-steward/releases) から Linux、macOS、Windows 用の対応するバイナリアーカイブを取得してください。ソース開発には Go 1.27 が必要です。
 
 ```text
 go run ./cmd/route-steward capabilities

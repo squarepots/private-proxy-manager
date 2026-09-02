@@ -32,7 +32,7 @@ The workflow:
 - treats an already-published version as a no-op;
 - rejects a version lower than or equal to the latest release when no matching tag exists;
 - builds Linux, macOS, and Windows binaries for amd64 and arm64 from that exact commit;
-- creates an annotated `vX.Y.Z` tag on the existing `main` commit and a GitHub Release with archives, `SHA256SUMS`, the AGPL license, and the bundled dependency notices;
+- creates an annotated `vX.Y.Z` tag on the existing `main` commit and a GitHub Release with the six OS/architecture archives, the AGPL license, and the bundled dependency notices;
 - never calls the bump script, edits `version.txt`, creates a release commit, or opens a release PR.
 
 The repository `GITHUB_TOKEN` is the release credential. No long-lived release token is part of the normal contract.

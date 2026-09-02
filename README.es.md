@@ -13,7 +13,7 @@ Route Steward ayuda a un agente de IA a configurar, inspeccionar, cambiar y recu
 ## Entrega la URL a un agente de IA
 
 ```text
-Abre https://github.com/squarepots/route-steward y ayúdame a configurar y gestionar un proxy privado en mis propios servidores. Clona el repositorio si hace falta, lee AGENTS.md y .agents/skills/route-steward/SKILL.md, y usa un binario Release de Route Steward ya instalado o descarga el archivo Release correcto y verifícalo con SHA256SUMS. No me pidas instalar Go para el uso normal. Ejecuta capabilities antes de pedir datos de infraestructura. Explica los requisitos de host dedicado y los efectos sobre el sistema, conserva el estado operativo en privado, ejecuta preflight antes de cada cambio y devuelve resultados depurados.
+Abre https://github.com/squarepots/route-steward y ayúdame a configurar y gestionar un proxy privado en mis propios servidores. Clona el repositorio si hace falta, lee AGENTS.md y .agents/skills/route-steward/SKILL.md, y usa un binario Release de Route Steward ya instalado o obtén el archivo Release correcto desde GitHub Releases con el entorno existente. No me pidas instalar Go para el uso normal. Ejecuta capabilities antes de pedir datos de infraestructura. Explica los requisitos de host dedicado y los efectos sobre el sistema, conserva el estado operativo en privado, ejecuta preflight antes de cada cambio y devuelve resultados depurados.
 ```
 
 ```text
@@ -22,7 +22,7 @@ route-steward bootstrap --private-dir ./private
 route-steward context --private-dir ./private
 ```
 
-El uso normal no requiere PowerShell, Node.js ni la herramienta de Go. Descarga el binario verificado para Linux, macOS o Windows desde [Releases](https://github.com/squarepots/route-steward/releases). El desarrollo desde código fuente requiere Go 1.27:
+El uso normal no requiere PowerShell, Node.js ni la herramienta de Go. Obtén el archivo binario correspondiente para Linux, macOS o Windows desde [Releases](https://github.com/squarepots/route-steward/releases). El desarrollo desde código fuente requiere Go 1.27:
 
 ```text
 go run ./cmd/route-steward capabilities

@@ -494,25 +494,27 @@ func applyMigrationSelection(candidate *Inventory, txn *migrationTransaction, re
 	}
 	oldRoute.Enabled = restoreOld
 	newRoute.Enabled = !restoreOld
-	for i := range candidate.Profiles {
-		profile := &candidate.Profiles[i]
-		if contains(profile.IncludeRoutes, "*") {
-			continue
-		}
-		from, to := txn.SourceRoute, txn.ReplacementRoute
-		if restoreOld {
-			from, to = txn.ReplacementRoute, txn.SourceRoute
-		}
-		for index, routeID := range profile.IncludeRoutes {
-			if routeID == from {
-				profile.IncludeRoutes[index] = to
-			}
-		}
-		profile.IncludeRoutes = sortedUnique(profile.IncludeRoutes)
-	}
 	from, to := txn.SourceRoute, txn.ReplacementRoute
 	if restoreOld {
 		from, to = txn.ReplacementRoute, txn.SourceRoute
+	}
+	for i := range candidate.Profiles {
+		profile := &candidate.Profiles[i]
+		if !contains(profile.IncludeRoutes, "*") {
+			for index, routeID := range profile.IncludeRoutes {
+				if routeID == from {
+					profile.IncludeRoutes[index] = to
+				}
+			}
+			profile.IncludeRoutes = sortedUnique(profile.IncludeRoutes)
+		}
+		if profile.Routing != nil {
+			for index, binding := range profile.Routing.ServiceRoutes {
+				if binding.Route == from {
+					profile.Routing.ServiceRoutes[index].Route = to
+				}
+			}
+		}
 	}
 	for i := range candidate.ClientTargets {
 		target := &candidate.ClientTargets[i]

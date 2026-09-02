@@ -28,7 +28,7 @@ Normal URL-first use:
 route-steward capabilities
 ```
 
-The executable must come from an installed binary or a Release archive verified against `SHA256SUMS`.
+The executable must come from an installed binary or the matching OS/architecture archive from GitHub Releases.
 
 Source-development checkout with Go 1.27 already available:
 
@@ -336,7 +336,7 @@ Before marking a PR ready:
 
 - Source validation requires Go 1.27. The validation scripts may use an existing
   `go` on `PATH` or an already-present repository-local toolchain, but they do
-  not download or install Go. Normal operation should use a verified Release
+  not download or install Go. Normal operation should use a matching Release
   binary.
 - Worker validation requires Node 24, npm, and the pinned Worker dependencies.
 - ShellCheck is required in hosted CI. A local machine without ShellCheck cannot

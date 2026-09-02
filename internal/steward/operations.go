@@ -338,13 +338,22 @@ func AddProfile(state *State, context map[string]any) (map[string]any, error) {
 	if findProfile(state.Inventory, id) != nil {
 		return nil, fmt.Errorf("Profile %q already exists", id)
 	}
+	routing, hasRouting, err := profileRoutingFromContext(context)
+	if err != nil {
+		return nil, err
+	}
 	profile := Profile{ID: id, Policy: stringField(context, "policy"), IncludeRoutes: stringSliceField(context, "include_routes", []string{"*"}), IncludeProviders: stringSliceField(context, "include_providers", []string{})}
+	if hasRouting {
+		profile.Routing = routing
+	} else if !hasField(context, "policy") {
+		profile.Routing = defaultProfileRouting()
+	}
 	candidate := cloneInventory(state.Inventory)
 	candidate.Profiles = append(candidate.Profiles, profile)
 	if err := saveCandidate(state, candidate, false); err != nil {
 		return nil, err
 	}
-	return map[string]any{"id": id, "role": "route-provider-policy-selection", "remote_changed": false}, nil
+	return map[string]any{"id": id, "role": "route-provider-routing-selection", "remote_changed": false}, nil
 }
 
 func UpdateProfile(state *State, target string, context map[string]any) (map[string]any, error) {
@@ -361,6 +370,13 @@ func UpdateProfile(state *State, target string, context map[string]any) (map[str
 	}
 	if hasField(context, "include_providers") {
 		profile.IncludeProviders = stringSliceField(context, "include_providers", nil)
+	}
+	if hasField(context, "routing") {
+		routing, _, err := profileRoutingFromContext(context)
+		if err != nil {
+			return nil, err
+		}
+		profile.Routing = routing
 	}
 	if err := saveCandidate(state, candidate, false); err != nil {
 		return nil, err

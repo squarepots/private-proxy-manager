@@ -35,8 +35,8 @@ The core never branches on model/vendor identity. Runtime-specific files delegat
 - **Link** — first-class inter-server link. Initial driver: single-hop `wireguard`.
 - **Route** — logical network path offered to ClientTargets. A `direct` Route uses one Server; a `relay` Route references ingress Server, egress Server, and Link. Initial ingress driver: `hysteria2`.
 - **Provider** — optional upstream third-party node source. Initial source type: generic `mihomo-http`.
-- **Policy** — reusable client routing/DNS behavior where a renderer needs it.
-- **Profile** — reusable selection of Routes, optional Providers, and Policy. It is not a renderer or device identity.
+- **Policy** — legacy schema-1 client routing/DNS fields retained only for safe input compatibility.
+- **Profile** — reusable selection of Routes, optional Providers, and explicit China/service routing. It is not a renderer or device identity.
 - **ClientTarget** — concrete renderer/delivery identity referencing a Profile. Current renderers: `mihomo`, `karing`, `shadowrocket`, and headless `hysteria2`.
 - **Private subscription** — optional target-scoped delivery state for one Shadowrocket ClientTarget.
 
@@ -127,7 +127,7 @@ A renderer resolves one ClientTarget, follows its Profile reference, then consum
 
 For an enabled hopping Route, the renderer uses Hysteria's standard multi-port endpoint in every supported client contract. The headless client also uses the interoperable fixed 30-second UDP hop interval; arbitrary per-client interval controls are intentionally absent.
 
-Output filenames derive from ClientTarget IDs, not operating-system identities. With no explicit Profile policy, rendering uses the generic privacy behavior; geography-specific policy such as `balanced-cn` is opt-in only.
+Output filenames derive from ClientTarget IDs, not operating-system identities. Profiles now own explicit `routing.china_direct` and supported `service_routes` bindings to enabled Route IDs. A loaded schema-1 Profile without `routing` keeps a compatibility fallback (`balanced-cn` means China direct; `privacy` or blank means no China-direct rules), while an explicit routing object is authoritative.
 
 The agent path records a hash-only render manifest after successful rendering. Stale/missing output becomes `client-render-stale` without exposing private client material.
 

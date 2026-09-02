@@ -32,6 +32,11 @@ func TestKaringClientTargetRendersDeterministicPinnedClashImport(t *testing.T) {
 	if !strings.Contains(string(one), "skip-cert-verify: true") || !strings.Contains(string(one), "fingerprint: '") || !strings.Contains(string(one), "obfs: salamander") {
 		t.Fatal("Karing import artifact weakened or omitted the supported Hysteria2 TLS/obfuscation contract")
 	}
+	for _, forbidden := range []string{"\ntun:", "auto-route:", "strict-route:", "auto-detect-interface:", "dns-hijack:", "listen: 0.0.0.0:1053"} {
+		if strings.Contains(string(one), forbidden) {
+			t.Fatalf("Karing import artifact retained client-runtime ownership %q", forbidden)
+		}
+	}
 	if _, err := RenderClients(state, "karing-mobile", true); err != nil {
 		t.Fatal(err)
 	}
