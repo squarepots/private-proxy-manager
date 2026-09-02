@@ -210,6 +210,19 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 		if id := stringField(context, "profile_id"); id != "" && profile(id) != nil {
 			conflicts = append(conflicts, "profile-id-already-exists")
 		}
+		if routing, hasRouting, err := profileRoutingFromContext(context); err != nil {
+			conflicts = append(conflicts, "profile-routing-invalid")
+		} else if stringField(context, "profile_id") != "" {
+			candidate := Profile{ID: stringField(context, "profile_id"), Policy: stringField(context, "policy"), IncludeRoutes: stringSliceField(context, "include_routes", []string{"*"}), IncludeProviders: stringSliceField(context, "include_providers", []string{})}
+			if hasRouting {
+				candidate.Routing = routing
+			} else if !hasField(context, "policy") {
+				candidate.Routing = defaultProfileRouting()
+			}
+			if err := validateProfileRouting(inv, candidate); err != nil {
+				conflicts = append(conflicts, "profile-routing-invalid")
+			}
+		}
 		effects = append(effects, "update-local-profile-selection")
 	case "update-profile":
 		if target == "" {
@@ -217,8 +230,33 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 		} else if profile(target) == nil {
 			conflicts = append(conflicts, "target-profile-missing")
 		}
-		if !anyField(context, "policy", "include_routes", "include_providers") {
+		if !anyField(context, "policy", "include_routes", "include_providers", "routing") {
 			missing = append(missing, "profile-change")
+		}
+		if selected := profile(target); selected != nil {
+			candidate := *selected
+			candidate.IncludeRoutes = append([]string(nil), selected.IncludeRoutes...)
+			candidate.IncludeProviders = append([]string(nil), selected.IncludeProviders...)
+			candidate.Routing = cloneProfileRouting(selected.Routing)
+			if hasField(context, "policy") {
+				candidate.Policy = stringField(context, "policy")
+			}
+			if hasField(context, "include_routes") {
+				candidate.IncludeRoutes = stringSliceField(context, "include_routes", nil)
+			}
+			if hasField(context, "include_providers") {
+				candidate.IncludeProviders = stringSliceField(context, "include_providers", nil)
+			}
+			if hasField(context, "routing") {
+				if routing, _, err := profileRoutingFromContext(context); err != nil {
+					conflicts = append(conflicts, "profile-routing-invalid")
+				} else {
+					candidate.Routing = routing
+				}
+			}
+			if err := validateProfileRouting(inv, candidate); err != nil {
+				conflicts = append(conflicts, "profile-routing-invalid")
+			}
 		}
 		effects = append(effects, "update-local-profile-selection")
 	case "remove-profile":

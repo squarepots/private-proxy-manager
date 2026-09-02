@@ -15,7 +15,7 @@ Route Steward 帮助 AI agent 在你控制的 VPS 上搭建、检查、更换和
 把下面的提示词粘贴到 Codex 或其他能够读取文件并运行本地命令的 agent：
 
 ```text
-打开 https://github.com/squarepots/route-steward 并帮我在自己的服务器上搭建和管理私有代理。需要时先 clone；阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md，然后使用已安装的 Route Steward Release 二进制，或下载正确的 Release 归档并按 SHA256SUMS 校验。正常使用不要要求我安装 Go。先运行 capabilities，再向我询问基础设施信息。解释专用主机要求和整机影响；把运行状态保存在 private 目录；每次修改前运行 preflight；只返回脱敏结果。
+打开 https://github.com/squarepots/route-steward 并帮我在自己的服务器上搭建和管理私有代理。需要时先 clone；阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md，然后使用已安装的 Route Steward Release 二进制，或在现有环境中从 GitHub Releases 获取匹配的 Release 归档。正常使用不要要求我安装 Go。先运行 capabilities，再向我询问基础设施信息。解释专用主机要求和整机影响；把运行状态保存在 private 目录；每次修改前运行 preflight；只返回脱敏结果。
 ```
 
 agent 会从以下命令开始：
@@ -26,7 +26,7 @@ route-steward bootstrap --private-dir ./private
 route-steward context --private-dir ./private
 ```
 
-正常使用不需要 PowerShell、Node.js 或 Go 工具链。请从 [Releases](https://github.com/squarepots/route-steward/releases) 下载并校验 Linux、macOS 或 Windows 二进制。源码开发需要 Go 1.27：
+正常使用不需要 PowerShell、Node.js 或 Go 工具链。请从 [Releases](https://github.com/squarepots/route-steward/releases) 获取匹配的 Linux、macOS 或 Windows 二进制归档。源码开发需要 Go 1.27：
 
 ```text
 go run ./cmd/route-steward capabilities

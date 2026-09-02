@@ -53,7 +53,6 @@ for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 wi
   fi
 done
 
-(cd dist && sha256sum route-steward_* > SHA256SUMS && sha256sum -c SHA256SUMS)
 for package_dir in "${package_dirs[@]}"; do
   rm -rf -- "$package_dir"
 done

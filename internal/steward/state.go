@@ -41,10 +41,7 @@ func NewCleanInventory(privateDir string) *Inventory {
 			RecoveryDirectory: filepath.Join(privateDir, "recovery"),
 		},
 		Servers: []Server{}, Links: []Link{}, Routes: []Route{}, Providers: []Provider{},
-		Policies: []Policy{
-			{ID: "balanced-cn", Description: "LAN and China direct; overseas DNS follows the selected route.", DNSMode: "balanced-cn"},
-			{ID: "privacy", Description: "Ordinary DNS follows the selected route; domestic CDN performance may be lower.", DNSMode: "privacy"},
-		},
+		Policies: []Policy{},
 		Profiles: []Profile{}, ClientTargets: []ClientTarget{},
 	}
 }
@@ -371,7 +368,7 @@ func ValidateInventory(inv *Inventory, privateDir string, skipSecrets bool) erro
 		}
 	}
 	for _, p := range inv.Profiles {
-		if p.Policy != "" && !policySet[p.Policy] {
+		if p.Policy != "" && !policySet[p.Policy] && !legacyPolicyID(p.Policy) {
 			failures = append(failures, fmt.Sprintf("Profile %q references an unknown Policy", p.ID))
 		}
 		for _, id := range p.IncludeRoutes {
@@ -383,6 +380,9 @@ func ValidateInventory(inv *Inventory, privateDir string, skipSecrets bool) erro
 			if id != "*" && !providerSet[id] {
 				failures = append(failures, fmt.Sprintf("Profile %q references unknown Provider %q", p.ID, id))
 			}
+		}
+		if err := validateProfileRouting(inv, p); err != nil {
+			failures = append(failures, fmt.Sprintf("Profile %q has invalid routing: %v", p.ID, err))
 		}
 	}
 	for _, t := range inv.ClientTargets {

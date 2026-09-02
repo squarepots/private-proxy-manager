@@ -15,7 +15,7 @@ Route Steward helps an AI agent set up, inspect, change, and recover a private p
 Paste this prompt into Codex or another agent that can read files and run local commands:
 
 ```text
-Open https://github.com/squarepots/route-steward and help me set up and manage a private proxy on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use an installed Route Steward Release binary or download the correct Release archive and verify it against SHA256SUMS. Do not ask me to install Go for normal use. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
+Open https://github.com/squarepots/route-steward and help me set up and manage a private proxy on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use an installed Route Steward Release binary or obtain the matching Release archive from GitHub Releases using the existing environment. Do not ask me to install Go for normal use. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
 ```
 
 The agent starts with:
@@ -26,7 +26,7 @@ route-steward bootstrap --private-dir ./private
 route-steward context --private-dir ./private
 ```
 
-No PowerShell, Node.js, or Go toolchain is required for normal use. Download a verified binary for Linux, macOS, or Windows from [Releases](https://github.com/squarepots/route-steward/releases). Source development requires Go 1.27:
+No PowerShell, Node.js, or Go toolchain is required for normal use. Obtain the matching binary archive for Linux, macOS, or Windows from [Releases](https://github.com/squarepots/route-steward/releases). Source development requires Go 1.27:
 
 ```text
 go run ./cmd/route-steward capabilities
@@ -39,7 +39,7 @@ Node.js is used only when you choose the optional Cloudflare Worker subscription
 
 - a private Hysteria2 proxy through one server, or through an optional two-server WireGuard relay;
 - optional bounded Hysteria2 port hopping for per-port UDP throttling or filtering, with one tested client contract;
-- complete private configuration for a Mihomo/Clash Verge-compatible app, including optional per-process selection rules, Karing, Shadowrocket, or a headless Linux/application proxy;
+- complete private configuration for a Mihomo/Clash Verge-compatible app, including explicit Profile service/China routing, an emergency/global selector, optional per-process selection rules, Karing, Shadowrocket, or a headless Linux/application proxy;
 - read-only server audit, real on-demand client traffic health, and typed configuration drift;
 - resumable overlap-first server replacement with health-gated client switching and no automatic retirement;
 - encrypted local recovery with verified, relocatable private state;

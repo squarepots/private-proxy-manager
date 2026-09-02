@@ -10,7 +10,7 @@ You need the Route Steward Release binary on a Linux, macOS, or Windows computer
 
 ## How do I install it?
 
-Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases), verify it with `SHA256SUMS`, and place the executable on your `PATH` or set `RST_ROUTE_STEWARD_BIN`. Developers working from a source checkout need Go 1.27; Route Steward does not install Go automatically.
+Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases) using the existing environment, then run it from a user/project-local location; putting it on your `PATH` or setting `RST_ROUTE_STEWARD_BIN` is optional. Developers working from a source checkout need Go 1.27; Route Steward does not install Go automatically.
 
 ## Why must the server be dedicated?
 
@@ -18,7 +18,7 @@ Initial setup prepares the whole host. It changes UFW defaults, swap/fstab, SSH,
 
 ## Can I start by giving the GitHub link to an AI agent?
 
-Yes. Use the prompt in the [Quickstart](QUICKSTART.md). A capable agent can clone the repository, read its instructions, use an installed verified Release binary or help verify a downloaded Release archive, inspect machine-readable capabilities, explain prerequisites, and then gather the minimum context for your route. Building from source is a developer path, not a normal-user prerequisite.
+Yes. Use the prompt in the [Quickstart](QUICKSTART.md). A capable agent can clone the repository, read its instructions, use an installed Release binary or obtain the matching Release archive, inspect machine-readable capabilities, explain prerequisites, and then gather the minimum context for your route. Building from source is a developer path, not a normal-user prerequisite.
 
 ## Will the AI model see my server details?
 
@@ -44,9 +44,13 @@ No. Health is an on-demand check, not a monitoring service. It contacts ipify's 
 
 Use optional `port_hopping` only when a network persistently throttles or filters particular UDP destination ports. RST supports one 2–8-port consecutive range beginning at the Route listener and renders it for Mihomo, Karing, Shadowrocket, and the headless official client. It does not help when UDP itself is blocked, and its health check validates a real range-configured client path rather than claiming to observe every periodic hop. See [Compatibility](COMPATIBILITY.md).
 
-## Can Mihomo route one application or game differently?
+## Can Mihomo route one application differently?
 
 Yes, for Mihomo/Clash Verge-compatible ClientTargets only. Add plain process names such as `launcher.exe` or Android package names to `mihomo_process_names` on the ClientTarget. The generated YAML creates an `Applications` policy group so the operator can manually choose `DIRECT` or the selected Profile route. Profiles remain reusable and do not store app-specific process names.
+
+## How are Profile service routes and providers selected?
+
+The Profile owns explicit `china_direct` and `service_routes` settings. Supported service categories are `openai` and `youtube`, and each binding names an enabled Route ID already included in the Profile. Mihomo output emits deterministic `GEOSITE` rules and per-Route selectors, followed by one final `MATCH,Private Routes`. Mihomo also gets an explicit `GLOBAL` selector with managed nodes, `DIRECT`, `REJECT`, and included Provider sets; RST does not rely on the core's implicit built-in GLOBAL expansion. Provider nodes nested under `Private Routes` are not lost: the explicit `GLOBAL` `use` entries expose them as direct choices even when a client's built-in GLOBAL view would omit them. Karing receives the shared routing rules but not the Mihomo-only GLOBAL group.
 
 ## How does server replacement avoid interruption?
 

@@ -118,19 +118,16 @@
     }
   ],
   "providers": [],
-  "policies": [
-    {
-      "id": "privacy",
-      "description": "Ordinary DNS follows the selected route; domestic CDN performance may be lower.",
-      "dns_mode": "privacy"
-    }
-  ],
+  "policies": [],
   "profiles": [
     {
       "id": "primary",
-      "policy": "privacy",
       "include_routes": ["*"],
-      "include_providers": []
+      "include_providers": [],
+      "routing": {
+        "china_direct": false,
+        "service_routes": []
+      }
     }
   ],
   "client_targets": [

@@ -33,7 +33,7 @@ Inventory schema `1` is the persisted desired-state contract:
 - Link with `driver=wireguard`;
 - Route with `ingress.driver=hysteria2`;
 - optional Provider with `source_type=mihomo-http`;
-- Profile for reusable Route, Provider, and policy selection;
+- Profile for reusable Route, Provider, and explicit China/service routing selection;
 - ClientTarget for renderer and delivery identity.
 
 Product SemVer in `version.txt` is independent from inventory schema compatibility. Recovery accepts schema 1 and resets disposable observed evidence.
@@ -46,17 +46,18 @@ Clean bootstrap creates a valid neutral inventory, empty secret index, and empty
 
 | Capability | Supported contract |
 | --- | --- |
-| Mihomo | Private YAML output for Mihomo/Clash Verge-compatible clients, with optional target-scoped `PROCESS-NAME` routing |
+| Mihomo | Private YAML output for Mihomo/Clash Verge-compatible clients, with explicit `GLOBAL`/emergency selection, Provider `use` composition, Profile service routing, and optional target-scoped `PROCESS-NAME` routing; compatibility baseline Mihomo 1.19.27 |
 | Karing | Private Clash YAML imported from a local file; compatibility baseline 1.2.23.2606; Windows, macOS, Linux, iOS, Android, and tvOS |
 | Shadowrocket offline | Private node-import HTML generated without external page resources |
 | Shadowrocket subscription | Optional isolated Cloudflare Worker delivery for one ClientTarget |
 | Hysteria2 headless | Private official-client JSON plus foreground loopback HTTP/SOCKS5 runtime for one selected Route |
-| Default policy | Generic privacy DNS/routing behavior |
-| `balanced-cn` policy | Explicit opt-in only |
+| Profile routing | `routing.china_direct` plus `openai` and `youtube` service bindings to enabled included Route IDs |
 
-A ClientTarget selects the renderer and delivery. Its referenced Profile selects Routes, optional Providers, and policy.
+A ClientTarget selects the renderer and delivery. Its referenced Profile selects Routes, optional Providers, and explicit routing. A schema-1 Profile without `routing` remains readable through the legacy fallback: `balanced-cn` means China-direct rules, while `privacy` or blank means no China-direct rules. An explicit routing object is authoritative.
 
-The Mihomo renderer may also carry `mihomo_process_names` on the ClientTarget. Values are limited to plain executable/package names and are not accepted on Profiles or other renderers. When present, rendering sets Mihomo's process matching mode to `strict`, creates an `Applications` select group with `DIRECT` and `Private Routes`, and emits `PROCESS-NAME` rules after private-address direct rules and before geography rules. Sanitized context reports only process-name counts; concrete process names remain private.
+The shared Mihomo/Karing YAML leaves TUN, system-proxy, auto-route, strict-route, interface detection, and DNS-hijack ownership to the client. RST does not expose an externally reachable DNS listener. Mihomo receives an explicit `GLOBAL` selector listing managed Route nodes, `DIRECT`, `REJECT`, and included Provider sets; it does not depend on the core's implicit built-in GLOBAL expansion. Provider nodes nested under `Private Routes` remain available there, and the explicit `GLOBAL` `use` entries make them direct emergency choices instead of making their absence from a client's built-in GLOBAL view look like data loss. The final rule is always `MATCH,Private Routes`.
+
+The Mihomo renderer may also carry `mihomo_process_names` on the ClientTarget. Values are limited to plain executable/package names and are not accepted on Profiles or other renderers. When present, rendering sets Mihomo's process matching mode to `strict`, creates an `Applications` select group with `DIRECT` and `Private Routes`, and emits `PROCESS-NAME` rules after private-address direct rules and before Profile service/China rules. Sanitized context reports only process-name counts; concrete process names remain private.
 
 The `karing` renderer reuses the deterministic Clash YAML contract rather than maintaining a divergent approximation. Rendering fails unless every managed Hysteria2 node retains `skip-cert-verify: true`, Hysteria2 ALPN, salamander obfuscation, and a valid SHA-256 certificate fingerprint. Import the resulting `.yaml` with Karing's local Clash-file flow; no field editing is part of the supported setup. See the [client research record](CLIENT-RESEARCH.md) for the selection evidence and rejected candidates.
 

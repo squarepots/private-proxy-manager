@@ -219,6 +219,27 @@ func TestMigrationSwitchesAndRollsBackHeadlessRouteSelection(t *testing.T) {
 	}
 }
 
+func TestMigrationUpdatesExplicitProfileServiceBindings(t *testing.T) {
+	state, source, input := migrationFixture(t, "direct", false)
+	profile := findProfile(state.Inventory, "primary")
+	profile.Routing = &ProfileRouting{ServiceRoutes: []ProfileServiceRoute{{Service: "openai", Route: source.ID}}}
+	if err := state.Save(false); err != nil {
+		t.Fatal(err)
+	}
+	result, err := migrateRouteWith(context.Background(), state, source.ID, input, migrationTestDependencies(nil, "healthy"))
+	if err != nil || result.Status != "complete" {
+		t.Fatalf("migration did not complete: %#v err=%v", result, err)
+	}
+	profile = findProfile(state.Inventory, "primary")
+	if profile == nil || profile.Routing == nil || len(profile.Routing.ServiceRoutes) != 1 || profile.Routing.ServiceRoutes[0].Route != result.ReplacementRoute {
+		t.Fatalf("explicit service binding did not follow replacement Route: %#v", profile)
+	}
+	artifact, err := os.ReadFile(filepath.Join(state.Inventory.Delivery.Directory, "desktop.yaml"))
+	if err != nil || !strings.Contains(string(artifact), "GEOSITE,openai,RST-Route-"+result.ReplacementRoute) {
+		t.Fatalf("migrated artifact did not use the replacement service selector: err=%v artifact=%s", err, artifact)
+	}
+}
+
 func TestMigrationRollsBackFailedSubscriptionPublication(t *testing.T) {
 	state, source, input := migrationFixture(t, "direct", true)
 	deps := migrationTestDependencies(nil, "healthy")
@@ -386,7 +407,11 @@ func migrationTestDependencies(deployFailure error, healthStatus string) migrati
 		Health: func(_ context.Context, _ *State, routeID string, _ bool) (HealthResult, error) {
 			return HealthResult{SchemaVersion: 1, Route: routeID, Status: healthStatus}, nil
 		},
-		Render: RenderClients,
+		// Migration unit tests exercise desired-state switching; the pinned-core
+		// compatibility suite owns runtime config validation separately.
+		Render: func(state *State, target string, _ bool) (RenderResult, error) {
+			return RenderClients(state, target, true)
+		},
 		Publish: func(*State, string, map[string]any) (map[string]any, error) {
 			return map[string]any{"published": true}, nil
 		},

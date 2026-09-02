@@ -144,10 +144,11 @@ type Policy struct {
 }
 
 type Profile struct {
-	ID               string   `json:"id"`
-	Policy           string   `json:"policy"`
-	IncludeRoutes    []string `json:"include_routes"`
-	IncludeProviders []string `json:"include_providers"`
+	ID               string          `json:"id"`
+	Policy           string          `json:"policy,omitempty"`
+	IncludeRoutes    []string        `json:"include_routes"`
+	IncludeProviders []string        `json:"include_providers"`
+	Routing          *ProfileRouting `json:"routing,omitempty"`
 }
 
 type ClientTarget struct {
