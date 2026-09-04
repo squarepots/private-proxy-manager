@@ -37,9 +37,9 @@ if ($binary) {
 }
 
 $go = Get-Command go -ErrorAction SilentlyContinue
-if (-not $go) { throw 'Route Steward executable was not found. Normal URL-first use should obtain the matching Release archive from GitHub Releases and put route-steward on PATH or set RST_ROUTE_STEWARD_BIN. Source-development checkout fallback requires Go 1.27 already available; this script does not install Go.' }
+if (-not $go) { throw 'Route Steward was not found. Download the matching GitHub Release, set RST_ROUTE_STEWARD_BIN, or install Go 1.27 for source development.' }
 $goVersion = (& $go.Source env GOVERSION 2>$null | Out-String).Trim()
-if ($LASTEXITCODE -ne 0 -or $goVersion -notmatch '^go1\.27(?:\.|$)') { throw "Source-development checkout fallback requires Go 1.27 already available; found '$goVersion'. Normal users should use a matching Release binary." }
+if ($LASTEXITCODE -ne 0 -or $goVersion -notmatch '^go1\.27(?:\.|$)') { throw "Source development requires Go 1.27; found '$goVersion'." }
 $goArguments = @('run', './cmd/route-steward') + $arguments
 Push-Location $repo
 try {

@@ -1,61 +1,38 @@
 # ClientTargets
 
-RST does not replace proxy client apps. It renders/imports private infrastructure into supported clients.
+A `Profile` selects Routes, optional Providers, and China/service routing. A `ClientTarget` references a Profile and selects the renderer and delivery method. Multiple targets can reuse one Profile.
 
-## Client model
+## Renderers
 
-Keep these concepts separate:
+| Renderer | Output and use |
+| --- | --- |
+| `mihomo` | Private YAML for Mihomo/Clash Verge-compatible clients. Supports Profile service rules, a `GLOBAL` selector, Providers, and optional `mihomo_process_names`. |
+| `karing` | Private Clash YAML for Karing 1.2.23.2606 on Windows, macOS, Linux, iOS, Android, and tvOS. Import the generated file locally without editing it. |
+| `shadowrocket` | Offline node import or optional private subscription delivery. |
+| `hysteria2` | Official-client JSON for one enabled Route plus an HTTP/SOCKS5 listener bound to loopback. |
 
-- `Profile` — reusable Route / Provider selection plus explicit China/service routing. A legacy policy field is input-only compatibility state. It is not a renderer and not a device identity.
-- `ClientTarget` — references one Profile and declares the renderer/delivery contract for a concrete client output.
+Client applications control TUN, system proxy, active profiles, host routes, and other runtime capture settings.
 
-Multiple ClientTargets may reuse one Profile. Renderer behavior comes only from `ClientTarget.renderer`; Profiles contain reusable selection state and no renderer compatibility marker. Mihomo process routing is renderer-specific ClientTarget state; sanitized context reports only counts.
+Choose a renderer from the user's client when the match is clear. For an unfamiliar or version-sensitive client, check authoritative documentation and the current RST compatibility matrix.
 
-## Current first-class renderers
+## Mihomo and Providers
 
-- `mihomo`: file output for Mihomo-compatible clients such as Clash Verge-compatible clients. The renderer emits deterministic Profile service rules and an explicit `GLOBAL` selector using managed nodes, `DIRECT`, `REJECT`, and included Provider sets. Optional process routing belongs to `ClientTarget.mihomo_process_names`, not to a reusable Profile.
-- `karing`: private Clash YAML for Karing, compatibility baseline 1.2.23.2606. Import the generated `.yaml` through Karing's local Clash-file flow without editing it. The renderer requires the managed SHA-256 certificate pin on every Hysteria2 node.
-- `shadowrocket`: offline node import, or optional target-scoped private subscription delivery.
-- `hysteria2`: private official-client JSON for a Linux server, backend, script, or CI job. It selects one enabled Route from the referenced Profile and exposes HTTP and SOCKS5 on one loopback-only listener.
+`mihomo_process_names` accepts plain executable or package names. Rendering creates an `Applications` group, sets strict process matching, and places process rules after private-address rules and before Profile service and China rules. Sanitized output reports the count of configured names.
 
-Do not hard-code operating-system identities such as `windows` or `iphone` into core behavior. ClientTarget IDs are project identities, not operating-system drivers. The shared Mihomo/Karing YAML leaves TUN, system-proxy, auto-route, interface detection, and DNS-hijack ownership to the client.
+Profiles may include zero or more Providers. Mihomo exposes them through `Private Routes` and the explicit `GLOBAL` selector. Karing uses the shared routing rules without the Mihomo-specific `GLOBAL` group.
 
-## Choosing a target
+## Headless Hysteria2
 
-Infer the ClientTarget from the user's stated device/app when unambiguous. If current compatibility is version-sensitive or the app is unfamiliar, research authoritative client documentation before selecting a renderer.
+One target selects one enabled Route from its Profile. The listener is an IP-literal loopback address; concurrent targets need distinct ports. `auto` ingress tries IPv4 and then IPv6.
 
-External documentation can establish that a client understands a format/protocol; it does not make that client supported by RST. If there is no RST renderer/tested import contract, describe it as unsupported rather than improvising a config.
+Use `route-steward proxy --target <id> --check` before depending on a target. It renders the JSON, obtains the pinned official client when needed, makes a real HTTP request, compares the exit with desired state, and stops. Plain `proxy` runs in the foreground.
 
-## Providers
+## Shadowrocket subscriptions
 
-Third-party `Provider` nodes are optional. A private-only setup with zero Providers must render successfully.
+Each subscription-backed ClientTarget has its own Worker/host identity and bearer token. The Worker stores the subscription body and token hash as secrets and returns the private configuration over a non-cacheable endpoint.
 
-When a Profile explicitly includes Providers, compose only those enabled Provider IDs. Mihomo exposes included Provider sets through the explicit `GLOBAL` selector's `use` entries and the `Private Routes` selector; Karing does not get the Mihomo-only GLOBAL group. Do not impose provider-specific grouping, naming, health checking, or routing policy that was not declared by the Profile.
+Token rotation changes only the selected target and requires explicit current approval.
 
-## Mihomo process routing
+## Private output
 
-Use `mihomo_process_names` only for a Mihomo ClientTarget. It accepts plain executable or package names such as `launcher.exe` or `com.example.app`; do not use paths, wildcards, regular expressions, display names, or app-specific hard-coded values. Rendering adds an `Applications` select group with `DIRECT` and `Private Routes`, sets `find-process-mode: strict`, and places `PROCESS-NAME` rules after private-address direct rules and before Profile service/China rules.
-
-The `hysteria2` renderer deliberately uses one explicitly selected managed Route. It does not compose Providers or apply GUI routing policy, and `auto` ingress selection prefers IPv4 before falling back to IPv6. Use distinct listener ports when multiple local proxies run concurrently.
-
-## Headless runtime
-
-`route-steward proxy --target <id> --check` downloads the pinned official client into the private cache when absent, renders the target, makes a real HTTP request through it, and compares the exit with desired state. Plain `route-steward proxy --target <id>` runs the same verified client in the foreground for supervision by a shell, service manager, or CI job. Never widen the generated listener beyond loopback.
-
-## Shadowrocket delivery
-
-The offline HTML artifact contains private import QR data and must not load external scripts/resources.
-
-The optional Cloudflare Worker is a private configuration-delivery endpoint only. Subscription state belongs to one Shadowrocket ClientTarget. Each subscription-backed ClientTarget requires an isolated Worker/host identity and its own bearer token state.
-
-Token rotation is a `credential-change` operation. It requires explicit current authorization, republishes only that target's Worker body/token, and must not rotate Route credentials or another ClientTarget's token.
-
-The Worker is not a proxy data plane, management database, panel, telemetry service, or account system. Keep subscription token/body in Worker secrets and canonical recovery state locally.
-
-## Validation and render drift
-
-Validate generated Mihomo/Karing Clash configuration with a compatible local core when available. Karing output also passes a renderer-specific pinned-Hysteria2 structure check. Validate a headless Hysteria2 target with the dedicated real-traffic check before depending on it. Keep output private and restrict local permissions.
-
-RST records only local input/output hashes needed to detect a stale or missing canonical ClientTarget render. A stale render is drift, not permission to mutate remote infrastructure.
-
-Never paste generated live configuration, subscription URLs, or full private node URIs into conversation just to prove rendering succeeded.
+Keep generated configuration, import pages, subscription URLs, and full node URIs inside the private root. Render drift records artifact identities and hashes without exposing file contents.

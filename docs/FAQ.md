@@ -2,15 +2,15 @@
 
 ## What does Route Steward do?
 
-Route Steward helps an AI agent set up and manage a private proxy on VPS servers you control. It generates server configuration and private client-app output through a reviewable, preflighted workflow.
+Route Steward helps an AI agent set up and manage a private proxy on VPS servers you control. It checks each change, configures the servers, and generates private client files.
 
 ## What do I need before I start?
 
-You need the Route Steward Release binary on a Linux, macOS, or Windows computer with a tool-capable AI agent and a dedicated rebuildable Ubuntu 24.04 amd64 VPS with SSH key access. You can use Mihomo/Clash Verge-compatible software, Karing, Shadowrocket, or the built-in headless Hysteria2 workflow. A relay route uses two VPS hosts. Go, PowerShell, and Node.js are not required for normal use.
+You need the Route Steward release on a Linux, macOS, or Windows computer with a tool-capable AI agent. A direct Route uses one dedicated, rebuildable Ubuntu 24.04 amd64 VPS with SSH key access; a relay uses two. Supported clients are listed in [Compatibility](COMPATIBILITY.md).
 
 ## How do I install it?
 
-Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases) using the existing environment, then run it from a user/project-local location; putting it on your `PATH` or setting `RST_ROUTE_STEWARD_BIN` is optional. Developers working from a source checkout need Go 1.27; Route Steward does not install Go automatically.
+Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases). Run it in place, add it to `PATH`, or set `RST_ROUTE_STEWARD_BIN`. Source development uses Go 1.27.
 
 ## Why must the server be dedicated?
 
@@ -18,7 +18,7 @@ Initial setup prepares the whole host. It changes UFW defaults, swap/fstab, SSH,
 
 ## Can I start by giving the GitHub link to an AI agent?
 
-Yes. Use the prompt in the [Quickstart](QUICKSTART.md). A capable agent can clone the repository, read its instructions, use an installed Release binary or obtain the matching Release archive, inspect machine-readable capabilities, explain prerequisites, and then gather the minimum context for your route. Building from source is a developer path, not a normal-user prerequisite.
+Yes. Use the prompt in the [Quickstart](QUICKSTART.md). The agent reads the repository instructions, runs capability discovery, explains the prerequisites, and asks for the details needed for your Route.
 
 ## Will the AI model see my server details?
 
@@ -30,7 +30,7 @@ Inventory, credentials, generated client files, observed evidence, and recovery 
 
 ## What happens when a route changes unexpectedly?
 
-Read-only audit records bounded evidence and drift reports the category. RST does not overwrite a drifted or undetermined deployed route until the discrepancy is understood and a supported operation passes preflight.
+Audit records the observed server state, and drift reports the type of mismatch. Route Steward requires the discrepancy to be understood before another deployment.
 
 ## Does audit prove that the proxy carries Internet traffic?
 
@@ -38,31 +38,31 @@ No. Audit checks supported server configuration, services, listeners, relay stat
 
 ## Does health expose my public IP or run monitoring continuously?
 
-No. Health is an on-demand check, not a monitoring service. It contacts ipify's address endpoints and Cloudflare's trace endpoint through the proxy and stores only bounded local evidence. The normal agent result reports whether the observed exit matches; exact public IP values are returned only when explicitly requested. Packet loss is reported as unsupported because RST does not yet have a stable, safe end-to-end metric for it.
+No. Health runs on demand. It contacts ipify's address endpoints and Cloudflare's trace endpoint through the proxy, stores the result locally, and reports whether the observed exit matches. Exact public IP values require an explicit request. Packet loss is currently unsupported.
 
 ## When should I use port hopping?
 
-Use optional `port_hopping` only when a network persistently throttles or filters particular UDP destination ports. RST supports one 2–8-port consecutive range beginning at the Route listener and renders it for Mihomo, Karing, Shadowrocket, and the headless official client. It does not help when UDP itself is blocked, and its health check validates a real range-configured client path rather than claiming to observe every periodic hop. See [Compatibility](COMPATIBILITY.md).
+Use `port_hopping` when a network persistently throttles or filters particular UDP destination ports. RST supports one consecutive range of 2–8 ports beginning at the Route listener and renders it for every supported client. It cannot carry traffic across a network that blocks UDP entirely. See [Compatibility](COMPATIBILITY.md).
 
 ## Can Mihomo route one application differently?
 
-Yes, for Mihomo/Clash Verge-compatible ClientTargets only. Add plain process names such as `launcher.exe` or Android package names to `mihomo_process_names` on the ClientTarget. The generated YAML creates an `Applications` policy group so the operator can manually choose `DIRECT` or the selected Profile route. Profiles remain reusable and do not store app-specific process names.
+Yes. A Mihomo ClientTarget can list plain executable or Android package names in `mihomo_process_names`. The generated `Applications` group lets the user select `DIRECT` or `Private Routes` for those processes.
 
 ## How are Profile service routes and providers selected?
 
-The Profile owns explicit `china_direct` and `service_routes` settings. Supported service categories are `openai` and `youtube`, and each binding names an enabled Route ID already included in the Profile. Mihomo output emits deterministic `GEOSITE` rules and per-Route selectors, followed by one final `MATCH,Private Routes`. Mihomo also gets an explicit `GLOBAL` selector with managed nodes, `DIRECT`, `REJECT`, and included Provider sets; RST does not rely on the core's implicit built-in GLOBAL expansion. Provider nodes nested under `Private Routes` are not lost: the explicit `GLOBAL` `use` entries expose them as direct choices even when a client's built-in GLOBAL view would omit them. Karing receives the shared routing rules but not the Mihomo-only GLOBAL group.
+A Profile stores `china_direct`, `openai` and `youtube` service bindings, included Routes, and optional Providers. Each service binding names an enabled Route in the Profile. Mihomo lists included Provider sets in both `Private Routes` and its explicit `GLOBAL` group. Karing uses the shared Profile routing rules.
 
 ## How does server replacement avoid interruption?
 
-`migrate-route` persists an overlap-first transaction. It creates or reuses replacement capacity, deploys it without touching current client output, requires a healthy real Hysteria2 traffic check, and only then switches and validates affected ClientTargets. A failed deployment, health check, render, or subscription publication returns `workflow-blocked`; retrying the same migration resumes deterministically. Old remote capacity is never retired automatically and remains a later explicit destructive action.
+`migrate-route` creates and tests replacement capacity before switching affected ClientTargets. If a stage returns `workflow-blocked`, retry the same source Route and replacement Server. The completed migration leaves the old remote capacity available for a later user-requested retirement.
 
 ## Can a Linux server, script, or backend use a Route without a GUI app?
 
-Yes. A `hysteria2` ClientTarget selects one enabled Route and a loopback port. `route-steward proxy --target <id> --check` proves real HTTP traffic and exit identity; without `--check`, the command runs a local HTTP/SOCKS5 proxy in the foreground. Set an application's `HTTP_PROXY`, `HTTPS_PROXY`, or SOCKS5 setting to that loopback address. RST writes the official-client JSON automatically; it does not install a system service or expose the proxy to the LAN.
+Yes. A `hysteria2` ClientTarget selects one enabled Route and a loopback port. `route-steward proxy --target <id> --check` tests real HTTP traffic and exit identity; without `--check`, it runs a local HTTP/SOCKS5 proxy in the foreground. Set the application's proxy setting to that loopback address.
 
 ## Which hosts, topologies, and clients work?
 
-See [Compatibility](COMPATIBILITY.md). The machine-readable capability response is the runtime source of truth. Support is limited to the items explicitly listed there and implemented by the repository.
+See [Compatibility](COMPATIBILITY.md) or run `route-steward capabilities`.
 
 ## What does the optional subscription Worker do?
 

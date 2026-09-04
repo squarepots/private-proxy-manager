@@ -25,7 +25,7 @@ func RunRequest(ctx context.Context, request Request) (Envelope, int) {
 		return Envelope{SchemaVersion: 1, Command: command, Success: false, Code: code, Data: data}, exit
 	}
 	if request.Command == "capabilities" {
-		return success("capabilities", map[string]any{"product": "route-steward", "interface": "agent-machine-surface", "rule": authorityRule, "capabilities": Capabilities(), "drivers": DriverCapabilities()})
+		return success("capabilities", map[string]any{"product": "route-steward", "interface": "agent-machine-surface", "capabilities": Capabilities(), "drivers": DriverCapabilities()})
 	}
 	if request.Command == "bootstrap" {
 		state, created, err := Bootstrap(request.PrivateDir)

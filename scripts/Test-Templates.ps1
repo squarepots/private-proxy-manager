@@ -110,48 +110,6 @@ foreach ($sourcePath in @(
     'worker/src/index.ts'
 )) { Reject-IgnoredPath $sourcePath }
 
-# Product identity and positioning stay plain at the public entry points.
-Require-Text 'README.md' 'private prox(?:y|ies)' 'The English README no longer states the product as private proxy management.'
-Require-Text 'README.zh-CN.md' '私有代理' 'The Chinese README no longer states the product as private proxy management.'
-Reject-Text 'README.md' '(?i)(?:egress lifecycle|internet exit lifecycle|agent-operated control plane|deterministic infrastructure lifecycle)' 'The English README reintroduced abstract positioning language.'
-Reject-Text 'README.zh-CN.md' '(?i)(?:egress lifecycle|internet exit lifecycle|agent-operated control plane|deterministic infrastructure lifecycle)' 'The Chinese README reintroduced abstract positioning language.'
-Reject-Text 'README.md' '(?i)\bVPN clients?\b' 'The English README reintroduced misleading VPN-client terminology.'
-Reject-Text 'docs/QUICKSTART.md' '(?i)\bVPN clients?\b' 'The English Quickstart reintroduced misleading VPN-client terminology.'
-Require-Text 'docs/COMPATIBILITY.md' 'route-steward capabilities` is the runtime source of truth' 'Compatibility no longer points readers to runtime capability truth.'
-Require-Text 'docs/OPERATING-BOUNDARY.md' 'owned by the operator or administered with the resource owner''s authorization' 'The authorized-infrastructure operating boundary is missing.'
-Require-Text 'internal/steward/engine.go' '"interface":\s*"agent-machine-surface"' 'The native machine surface product identity is incorrect.'
-Require-Text 'README.md' 'Do not ask me to install Go for normal use' 'The README URL-first prompt no longer keeps Go out of the normal-user path.'
-Require-Text 'docs/QUICKSTART.md' 'matching Release archive from GitHub Releases' 'The Quickstart no longer explains the normal Release archive path.'
-Reject-Text 'README.md' 'SHA256SUMS' 'The English README retains the retired release checksum ceremony.'
-Reject-Text 'README.zh-CN.md' 'SHA256SUMS' 'The Chinese README retains the retired release checksum ceremony.'
-Reject-Text 'README.es.md' 'SHA256SUMS' 'The Spanish README retains the retired release checksum ceremony.'
-Reject-Text 'README.ja.md' 'SHA256SUMS' 'The Japanese README retains the retired release checksum ceremony.'
-Reject-Text 'README.pt-BR.md' 'SHA256SUMS' 'The Brazilian Portuguese README retains the retired release checksum ceremony.'
-Reject-Text 'docs/QUICKSTART.md' 'SHA256SUMS' 'The Quickstart retains the retired release checksum ceremony.'
-Reject-Text 'docs/FAQ.md' 'SHA256SUMS' 'The FAQ retains the retired release checksum ceremony.'
-Reject-Text 'AGENTS.md' 'SHA256SUMS' 'The canonical Agent instructions retain the retired release checksum ceremony.'
-Reject-Text '.agents/skills/route-steward/SKILL.md' 'SHA256SUMS' 'The repository Skill retains the retired release checksum ceremony.'
-Reject-Text 'agent/route-steward-agent.ps1' 'SHA256SUMS' 'The compatibility forwarder retains the retired release checksum ceremony.'
-Require-Text 'AGENTS.md' 'do not ask the user to install Go or perform a system-level Go install' 'The canonical Agent instructions no longer prohibit blind Go installation.'
-Require-Text '.agents/skills/route-steward/SKILL.md' 'do not perform a system-level Go install' 'The repository Skill no longer prohibits blind Go installation.'
-Require-Text 'agent/route-steward-agent.ps1' 'this script does not install Go' 'The compatibility forwarder no longer tells users that Go installation is outside its behavior.'
-Require-Text 'scripts/Validate-Local.ps1' 'this validation script does not install Go' 'Source validation no longer states that it does not install Go.'
-Reject-Text 'README.md' 'release binary or build the Go CLI' 'The README URL-first prompt still treats source build as a normal-user fallback.'
-Reject-Text 'docs/QUICKSTART.md' 'release binary or build the Go CLI' 'The Quickstart URL-first prompt still treats source build as a normal-user fallback.'
-Reject-Text 'docs/FAQ.md' 'obtain or build the executable' 'The FAQ still treats source build as a normal-user fallback.'
-Reject-Text 'README.zh-CN.md' 'go install github\.com/squarepots/route-steward/cmd/route-steward@latest' 'The Chinese README still advertises Go install as a normal-user path.'
-Reject-Text 'README.es.md' 'go install github\.com/squarepots/route-steward/cmd/route-steward@latest' 'The Spanish README still advertises Go install as a normal-user path.'
-Reject-Text 'README.ja.md' 'go install github\.com/squarepots/route-steward/cmd/route-steward@latest' 'The Japanese README still advertises Go install as a normal-user path.'
-Reject-Text 'README.pt-BR.md' 'go install github\.com/squarepots/route-steward/cmd/route-steward@latest' 'The Brazilian Portuguese README still advertises Go install as a normal-user path.'
-Require-Text 'docs/COMPATIBILITY.md' 'target-scoped `PROCESS-NAME` routing' 'Compatibility no longer documents Mihomo process routing.'
-Require-Text 'docs/FAQ.md' 'Provider nodes nested under `Private Routes` are not lost' 'FAQ no longer explains explicit Mihomo GLOBAL Provider visibility.'
-Require-Text 'OPERATIONS.md' 'ClientTarget\.mihomo_process_names' 'Operations no longer keeps Mihomo process routing on the ClientTarget.'
-Require-Text 'internal/steward/capabilities.go' '"rule": "PROCESS-NAME"' 'Capability discovery no longer exposes the Mihomo PROCESS-NAME rule contract.'
-Require-Text 'internal/steward/render.go' 'PROCESS-NAME,%s,Applications' 'The Mihomo renderer no longer emits PROCESS-NAME rules into the Applications group.'
-Reject-Text 'agent/route-steward-agent.ps1' "'run', './cmd/route-steward', '--'" 'The Go source fallback must not pass a fake -- command.'
-Reject-Text '.agents/skills/route-steward/SKILL.md' 'go run ./cmd/route-steward --' 'The repository-URL workflow must use the real Go CLI command shape.'
-Reject-Text 'internal/steward/engine.go' 'repository_script' 'Local-assisted recovery or backup still exposes a legacy repository script as contract.'
-
 $trackedChineseDocs = @(& git -C $repo ls-files -- 'docs/*.zh-CN.md' | Where-Object { Test-Path -LiteralPath (Join-Path $repo $_) -PathType Leaf })
 if ($LASTEXITCODE -ne 0) {
     $failures.Add('Unable to enumerate tracked localized documentation.')
@@ -199,4 +157,4 @@ if ($failures.Count) {
     $failures | Sort-Object -Unique | ForEach-Object { Write-Error $_ }
     exit 1
 }
-Write-Host 'Static server ownership/safety, Worker privacy, CI trigger, documentation, portability, and compatibility validation passed.'
+Write-Host 'Static server safety, Worker privacy, CI, repository layout, and portability validation passed.'

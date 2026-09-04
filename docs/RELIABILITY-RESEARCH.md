@@ -1,41 +1,41 @@
 # Reliability research
 
-Research date: 2026-08-24. This historical decision record explains the reliability choices made for the 1.6.0 work. The current support contract remains `route-steward capabilities` and `docs/COMPATIBILITY.md`. This record is not the runtime source of truth.
+Research date: 2026-08-24. This record explains the reliability choices made for version 1.6.0. Current support is listed by `route-steward capabilities` and `docs/COMPATIBILITY.md`.
 
 ## Decision
 
 Route Steward 1.6.0 adds optional Hysteria2 port hopping and updates the pinned official Hysteria server/client to 2.12.2.
 
-Port hopping is appropriate for persistent throttling or filtering of individual UDP destination ports. Hysteria documents that it does not help when UDP is blocked as a whole. RST accepts exactly one consecutive range of 2–8 UDP ports, such as `20000-20003`; the range must begin at `listen_port`. The small bound keeps firewall exposure, collision detection, and incident diagnostics understandable.
+Port hopping addresses persistent throttling or filtering of individual UDP destination ports. Hysteria documents that it cannot carry traffic when UDP is blocked as a whole. RST accepts one consecutive range of 2–8 UDP ports, such as `20000-20003`, beginning at `listen_port`. The limit keeps firewall exposure and collision checks manageable.
 
-The canonical route state, firewall rule, remote Hysteria listener, scoped systemd capability drop-in, audit hash, private payload, headless configuration, and migration checkpoint carry the selected range. During a relay-exit replacement, the unchanged entry temporarily needs both paths, so the replacement reserves a same-width non-overlapping range and the health-gated client switch publishes it only after it works. Deployment uses Hysteria's Linux packet-filter helper and therefore requires `nft` or `iptables`; base setup installs `nftables`. A hopping Route opens only its exact UFW UDP range and grants `CAP_NET_ADMIN` only to that RST service unit.
+Inventory, the firewall rule, Hysteria listener, systemd capability file, audit hash, client payloads, and migration checkpoint carry the selected range. During a relay-exit replacement, the shared entry serves both paths, so the replacement reserves a same-width, non-overlapping range until the client switch. Deployment uses Hysteria's Linux packet-filter helper and requires `nft` or `iptables`; base setup installs `nftables`. A hopping Route opens its selected UFW range and grants `CAP_NET_ADMIN` to that service unit.
 
-## One client contract
+## Client output
 
-The supported output is deliberately the common feature set rather than a renderer-specific approximation:
+Each renderer carries the same port range:
 
 | Client path | Port-hopping output |
 | --- | --- |
 | Mihomo | Clash `ports` field |
-| Karing | The same tested Clash YAML contract |
+| Karing | The same tested Clash YAML format |
 | Shadowrocket node/subscription | Standard Hysteria multi-port URI authority |
 | Official headless client | Multi-port `server` plus the interoperable fixed `30s` UDP hop interval |
 
-RST does not expose a random or arbitrary hop interval. Mihomo can express one, but the standard Hysteria URI cannot, so adding it would create a setting that Shadowrocket cannot receive or verify through the same contract.
+The standard Hysteria URI has no hop-interval field, so RST uses the official client's 30-second interval across its generated output.
 
-Audit verifies the desired range, remote listener configuration, UFW range, capability drop-in, and configuration hash. `health` and `proxy --check` start an actual official client configured with the advertised range and verify traffic through it. They are point-in-time checks: they do not claim to observe every later periodic hop or measure packet loss.
+Audit verifies the selected range, remote listener, UFW rule, capability file, and configuration hash. `health` and `proxy --check` run the official client with that range and verify traffic. These checks run at one point in time and do not measure packet loss.
 
-## Features considered and not added
+## Options considered
 
 | Candidate | Decision | Reason |
 | --- | --- | --- |
 | Port hopping | Implemented | The official server/client format and all four supported Route Steward client paths close end to end. |
 | Hysteria 2.12.2 | Implemented | Current official release at research time; pinned server/client binaries and hashes are updated together. |
-| Existing salamander obfuscation | Retained | It is already part of the managed, pinned TLS client contract; this change does not introduce an unrendered alternate obfuscator. |
-| Existing fixed 404 masquerade | Retained, not counted as a reliability control | It gives a predictable minimal HTTP response but is not an operator-controlled site mimic and does not improve loss, throttling, or UDP filtering. |
-| Mimic | Rejected | It requires Linux/kernel or external-program setup, matching client configuration, and Hysteria documents that it cannot be combined with port hopping. That is not a complete current multi-client Route Steward lifecycle. |
-| Gecko, ECH, Realms, or extra transport controls | Rejected | No complete, tested deployment, audit, migration, recovery, and four-client rendering path exists in RST for them. They are not exposed as partial knobs. |
-| A real-site proxy masquerade | Rejected | It would require an operator-controlled external site/domain and ongoing content behavior outside the current dedicated-IP Route contract. The existing fixed 404 response remains a server behavior, not a reliability claim. |
+| Existing salamander obfuscation | Retained | It was already present in every managed client output. |
+| Existing fixed 404 response | Retained | It gives a predictable HTTP response but does not improve packet loss, throttling, or UDP filtering. |
+| Mimic | Rejected | It conflicts with port hopping and requires additional Linux or external-program setup plus matching client configuration. |
+| Gecko, ECH, Realms, or extra transport controls | Rejected | Each would require new deployment, audit, migration, recovery, and renderer support. |
+| A real-site proxy masquerade | Rejected | It requires an external site or domain and continuing content management. |
 
 ## Sources
 

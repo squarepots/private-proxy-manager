@@ -8,42 +8,32 @@
 
 **Configura y gestiona proxies privados en tus propios servidores con un agente de IA.**
 
-Route Steward ayuda a un agente de IA a configurar, inspeccionar, cambiar y recuperar un proxy privado en servidores VPS que controlas. Dale esta URL de GitHub: el agente puede descubrir el flujo compatible, comprobar los requisitos antes de cada cambio, operar con el binario nativo `route-steward` y devolver resultados depurados sin exponer credenciales ni rutas locales.
+Entrega este repositorio a un agente de IA y describe el proxy que necesitas. Route Steward aporta los comandos, controles de seguridad, configuración del servidor, archivos de cliente, auditorías y recuperación.
 
 ## Entrega la URL a un agente de IA
 
 ```text
-Abre https://github.com/squarepots/route-steward y ayúdame a configurar y gestionar un proxy privado en mis propios servidores. Clona el repositorio si hace falta, lee AGENTS.md y .agents/skills/route-steward/SKILL.md, y usa un binario Release de Route Steward ya instalado o obtén el archivo Release correcto desde GitHub Releases con el entorno existente. No me pidas instalar Go para el uso normal. Ejecuta capabilities antes de pedir datos de infraestructura. Explica los requisitos de host dedicado y los efectos sobre el sistema, conserva el estado operativo en privado, ejecuta preflight antes de cada cambio y devuelve resultados depurados.
+Abre https://github.com/squarepots/route-steward y ayúdame a configurar y gestionar un proxy privado en servidores que controlo. Lee AGENTS.md y .agents/skills/route-steward/SKILL.md, usa la versión publicada de Route Steward adecuada para este equipo y empieza con route-steward capabilities.
 ```
 
-```text
-route-steward capabilities
-route-steward bootstrap --private-dir ./private
-route-steward context --private-dir ./private
-```
-
-El uso normal no requiere PowerShell, Node.js ni la herramienta de Go. Obtén el archivo binario correspondiente para Linux, macOS o Windows desde [Releases](https://github.com/squarepots/route-steward/releases). El desarrollo desde código fuente requiere Go 1.27:
-
-```text
-go run ./cmd/route-steward capabilities
-go test ./...
-```
-
-Node.js solo se usa si eliges la entrega opcional de suscripciones mediante Cloudflare Worker.
+Consulta la [guía de inicio](docs/QUICKSTART.md) para instalarlo y preparar los requisitos.
 
 ## Qué obtienes
 
-- un proxy Hysteria2 privado mediante un servidor o un relay WireGuard opcional mediante dos;
-- configuración privada completa para una aplicación compatible con Mihomo/Clash Verge, incluidas reglas opcionales por proceso, Karing, Shadowrocket o un proxy sin GUI para Linux/aplicaciones;
-- auditoría de servidor de solo lectura, health real y bajo demanda del tráfico cliente, y drift de configuración tipado;
-- reemplazo reanudable de servidores con solapamiento, cambio de clientes condicionado por health y sin retiro automático;
-- recuperación local cifrada con estado privado verificado y reubicable;
-- una misma interfaz legible por máquinas para CLI y MCP stdio local.
+- un proxy Hysteria2 privado mediante un servidor o un enlace WireGuard entre dos servidores;
+- salto de puertos opcional para redes que limitan o filtran puertos UDP concretos;
+- archivos privados para clientes Mihomo/Clash Verge compatibles, Karing, Shadowrocket y Hysteria2 sin interfaz gráfica;
+- auditorías del servidor, informes de cambios de configuración y comprobaciones reales de tráfico bajo demanda;
+- sustitución reanudable del servidor que prueba la nueva ruta antes de cambiar los clientes;
+- copias de seguridad locales cifradas y recuperación;
+- comandos JSON mediante la línea de órdenes o MCP stdio local.
 
 La base actual es un VPS Ubuntu 24.04 amd64 dedicado y reconstruible con acceso SSH autorizado por clave. Consulta [Compatibility](docs/COMPATIBILITY.md) para conocer protocolos, clientes y topologías exactos.
 
 ## Efectos en el host y privacidad
 
-La preparación inicial modifica firewall, swap, SSH, sysctl, registros, actualizaciones, paquetes y monitorización de todo el host. El estado operativo, las claves, los archivos generados y los archivos de recuperación permanecen en el directorio private elegido y fuera de Git. Un runtime de IA en la nube puede procesar la dirección del servidor, el usuario SSH, la ruta de la clave y los ID enviados como argumentos; usa un runtime offline si deben permanecer locales.
+La preparación inicial modifica el cortafuegos, el espacio de intercambio, SSH, los parámetros del sistema, los registros, las actualizaciones, los paquetes y la monitorización del host. Usa un servidor dedicado que puedas reconstruir.
+
+El estado, las claves, los archivos generados y las copias de recuperación permanecen en el directorio privado elegido y fuera de Git. Un servicio de IA en la nube puede recibir los datos del servidor necesarios para una operación; usa un entorno sin conexión cuando deban permanecer locales.
 
 Usa únicamente servidores, cuentas y recursos de red propios o cuya administración tengas autorizada. Route Steward usa [AGPL-3.0-only](LICENSE); la atribución MIT del generador QR está en [client/vendor/NOTICE.md](client/vendor/NOTICE.md).

@@ -1,42 +1,42 @@
 # Client research record
 
-Research date: 2026-08-24. This historical decision record explains the first expansion beyond the existing Mihomo/Clash Verge-compatible, Shadowrocket, and headless Hysteria2 contracts. The current support contract remains `route-steward capabilities` and `docs/COMPATIBILITY.md`; external client facts still require fresh authoritative sources when they can change.
+Research date: 2026-08-24. This record explains the selection of the first additional GUI client. Current support is listed by `route-steward capabilities` and `docs/COMPATIBILITY.md`.
 
 ## Coverage before this change
 
-The existing GUI contracts covered desktop Mihomo/Clash clients and Shadowrocket, while the official Hysteria2 renderer covered servers, scripts, and CI. The meaningful gap was a first-class Android client and one tested GUI import path spanning Windows, macOS, Linux, iOS, and Android.
+Existing outputs covered desktop Mihomo/Clash clients, Shadowrocket, and headless Hysteria2. The gap was an Android client with a tested import path across desktop and mobile platforms.
 
 ## Selected: Karing
 
 Karing 1.2.23.2606 is the compatibility baseline. It was the current release during research, its repository remained active, and its official platform list covers Windows, macOS, Linux, iOS, Android, and tvOS. Karing documents full Clash configuration support, exposes a local YAML file-import flow, and its official Hysteria2 example defines `fingerprint` as the SHA-256 certificate fingerprint used for SSL pinning.
 
-Route Steward therefore adds a `karing` ClientTarget that emits the same deterministic private Clash YAML contract as the Mihomo renderer. The separate renderer identity records the selected app and adds a fail-closed Karing check for the certificate pin, self-signed TLS setting, ALPN, and salamander obfuscation. Users import the generated `.yaml` as a local Clash profile; manual field editing is outside the supported flow.
+Route Steward therefore added a `karing` ClientTarget using the shared Clash YAML renderer. Karing output is checked for the certificate pin, self-signed TLS setting, ALPN, and salamander obfuscation. Users import the generated `.yaml` as a local Clash profile.
 
-Validation is deterministic fixture/structure testing plus the existing local Clash-core check when a compatible core is available. Route Steward does not automate or bundle the Karing GUI, and the compatibility baseline is stated explicitly so future format changes can be reassessed.
+Validation uses fixture and structure tests plus a local Clash-core check when a compatible core is available. The documented version baseline makes later format changes reviewable.
 
 Primary evidence:
 
 - [Karing release 1.2.23.2606](https://github.com/KaringX/karing/releases/tag/v1.2.23.2606)
-- [Karing supported platforms and Clash configuration contract](https://github.com/KaringX/karing/blob/v1.2.23.2606/README.md)
+- [Karing supported platforms and Clash configuration](https://github.com/KaringX/karing/blob/v1.2.23.2606/README.md)
 - [Karing local configuration file import](https://github.com/KaringX/karing/blob/v1.2.23.2606/lib/screens/add_profile_by_import_from_file_screen.dart)
 - [Karing Hysteria2 and SHA-256 certificate-pinning example](https://github.com/KaringX/karing/blob/v1.2.23.2606/README_examples/clash/config.yaml)
 
-## Not selected in this tranche
+## Other candidates
 
-- Hiddify is active and multi-platform, but its official Hysteria2 URL conversion test does not preserve `pinSHA256` in the generated outbound. Supporting the simple URI import would weaken Route Steward's managed self-signed TLS identity. A separate full Sing-box renderer was not added as an untested workaround. Evidence: [Hiddify URL scheme](https://github.com/hiddify/hiddify.com/blob/9fc39756405e1f7665ce11488f3f80bdcb911ff6/docs/app/URL-Scheme.md) and [official Hysteria2 conversion test](https://github.com/hiddify/ray2sing/blob/caf5e9ac03eaba54dc339319670748d32a073a39/ray2sing_test/hysteria2_test.go).
-- v2rayN supports Hysteria2 subscriptions but does not close the iOS/Android platform gap, and its current certificate-validation semantics are still changing. It remains protocol-compatible, not Route Steward-supported. Evidence: [official subscription formats](https://github.com/2dust/v2rayN/wiki/Description-of-subscription) and [current Hysteria2 subscription regression](https://github.com/2dust/v2rayN/issues/9985).
+- Hiddify is active and multi-platform, but its official Hysteria2 URL conversion test drops `pinSHA256` from the generated outbound. That URI path did not meet the certificate-identity requirement. Evidence: [Hiddify URL scheme](https://github.com/hiddify/hiddify.com/blob/9fc39756405e1f7665ce11488f3f80bdcb911ff6/docs/app/URL-Scheme.md) and [official Hysteria2 conversion test](https://github.com/hiddify/ray2sing/blob/caf5e9ac03eaba54dc339319670748d32a073a39/ray2sing_test/hysteria2_test.go).
+- v2rayN supports Hysteria2 subscriptions but did not cover the iOS/Android gap, and its certificate-validation behavior was changing. Evidence: [official subscription formats](https://github.com/2dust/v2rayN/wiki/Description-of-subscription) and [Hysteria2 subscription regression](https://github.com/2dust/v2rayN/issues/9985).
 
-Adding either client later requires a complete import artifact that preserves certificate identity plus an app-specific maintained validation contract.
+Either client can be reconsidered when Route Steward can generate and test an import artifact that preserves certificate identity.
 
 ## Mihomo process-name routing
 
 Research date: 2026-08-28.
 
-The selected behavior is a Mihomo-only ClientTarget feature for application-specific routing in Clash Verge-compatible clients. The reusable Profile selects Routes, Providers, and explicit service/China routing; concrete process names are target-specific local client behavior and remain private.
+Process routing belongs to a Mihomo ClientTarget. Profiles remain reusable across targets, while concrete process names stay in private target state.
 
-Mihomo's official route-rule documentation lists `PROCESS-NAME` as a rule type and states that route rules are matched from top to bottom by priority. Its general configuration documents `find-process-mode: strict` as the default process matching mode. RST therefore renders plain `PROCESS-NAME` rules, sets `find-process-mode: strict`, and places those rules after private-address direct rules but before Profile service/China rules so LAN/private destinations stay direct while selected processes can be manually routed through either `DIRECT` or the selected Profile route. TUN and DNS-hijack settings remain client-owned rather than being forced into the generated file.
+Mihomo documents `PROCESS-NAME`, top-to-bottom rule evaluation, and `find-process-mode: strict`. RST renders plain process rules after private-address direct rules and before Profile service and China rules. The generated `Applications` group offers `DIRECT` and `Private Routes`. Client applications control TUN and DNS capture.
 
-RST intentionally does not expose process paths, wildcards, regular expressions, or app-specific hard-coded defaults. Process names are limited to plain executable/package names, are accepted only on Mihomo ClientTargets, and appear in sanitized context only as counts.
+RST accepts up to 32 plain executable or package names on Mihomo ClientTargets. Sanitized context reports only their count.
 
 Primary evidence:
 
@@ -46,7 +46,7 @@ Primary evidence:
 
 ## Profile service routing and explicit global selection
 
-Research date: 2026-09-02. Mihomo's official rule syntax supports `GEOSITE` matching and top-to-bottom evaluation, while proxy groups support explicit `proxies` and Provider `use` sets. RST uses those bounded primitives for Profile-owned `openai`/`youtube` service bindings, deterministic per-Route selectors, and a Mihomo-only `GLOBAL` selector. The supported core compatibility test pins Mihomo 1.19.27 and exercises Provider refresh through the selector; the product does not download or manage that test dependency.
+Research date: 2026-09-02. Mihomo supports `GEOSITE`, top-to-bottom rule evaluation, explicit proxy lists, and Provider `use` sets. RST uses them for `openai` and `youtube` Profile bindings, per-Route selectors, and a Mihomo `GLOBAL` group. Compatibility tests use Mihomo 1.19.27 supplied by the test environment and exercise Provider refresh through the selector.
 
 Primary evidence:
 

@@ -60,6 +60,7 @@ try {
     Assert-True ([IO.File]::ReadAllText($legacyOperatorPath, [Text.Encoding]::UTF8) -eq $legacyOperator) 'Deprecated operator state was changed instead of ignored.'
 
     $capabilities = & $agent capabilities -PrivateDirectory $stage | ConvertFrom-Json
+	Assert-True (-not $capabilities.data.PSObject.Properties['rule']) 'Capability discovery exposes editorial prose as machine data.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'add-server').Count -eq 1) 'Agent capability discovery is missing add-server.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'add-provider').Count -eq 1) 'Agent capability discovery is missing generic Provider lifecycle.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'add-profile').Count -eq 1) 'Profile lifecycle is missing from capability discovery.'
@@ -91,6 +92,7 @@ try {
 
     $blocked = & $agent preflight -PrivateDirectory $stage -Operation add-server | ConvertFrom-Json
     Assert-True (-not $blocked.data.ready -and $blocked.data.missing_context.Count -gt 0) 'Incomplete add-server context was not blocked.'
+	Assert-True (-not $blocked.data.PSObject.Properties['rule']) 'Preflight exposes editorial prose as machine data.'
 
     $missingOwnershipContext = [ordered]@{ server_id = 'blocked-a'; public_ipv4 = '192.0.2.20'; ssh_user = 'ubuntu'; ssh_key_path = 'fixture.pem' } | ConvertTo-Json -Compress
     $missingOwnership = & $agent preflight -PrivateDirectory $stage -Operation add-server -ContextJson $missingOwnershipContext | ConvertFrom-Json

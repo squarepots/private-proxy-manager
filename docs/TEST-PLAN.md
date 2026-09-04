@@ -1,18 +1,15 @@
 # Test Plan
 
-This plan defines how to prove that Route Steward works without expanding the
-public contract beyond the implemented capability surface. It separates default
-local validation from fake-transport acceptance tests and from live
-infrastructure tests that require explicit operator authorization.
+This plan covers local validation, fake-transport acceptance tests, and live
+infrastructure tests. Live tests require explicit operator authorization.
 
 ## Principles
 
-- Treat `route-steward capabilities` and `docs/COMPATIBILITY.md` as the support
-  boundary.
+- Compare documented support with `route-steward capabilities`.
 - Keep real inventory, SSH material, provider URLs, subscription tokens, client
   artifacts, raw observations, and recovery archives under ignored `private/`
   or another explicit private root.
-- Run scoped preflight before every local, remote, or external-publication
+- Run preflight before every local, remote, or external-publication
   mutation. Execute only when `ready=true`.
 - Use only operator-owned or owner-authorized, dedicated, rebuildable Ubuntu
   24.04 amd64 hosts for live deployment tests.
@@ -20,7 +17,7 @@ infrastructure tests that require explicit operator authorization.
 
 ## L0 Capability Smoke Test
 
-Goal: confirm that the executable exposes the native Go machine surface.
+Goal: confirm that the executable exposes the Go machine interface.
 
 Normal URL-first use:
 
@@ -53,10 +50,8 @@ Pass criteria:
 
 ## L1 Source Validation
 
-Goal: verify the native control plane, schemas, renderers, preflight logic, MCP
-surface, migration state machine, recovery behavior, and sanitized failure
-boundaries. This path requires Go 1.27 and is for source development; normal
-users should not install Go just to operate Route Steward.
+Goal: verify the Go engine, schemas, renderers, preflight logic, MCP interface,
+migration state, recovery, and sanitized failures. This path requires Go 1.27.
 
 Commands:
 
@@ -109,11 +104,10 @@ Pass criteria:
 - No private keys, tokens, subscription URLs, live public addresses, generated
   client artifacts, or recovery archives are tracked.
 - Server shell payloads parse.
-- Dedicated-host requirements, host-wide effects, CI triggers, compatibility
-  documentation, and agent instructions remain aligned.
-- Non-README Chinese documentation is not tracked. `README.zh-CN.md` may remain
-  as a localized entry point, but canonical operating documentation stays in
-  English.
+- Static checks cover server safety properties, Worker privacy, CI triggers,
+  ignored paths, source encoding, and repository layout without pinning prose.
+- Non-README Chinese documentation is not tracked. `README.zh-CN.md` is the
+  localized entry point; operating documentation stays in English.
 
 ## L3 Worker Subscription Delivery
 
@@ -230,7 +224,7 @@ Coverage:
 
 ## L7 Port Hopping
 
-Goal: prove that the 2-to-8 consecutive UDP port-hopping contract remains
+Goal: prove that 2-to-8 consecutive UDP port hopping remains
 consistent across validation, deployment, audit, health, rendering, and
 migration.
 
@@ -334,10 +328,8 @@ Before marking a PR ready:
 
 ## Local Environment Notes
 
-- Source validation requires Go 1.27. The validation scripts may use an existing
-  `go` on `PATH` or an already-present repository-local toolchain, but they do
-  not download or install Go. Normal operation should use a matching Release
-  binary.
+- Source validation requires Go 1.27 from `PATH` or an existing repository-local
+  toolchain. Normal operation uses a matching Release binary.
 - Worker validation requires Node 24, npm, and the pinned Worker dependencies.
 - ShellCheck is required in hosted CI. A local machine without ShellCheck cannot
   fully replace CI.

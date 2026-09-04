@@ -6,51 +6,38 @@
 
 [![Validation](https://github.com/squarepots/route-steward/actions/workflows/ci.yml/badge.svg)](https://github.com/squarepots/route-steward/actions/workflows/ci.yml)
 
-**用 AI agent 在自己的服务器上搭建和管理私有代理。**
+**用 AI 智能体在自己的服务器上搭建和管理私有代理。**
 
-Route Steward 帮助 AI agent 在你控制的 VPS 上搭建、检查、更换和恢复私有代理。把这个 GitHub 链接交给 agent；它会发现受支持的流程、在每次修改前检查前提、通过原生 `route-steward` 程序执行，并返回不暴露凭据或本地路径的脱敏结果。
+把这个仓库交给 AI 智能体，再描述你想要的代理。Route Steward 提供命令、安全检查、服务器配置、客户端文件、审计和恢复流程。
 
-## 把链接交给 AI agent
+## 把链接交给 AI 智能体
 
-把下面的提示词粘贴到 Codex 或其他能够读取文件并运行本地命令的 agent：
-
-```text
-打开 https://github.com/squarepots/route-steward 并帮我在自己的服务器上搭建和管理私有代理。需要时先 clone；阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md，然后使用已安装的 Route Steward Release 二进制，或在现有环境中从 GitHub Releases 获取匹配的 Release 归档。正常使用不要要求我安装 Go。先运行 capabilities，再向我询问基础设施信息。解释专用主机要求和整机影响；把运行状态保存在 private 目录；每次修改前运行 preflight；只返回脱敏结果。
-```
-
-agent 会从以下命令开始：
+把下面的提示词粘贴到 Codex 或其他能够读取文件并运行本地命令的 AI 智能体：
 
 ```text
-route-steward capabilities
-route-steward bootstrap --private-dir ./private
-route-steward context --private-dir ./private
+打开仓库 https://github.com/squarepots/route-steward 并帮我在自己控制的服务器上搭建和管理私有代理。阅读 AGENTS.md 和 .agents/skills/route-steward/SKILL.md，使用适合这台电脑的 Route Steward 发布版本，并先运行 route-steward capabilities。
 ```
 
-正常使用不需要 PowerShell、Node.js 或 Go 工具链。请从 [Releases](https://github.com/squarepots/route-steward/releases) 获取匹配的 Linux、macOS 或 Windows 二进制归档。源码开发需要 Go 1.27：
-
-```text
-go run ./cmd/route-steward capabilities
-go test ./...
-```
-
-只有选择可选的 Cloudflare Worker 订阅交付时才会用到 Node.js。
+安装方法和前提条件见[快速开始](docs/QUICKSTART.md)。
 
 ## 它能交付什么
 
-- 通过一台服务器的私有 Hysteria2 代理，或可选的两台服务器 WireGuard relay；
-- 可选、受限的 Hysteria2 端口跳跃，用于按端口的 UDP 限速或过滤，并保证同一套客户端契约；
-- 可直接用于 Mihomo/Clash Verge 兼容应用（含可选按进程选择规则）、Karing、Shadowrocket，或无 GUI Linux/应用代理的完整私有配置；
-- 只读服务器审计、按需真实客户端流量 health，以及明确的配置 drift 分类；
-- 可恢复的 overlap-first 服务器替换：通过 health 后才切换客户端，绝不自动退役旧容量；
-- 经过校验、可迁移私有状态的加密本地恢复；
-- 同一套机器接口同时用于命令行和本地 stdio MCP。
+- 通过一台服务器运行 Hysteria2 私有代理，或通过两台服务器组成 WireGuard 中继；
+- 可选的端口跳跃，应对网络对个别 UDP 端口的限速或过滤；
+- 为 Mihomo/Clash Verge 兼容应用、Karing、Shadowrocket 和无界面 Hysteria2 生成私有客户端文件；
+- 服务器审计、配置偏差报告和按需真实流量检查；
+- 可恢复的服务器替换流程，在切换客户端前先验证新路径；
+- 加密的本地备份与恢复；
+- 通过命令行或本地标准输入输出 MCP 使用的 JSON 命令。
 
-当前服务器基线是具备授权 SSH key 访问的专用、可重建 Ubuntu 24.04 amd64 VPS。准确的协议、客户端、拓扑和可选交付方式见 [Compatibility](docs/COMPATIBILITY.md)。
+当前服务器基线是可通过 SSH 密钥访问的专用、可重建 Ubuntu 24.04 amd64 VPS。支持的协议、客户端、拓扑和交付方式见[兼容性说明](docs/COMPATIBILITY.md)。
 
 ## 主机影响与隐私
 
-首次部署会准备整台主机，包括防火墙、swap、SSH、sysctl、日志、更新、软件包和监控。运行状态、密钥、生成的客户端文件和恢复归档都保存在你选择的 private 目录并被 Git 排除。云端 AI runtime 仍可能处理操作参数中的服务器地址、SSH 用户名、key path 和 ID；这些输入必须留在本机时，请使用离线 runtime。
+首次部署会修改整台主机的防火墙、交换空间、SSH、系统参数、日志、更新、软件包和监控配置。请使用专用且可重建的服务器。
 
-仅使用你拥有或获授权管理的服务器、账户与网络资源。部署前请阅读 [Operations](OPERATIONS.md)、[Privacy](docs/PRIVACY.md) 和 [Security](SECURITY.md)。
+密钥、运行状态、生成的客户端文件和恢复归档都保存在你选择的私有目录中，并被 Git 排除。云端 AI 服务仍可能接收执行操作所需的服务器信息；如果这些信息必须留在本机，请使用离线运行环境。
 
-Route Steward 使用 [AGPL-3.0-only](LICENSE)。Vendored QR generator 的 MIT attribution 保留在 [client/vendor/NOTICE.md](client/vendor/NOTICE.md)。
+仅使用你拥有或获授权管理的服务器、账户与网络资源。部署前请阅读[操作说明](OPERATIONS.md)、[隐私说明](docs/PRIVACY.md)和[安全说明](SECURITY.md)。
+
+Route Steward 使用 [AGPL-3.0-only](LICENSE) 许可证。内置二维码生成器的 MIT 署名见 [client/vendor/NOTICE.md](client/vendor/NOTICE.md)。

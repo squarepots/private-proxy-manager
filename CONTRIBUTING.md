@@ -1,6 +1,6 @@
 # Contributing
 
-Route Steward lets capable AI agents operate self-hosted network paths through one deterministic, model-neutral core.
+Route Steward lets AI agents set up and manage private proxies on user-controlled servers.
 
 ## Contribution licensing
 
@@ -18,16 +18,16 @@ git commit -s
 
 This adds a `Signed-off-by:` trailer using your Git identity. Keep that trailer on every contributed commit.
 
-## Start with the contract
+## Start with the project
 
 Read `AGENTS.md`, the repository Skill, `ARCHITECTURE.md`, `SECURITY.md`, and `docs/COMPATIBILITY.md`.
 
 Contributions should preserve these boundaries:
 
 - natural-language intent is the user entry point;
-- the native `route-steward` CLI and in-process MCP share one sanitized Go machine contract;
+- the `route-steward` CLI and local stdio MCP share one Go engine;
 - desired state and secrets remain local and ignored;
-- every mutation uses fail-closed preflight;
+- every mutation requires preflight with `ready=true`;
 - Providers remain optional;
 - migration remains overlap-first;
 - remote writes remain inside RST ownership.
@@ -41,11 +41,11 @@ A new driver, renderer, or operation needs:
 - a specific user outcome;
 - machine-readable capability metadata;
 - required context, effects, and authorization semantics;
-- deterministic implementation;
+- repeatable implementation;
 - focused behavior tests;
 - an update to `docs/COMPATIBILITY.md`.
 
-Keep user-facing onboarding outcome-oriented. Put exact machine semantics in Operations and the repository Skill instead of repeating them across every document.
+Follow the document owners listed in `AGENTS.md`. Link to an existing owner instead of copying its explanation into another document.
 
 ## Public examples and private data
 
