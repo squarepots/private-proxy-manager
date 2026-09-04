@@ -261,7 +261,6 @@ type Preflight struct {
 	Conflicts                 []string `json:"conflicts"`
 	UserDecisions             []string `json:"user_decisions"`
 	ExpectedEffects           []string `json:"expected_effects"`
-	Rule                      string   `json:"rule"`
 	RequiresLocalSecretPrompt bool     `json:"requires_local_secret_prompt,omitempty"`
 }
 

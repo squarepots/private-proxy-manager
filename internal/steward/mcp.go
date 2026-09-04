@@ -72,7 +72,7 @@ func NewMCPServer(privateDir string) *mcp.Server {
 		return envelope
 	})
 	migrationSchema := json.RawMessage(`{"type":"object","additionalProperties":false,"required":["target","context"],"properties":{"target":{"type":"string","minLength":1},"context":{"type":"object","additionalProperties":true,"required":["replacement_server_id"],"properties":{"replacement_server_id":{"type":"string","minLength":1}}}}}`)
-	add("route_steward_migrate", "Start or safely resume one overlap-first Route replacement. The old remote capacity is not retired.", migrationSchema, workflow, func(ctx context.Context, raw json.RawMessage) Envelope {
+	add("route_steward_migrate", "Start or resume one Route replacement and leave the old capacity available.", migrationSchema, workflow, func(ctx context.Context, raw json.RawMessage) Envelope {
 		var input mcpOperationInput
 		if err := json.Unmarshal(raw, &input); err != nil {
 			return invalidMCPEnvelope("execute", err)
@@ -90,7 +90,7 @@ func NewMCPServer(privateDir string) *mcp.Server {
 		envelope, _ := RunRequest(ctx, Request{Command: "preflight", Operation: input.Operation, Target: input.Target, Context: input.Context, PrivateDir: privateDir})
 		return envelope
 	})
-	add("route_steward_execute", "Execute one supported bounded operation after preflight. Credential rotation and secure-prompt recovery use dedicated local paths.", mcpOperationSchema(executableOperations), execute, func(ctx context.Context, raw json.RawMessage) Envelope {
+	add("route_steward_execute", "Execute one supported operation after preflight. Credential rotation and password-prompt recovery use dedicated commands.", mcpOperationSchema(executableOperations), execute, func(ctx context.Context, raw json.RawMessage) Envelope {
 		var input mcpOperationInput
 		if err := json.Unmarshal(raw, &input); err != nil {
 			return invalidMCPEnvelope("execute", err)

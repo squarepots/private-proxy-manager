@@ -28,7 +28,7 @@ try {
         $portableGo = Join-Path $repo '.tools\go\bin\go.exe'
         if (Test-Path -LiteralPath $portableGo -PathType Leaf) { $go = [pscustomobject]@{ Source = $portableGo } }
     }
-    if (-not $go) { throw 'Go 1.27 is required to validate a source-development checkout. Normal users should use a matching Route Steward Release binary; this validation script does not install Go.' }
+    if (-not $go) { throw 'Go 1.27 is required for source validation. Install it or use a matching GitHub Release for normal operation.' }
     $goVersion = (& $go.Source env GOVERSION 2>$null | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or $goVersion -notmatch '^go1\.27(?:\.|$)') { throw "Go 1.27 is required to validate a source-development checkout; found '$goVersion'." }
     $gofmtName = 'gofmt'
@@ -58,7 +58,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Route Steward executable build failed.' }
     }
     Invoke-ValidationStep 'Secret/generated-file scan' { & ./scripts/Check-NoSecrets.ps1 }
-    Invoke-ValidationStep 'Architecture/public-tree contract' { & ./scripts/Test-Templates.ps1 }
+    Invoke-ValidationStep 'Static safety and repository checks' { & ./scripts/Test-Templates.ps1 }
     Invoke-ValidationStep 'Product version' { & ./tests/Test-Version.ps1 }
     Invoke-ValidationStep 'Agent/context/authorization' { & ./tests/Test-Agent.ps1 }
 

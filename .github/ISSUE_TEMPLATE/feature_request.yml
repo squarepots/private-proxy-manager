@@ -7,7 +7,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Please describe the user problem first. A useful proposal connects one clear outcome to RST's deterministic capability, privacy, compatibility, and validation boundaries.
+        Start with the user problem and the smallest useful change.
         Do not include real server addresses, hostnames, subscription URLs, tokens, SSH paths or keys, generated client payloads, recovery archives, or private state. Use synthetic values.
   - type: textarea
     id: problem
@@ -20,7 +20,7 @@ body:
     id: proposal
     attributes:
       label: Proposed outcome
-      description: Explain the smallest useful behavior, how an agent would discover/use it, and any compatibility or privacy impact.
+      description: Explain the desired behavior, how an agent would use it, and any compatibility or privacy impact.
     validations:
       required: true
   - type: textarea

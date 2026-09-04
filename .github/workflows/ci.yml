@@ -66,7 +66,7 @@ jobs:
       - name: Product version behavior
         shell: pwsh
         run: ./tests/Test-Version.ps1
-      - name: Compatibility machine surface
+      - name: Agent capability and preflight behavior
         shell: pwsh
         run: ./tests/Test-Agent.ps1
       - name: Bash syntax

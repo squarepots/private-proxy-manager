@@ -8,48 +8,35 @@
 
 **Set up and manage private proxies on your own servers with an AI agent.**
 
-Route Steward helps an AI agent set up, inspect, change, and recover a private proxy on VPS servers you control. Give the agent this GitHub URL: it can discover the supported workflow, check prerequisites before every change, operate through the native `route-steward` executable, and return sanitized results without exposing credentials or local paths.
+Give an AI agent this repository and describe the proxy you want. Route Steward supplies the commands, safety checks, server setup, client files, audits, and recovery workflow.
 
 ## Give the URL to an AI agent
 
-Paste this prompt into Codex or another agent that can read files and run local commands:
+Paste this into Codex or another agent that can read files and run local commands:
 
 ```text
-Open https://github.com/squarepots/route-steward and help me set up and manage a private proxy on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use an installed Route Steward Release binary or obtain the matching Release archive from GitHub Releases using the existing environment. Do not ask me to install Go for normal use. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
+Open https://github.com/squarepots/route-steward and help me set up and manage a private proxy on servers I control. Read AGENTS.md and .agents/skills/route-steward/SKILL.md, use the Route Steward release for this computer, and begin with route-steward capabilities.
 ```
 
-The agent starts with:
-
-```text
-route-steward capabilities
-route-steward bootstrap --private-dir ./private
-route-steward context --private-dir ./private
-```
-
-No PowerShell, Node.js, or Go toolchain is required for normal use. Obtain the matching binary archive for Linux, macOS, or Windows from [Releases](https://github.com/squarepots/route-steward/releases). Source development requires Go 1.27:
-
-```text
-go run ./cmd/route-steward capabilities
-go test ./...
-```
-
-Node.js is used only when you choose the optional Cloudflare Worker subscription delivery.
+See the [Quickstart](docs/QUICKSTART.md) for installation and prerequisites.
 
 ## What it gives you
 
-- a private Hysteria2 proxy through one server, or through an optional two-server WireGuard relay;
-- optional bounded Hysteria2 port hopping for per-port UDP throttling or filtering, with one tested client contract;
-- complete private configuration for a Mihomo/Clash Verge-compatible app, including explicit Profile service/China routing, an emergency/global selector, optional per-process selection rules, Karing, Shadowrocket, or a headless Linux/application proxy;
-- read-only server audit, real on-demand client traffic health, and typed configuration drift;
-- resumable overlap-first server replacement with health-gated client switching and no automatic retirement;
-- encrypted local recovery with verified, relocatable private state;
-- one machine-readable interface for command-line and local stdio MCP use.
+- a private Hysteria2 proxy through one server or a two-server WireGuard relay;
+- optional port hopping for networks that throttle or filter individual UDP ports;
+- private client files for Mihomo/Clash Verge-compatible apps, Karing, Shadowrocket, and headless Hysteria2;
+- server audits, configuration drift reports, and real on-demand traffic checks;
+- resumable server replacement that tests the new path before switching clients;
+- encrypted local backups and recovery;
+- JSON commands through the CLI or local stdio MCP.
 
 The current server baseline is a dedicated, rebuildable Ubuntu 24.04 amd64 VPS with authorized SSH key access. Exact protocols, clients, topology, and optional delivery are listed in [Compatibility](docs/COMPATIBILITY.md).
 
 ## Host effects and privacy
 
-Initial setup prepares the whole host, including firewall, swap, SSH, sysctl, logging, updates, packages, and monitoring. Operational state, keys, generated client files, and recovery archives stay in the private directory you select and are excluded from Git. A cloud AI runtime may still process the server address, SSH username, key path, and IDs supplied as operation inputs; use an offline runtime when those inputs must remain local.
+Initial setup changes firewall, swap, SSH, sysctl, logging, updates, packages, and monitoring across the host. Use a dedicated, rebuildable server.
+
+Keys, operational state, generated client files, and recovery archives stay in the private directory you select and are excluded from Git. A cloud AI service may still receive the server details needed for an operation; use an offline runtime when those details must remain local.
 
 Use only servers, accounts, and network resources you own or are authorized to administer. Read [Operations](OPERATIONS.md), [Privacy](docs/PRIVACY.md), and [Security](SECURITY.md) before deployment.
 

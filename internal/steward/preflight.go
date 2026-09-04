@@ -522,7 +522,7 @@ func NewPreflight(operation, target string, state *State, context map[string]any
 	if target != "" {
 		targetValue = stringPointer(target)
 	}
-	return Preflight{SchemaVersion: 1, Operation: operation, Target: targetValue, State: capability.State, Executor: capability.Executor, Mutation: capability.Mutation, AuthorizationClass: capability.AuthorizationClass, ContextComplete: complete, Authorized: authorized, Ready: complete && authorized, MissingContext: missing, Conflicts: conflicts, UserDecisions: decisions, ExpectedEffects: effects, Rule: authorityRule, RequiresLocalSecretPrompt: capability.RequiresLocalSecretPrompt}, nil
+	return Preflight{SchemaVersion: 1, Operation: operation, Target: targetValue, State: capability.State, Executor: capability.Executor, Mutation: capability.Mutation, AuthorizationClass: capability.AuthorizationClass, ContextComplete: complete, Authorized: authorized, Ready: complete && authorized, MissingContext: missing, Conflicts: conflicts, UserDecisions: decisions, ExpectedEffects: effects, RequiresLocalSecretPrompt: capability.RequiresLocalSecretPrompt}, nil
 }
 
 func NewRecoveryPreflight(privateDir string, context map[string]any) Preflight {
@@ -539,7 +539,7 @@ func NewRecoveryPreflight(privateDir string, context map[string]any) Preflight {
 		conflicts = append(conflicts, "private-state-target-already-exists")
 	}
 	ready := len(missing) == 0 && len(conflicts) == 0
-	return Preflight{SchemaVersion: 1, Operation: "recover", Target: nil, State: "supported", Executor: "local-assisted", Mutation: true, AuthorizationClass: "local-write", ContextComplete: ready, Authorized: true, Ready: ready, MissingContext: missing, Conflicts: conflicts, UserDecisions: []string{"enter-recovery-password-only-in-local-7zip-prompt"}, ExpectedEffects: []string{"no-remote-infrastructure-change", "reset-observed-state", "restore-local-canonical-private-state", "rewrite-restored-ssh-key-paths"}, Rule: authorityRule, RequiresLocalSecretPrompt: true}
+	return Preflight{SchemaVersion: 1, Operation: "recover", Target: nil, State: "supported", Executor: "local-assisted", Mutation: true, AuthorizationClass: "local-write", ContextComplete: ready, Authorized: true, Ready: ready, MissingContext: missing, Conflicts: conflicts, UserDecisions: []string{"enter-recovery-password-only-in-local-7zip-prompt"}, ExpectedEffects: []string{"no-remote-infrastructure-change", "reset-observed-state", "restore-local-canonical-private-state", "rewrite-restored-ssh-key-paths"}, RequiresLocalSecretPrompt: true}
 }
 
 func replaceUnderscore(value string) string {

@@ -2,28 +2,28 @@
 
 Route Steward helps an AI agent set up and manage a private proxy on VPS servers you control. The normal interface is one native executable for Linux, macOS, and Windows.
 
-## 1. Install the Release executable
+## 1. Download Route Steward
 
-Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases) using the existing environment, then run `route-steward` (or `route-steward.exe`) from that user/project-local location. Putting it on your `PATH` is optional.
+Download the archive for your operating system and architecture from [GitHub Releases](https://github.com/squarepots/route-steward/releases). Run `route-steward` (or `route-steward.exe`) from that location or add it to `PATH`.
 
-Normal use does not require Go, PowerShell, or Node.js, and Route Steward does not install Go for you. Developers working from source need Go 1.27 and can use the same CLI through the source checkout:
+Normal use requires no language toolchain. Source development uses Go 1.27:
 
 ```text
 go run ./cmd/route-steward capabilities
 go test ./...
 ```
 
-Node.js is needed only for the optional Cloudflare Worker subscription publisher.
+The optional Cloudflare Worker publisher uses Node.js.
 
 ## 2. Give the repository to an agent
 
 Paste this into Codex or another agent that can read files and run local commands:
 
 ```text
-Open https://github.com/squarepots/route-steward and help me set up and manage a private proxy on my own servers. Clone it if needed, read AGENTS.md and .agents/skills/route-steward/SKILL.md, then use an installed Route Steward Release binary or obtain the matching Release archive from GitHub Releases using the existing environment. Do not ask me to install Go for normal use. Run capabilities before asking for infrastructure details. Explain the dedicated-host requirements and host effects, keep operational state private, run preflight before every change, and return sanitized results.
+Open https://github.com/squarepots/route-steward and help me set up and manage a private proxy on servers I control. Read AGENTS.md and .agents/skills/route-steward/SKILL.md, use the Route Steward release for this computer, and begin with route-steward capabilities.
 ```
 
-The agent should begin with:
+The agent discovers current support first, then creates private state if needed:
 
 ```text
 route-steward capabilities
@@ -32,20 +32,18 @@ route-steward context --private-dir ./private
 route-steward drift --private-dir ./private
 ```
 
-For source development with Go 1.27 already available, the same interface is available as `go run ./cmd/route-steward <command>`.
-
 ## 3. Prepare the first proxy
 
 The agent will ask for the facts declared by capability discovery:
 
 - one dedicated, rebuildable Ubuntu 24.04 amd64 VPS for a direct route, or two for a relay;
 - each server's public address, valid Unix SSH username, and local private-key path;
-- the desired direct or single-hop relay connection;
-- a Mihomo/Clash Verge-compatible, Karing, Shadowrocket, or headless Hysteria2 client target.
+- whether you want a direct connection or a two-server relay;
+- the client you plan to use.
 
 Use non-identifying IDs such as `entry-a`, `route-a`, and `desktop-a`. Route Steward stores real operational values only in the selected private directory.
 
-If a network persistently throttles or filters individual UDP destination ports, the agent may create a Route with `port_hopping` such as `20000-20003`. The range must contain 2–8 consecutive ports and start at `listen_port`; all supported client outputs receive the same range. It is not a remedy for a network that blocks UDP generally. See [Compatibility](COMPATIBILITY.md) for the current support boundary.
+See [Compatibility](COMPATIBILITY.md) for supported routes, port hopping, and clients. Initial server preparation changes host-wide settings, so use a dedicated, rebuildable host.
 
 ## 4. Let the agent operate the workflow
 
@@ -55,79 +53,22 @@ capabilities → bootstrap when absent → context and drift
 → preflight → execute → audit → render
 ```
 
-Preflight returns missing facts, conflicts, expected effects, and authorization class. Execution continues only when `ready=true`. A deployed route with unexpected or undetermined live state is not blindly overwritten.
+Preflight returns missing facts, conflicts, expected effects, authorization class, and `ready`. The agent resolves those results before execution.
 
-## 5. Check the outcome
+## 5. Verify the result
 
-A successful response identifies the proxy route, server audit result, and private-root-relative client artifact. Server audit proves that managed configuration and services match. To prove actual client traffic, run the separate on-demand health check:
+The agent should report the Route state, audit result, and client artifact path relative to the private root. Audit checks managed server configuration. This command tests real client traffic:
 
 ```text
 route-steward health --private-dir ./private --target route-a
 ```
 
-Health runs a pinned Hysteria2 client through the Route, checks Internet and DNS access, compares the observed exit with desired state, and returns a short summary. Exact public IP values remain private unless `--include-public-ip` is explicitly supplied.
+For a headless Hysteria2 target, use `route-steward proxy --private-dir ./private --target <id> --check`.
 
-```json
-{
-  "route": "route-a",
-  "state": "deployed",
-  "audit": { "status": "in-sync" },
-  "health": { "status": "healthy", "latency_ms": 82 },
-  "artifact": { "relative_path": "<private>/delivery/desktop-a.yaml" }
-}
-```
+Returned results omit credentials, absolute local paths, Provider URLs, subscription tokens, node URIs, and raw SSH output. Generated client files remain inside the private root.
 
-Returned data omits credentials, absolute home paths, Provider URLs, subscription tokens, live node URIs, and raw SSH output.
+## Later changes and recovery
 
-For Karing 1.2.23.2606 or the same maintained import contract, create and render a Karing target after the Route is enabled:
+For an existing setup, ask the agent to inspect `context`, `drift`, and any migration checkpoint before making changes. `migrate-route` tests replacement capacity before switching client output and leaves retirement of the old capacity for a later user request.
 
-```text
-route-steward execute --private-dir ./private --operation add-client-target --context-json '{"target_id":"karing-mobile","profile_id":"primary","renderer":"karing"}'
-route-steward execute --private-dir ./private --operation render-client --target karing-mobile
-```
-
-In Karing, choose Add Profile, import a local Clash file, and select `<private>/delivery/karing-mobile.yaml`. Do not edit certificate, obfuscation, or routing fields; the generated file is the supported artifact and contains live credentials.
-
-Profiles express routing explicitly. Set `routing.china_direct` when China destinations should go direct, and bind the supported service categories to included RST Route IDs:
-
-```json
-{"profile_id":"primary","include_routes":["route-a","route-b"],"routing":{"china_direct":false,"service_routes":[{"service":"openai","route":"route-a"},{"service":"youtube","route":"route-b"}]}}
-```
-
-Only `openai` and `youtube` service categories are supported. The referenced Route must be enabled and included in the Profile; unmatched traffic ends at the Profile's `Private Routes` selector. A legacy `policy` value is accepted when reading old schema-1 state, but an explicit `routing` value always wins.
-
-For a Mihomo/Clash Verge-compatible target that needs application-specific routing, keep the Profile reusable and add process names only to the Mihomo ClientTarget:
-
-```text
-route-steward execute --private-dir ./private --operation add-client-target --context-json '{"target_id":"desktop-apps","profile_id":"primary","renderer":"mihomo","mihomo_process_names":["launcher.exe","com.example.app"]}'
-route-steward execute --private-dir ./private --operation render-client --target desktop-apps
-```
-
-The generated private YAML adds an `Applications` policy group where the operator can manually choose `DIRECT` or `Private Routes`, plus an explicit Mihomo `GLOBAL` selector that lists the managed nodes, `DIRECT`, `REJECT`, and included Provider sets. It leaves TUN, system-proxy, and runtime DNS-hijack ownership to the client. Only the count of configured process names appears in sanitized context; the concrete names remain in private state and the private client artifact.
-
-## 6. Use a Route from a Linux server or application
-
-After the selected Route is deployed, the agent can create a headless target without editing a Hysteria configuration by hand:
-
-```text
-route-steward execute --private-dir ./private --operation add-client-target --context-json '{"target_id":"backend-a","profile_id":"primary","renderer":"hysteria2","route_id":"route-a","listen":"127.0.0.1:1080","ingress_family":"auto"}'
-route-steward proxy --private-dir ./private --target backend-a --check
-route-steward proxy --private-dir ./private --target backend-a
-```
-
-The check starts the pinned official client temporarily, sends a real HTTP request through the Route, verifies the declared exit, and stops. The final command runs in the foreground; supervise it with the host's existing service manager for persistent use. While it is running, an application can use either protocol on the same local port:
-
-```text
-HTTP_PROXY=http://127.0.0.1:1080 HTTPS_PROXY=http://127.0.0.1:1080 your-command
-curl --proxy socks5h://127.0.0.1:1080 https://example.com/
-```
-
-The listener must be an IP-literal loopback address. One target selects one managed Route; Provider composition, GUI policy, public/LAN listening, and automatic service installation are not implied.
-
-## 7. Continue or recover
-
-Ask the agent to run audit and drift before changing an existing route. `migrate-route` persists and resumes an overlap-first replacement: the replacement is deployed and health-checked before affected client output changes, failed client switching is rolled back, and old remote capacity is not retired. A `workflow-blocked` result is safe to retry with the same Route and replacement Server. Encrypted recovery uses `route-steward backup` and `route-steward recover`; enter the password only in the local 7-Zip prompt.
-
-After a restart, `route-steward migrations --private-dir ./private` returns the sanitized checkpoint and recorded next action.
-
-Read [Compatibility](COMPATIBILITY.md), [Operations](../OPERATIONS.md), [Privacy](PRIVACY.md), [Security](../SECURITY.md), and the [operating boundary](OPERATING-BOUNDARY.md) before real deployment.
+`route-steward backup` and `route-steward recover` use a local 7-Zip password prompt. See [Operations](../OPERATIONS.md) for command details and [Security](../SECURITY.md), [Privacy](PRIVACY.md), and the [operating boundary](OPERATING-BOUNDARY.md) before deployment.

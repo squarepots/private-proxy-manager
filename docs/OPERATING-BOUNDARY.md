@@ -1,6 +1,6 @@
 # Operating boundary
 
-Route Steward manages self-hosted network paths on infrastructure selected and controlled by the operator. This document defines the conditions that make that operating model clear and reproducible.
+Route Steward manages self-hosted network paths on infrastructure selected and controlled by the operator.
 
 ## Authorized infrastructure
 
@@ -23,6 +23,6 @@ The operator selects the deployment topology and confirms that its purpose, infr
 
 ## Project distribution
 
-The open-source project distributes local automation, schemas, renderers, tests, and documentation. Each Route runs in operator-selected environments under the operator's accounts. The deterministic engine records desired state locally and applies scoped changes after preflight establishes the target, expected effects, access, and authorization class.
+The open-source project distributes local automation, schemas, renderers, tests, and documentation. Each Route runs in the operator's environment and accounts. The Go engine records desired state locally and applies changes after preflight checks the target, effects, access, and authorization class.
 
 Technical capabilities are listed in [Compatibility](COMPATIBILITY.md). Infrastructure ownership and mutation boundaries are listed in [Operations](../OPERATIONS.md), [Security](../SECURITY.md), and the [Threat model](THREAT-MODEL.md).

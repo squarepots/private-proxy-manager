@@ -147,6 +147,51 @@ func TestGoControlPlaneLifecycle(t *testing.T) {
 	}
 }
 
+func TestMachineContractsExposeStructuredDecisionData(t *testing.T) {
+	capabilities, exit := RunRequest(context.Background(), Request{Command: "capabilities"})
+	if exit != 0 || !capabilities.Success {
+		t.Fatalf("capability discovery failed: exit=%d %#v", exit, capabilities)
+	}
+	data, ok := capabilities.Data.(map[string]any)
+	if !ok {
+		t.Fatalf("capability data has unexpected shape: %#v", capabilities.Data)
+	}
+	if _, exists := data["rule"]; exists {
+		t.Fatal("capability data contains an editorial rule")
+	}
+	if data["product"] != "route-steward" || data["interface"] != "agent-machine-surface" {
+		t.Fatalf("capability data omitted machine interface identity: %#v", data)
+	}
+	if _, ok := data["capabilities"].([]Capability); !ok {
+		t.Fatalf("capability data omitted structured operations: %#v", data)
+	}
+
+	state, _, err := Bootstrap(filepath.Join(t.TempDir(), "private"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	preflight, err := NewPreflight("add-server", "", state, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(preflight)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(encoded, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := fields["rule"]; exists {
+		t.Fatal("preflight data contains an editorial rule")
+	}
+	for _, field := range []string{"authorization_class", "context_complete", "authorized", "ready", "missing_context", "conflicts", "user_decisions", "expected_effects"} {
+		if _, exists := fields[field]; !exists {
+			t.Fatalf("preflight data omitted %q", field)
+		}
+	}
+}
+
 func TestRemotePayloadValidationUsesSemantics(t *testing.T) {
 	fingerprint := strings.Repeat("ab", 32)
 	expected := []byte("schema: 1\nname: 'Entry-A'\nproxies:\n  - name: Entry-A-HY2-v4\n    type: hysteria2\n    server: '192.0.2.10'\n    port: 443\n    password: 'fixture-auth'\n    sni: '192.0.2.10'\n    skip-cert-verify: true\n    fingerprint: '" + fingerprint + "'\n    alpn: [h3]\n    obfs: salamander\n    obfs-password: 'fixture-obfs'\n")
