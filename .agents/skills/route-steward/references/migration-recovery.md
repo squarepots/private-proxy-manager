@@ -26,7 +26,7 @@ Restore into a clean destination:
 route-steward recover --archive <path> --private-dir <directory>
 ```
 
-Recovery verifies the manifest and archive paths, relocates SSH and delivery paths, applies private permissions, validates schema-1 inventory, and resets observed evidence. Restored migrations return to a revalidation stage.
+Recovery verifies the manifest and archive paths, relocates SSH and delivery paths, applies private permissions, validates current inventory, and resets observed evidence. Restored migrations return to a revalidation stage.
 
 After recovery, read capabilities, context, drift, and migrations. Audit existing Routes before a remote write, then render clients from the restored state.
 
