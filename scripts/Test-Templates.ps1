@@ -135,7 +135,7 @@ $examplePath = Join-Path $repo 'examples/inventory.example.json'
 if (Test-Path -LiteralPath $examplePath -PathType Leaf) {
     try {
         $example = [IO.File]::ReadAllText($examplePath, [Text.Encoding]::UTF8) | ConvertFrom-Json
-        if ([int]$example.schema -ne 1) { $failures.Add('examples/inventory.example.json: public inventory schema must be 1.') }
+        if ([int]$example.schema -ne 2) { $failures.Add('examples/inventory.example.json: public inventory schema must be 2.') }
     }
     catch { $failures.Add('examples/inventory.example.json: invalid JSON.') }
 }

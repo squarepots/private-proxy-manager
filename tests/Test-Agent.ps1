@@ -47,7 +47,7 @@ try {
     Assert-True (Test-Path -LiteralPath (Join-Path $stage 'inventory.json')) 'Bootstrap did not create inventory.json.'
     Assert-True (Test-Path -LiteralPath (Join-Path $stage 'secrets\index.json')) 'Bootstrap did not create secret index.'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $stage 'operator.json'))) 'Bootstrap created deprecated operator state.'
-    Assert-True ($bootstrap.data.context.inventory_schema -eq 1) 'Clean bootstrap did not create public inventory schema 1.'
+    Assert-True ($bootstrap.data.context.inventory_schema -eq 2) 'Clean bootstrap did not create public inventory schema 2.'
     Assert-True ($bootstrap.data.context.counts.providers -eq 0) 'Clean bootstrap unexpectedly requires a Provider.'
     Assert-True (@($bootstrap.data.context.profiles).Count -eq 0) 'Clean bootstrap must not assume a Profile or geographic policy.'
     Assert-True (@($bootstrap.data.context.client_targets).Count -eq 0) 'Clean bootstrap must not assume devices or client apps.'
@@ -85,7 +85,8 @@ try {
     Assert-True ($capabilities.data.drivers.compute[0].transport -eq 'ssh') 'BYO SSH compute capability truth is missing.'
     Assert-True (@($capabilities.data.drivers.renderers | Where-Object id -eq 'mihomo').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'karing').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'shadowrocket').Count -eq 1 -and @($capabilities.data.drivers.renderers | Where-Object id -eq 'hysteria2').Count -eq 1) 'Client renderer capability truth is incomplete.'
     $mihomoCapability = @($capabilities.data.drivers.renderers | Where-Object id -eq 'mihomo')[0]
-    Assert-True ($mihomoCapability.compatibility_baseline -eq '1.19.27' -and $mihomoCapability.global_selector -eq 'GLOBAL' -and @($mihomoCapability.profile_routing).Count -eq 3 -and @($mihomoCapability.provider_group_semantics) -contains 'use') 'Mihomo Profile/global/provider capability contract is incomplete.'
+    Assert-True ($mihomoCapability.compatibility_baseline -eq '1.19.27' -and $mihomoCapability.global_selector -eq 'GLOBAL' -and @($mihomoCapability.provider_group_semantics) -contains 'use') 'Mihomo global/provider capability contract is incomplete.'
+    Assert-True ($capabilities.data.drivers.profile_routing.ordered -and @($capabilities.data.drivers.profile_routing.match_types).Count -eq 3 -and @($capabilities.data.drivers.profile_routing.action_types).Count -eq 2 -and $capabilities.data.drivers.profile_routing.route_target -eq 'enabled-included-route-id') 'Generic Profile routing capability contract is incomplete.'
     Assert-True ($mihomoCapability.process_routing.rule -eq 'PROCESS-NAME' -and $mihomoCapability.process_routing.field -eq 'mihomo_process_names' -and $mihomoCapability.process_routing.process_name_limit -eq 32) 'Mihomo process-routing capability contract is incomplete.'
     $karingCapability = @($capabilities.data.drivers.renderers | Where-Object id -eq 'karing')[0]
     Assert-True ($karingCapability.compatibility_baseline -match '^(0|[1-9][0-9]*)\.' -and $karingCapability.tls_identity -eq 'sha256-certificate-pinning' -and @($karingCapability.platforms).Count -eq 6) 'Karing capability contract is incomplete.'
@@ -129,12 +130,12 @@ try {
     Assert-True ($addRoute.data.result.ingress_driver -eq 'hysteria2' -and -not $addRoute.data.result.enabled) 'A new Route did not preserve explicit ingress driver/pending semantics.'
     Assert-True (@($capabilities.data.capabilities | Where-Object id -eq 'add-route')[0].required_context.type -contains 'udp-port-range-2-to-8') 'add-route capability metadata does not describe optional bounded port hopping.'
 
-    $profileContext = [ordered]@{ profile_id = 'primary'; include_routes = @('direct-a'); include_providers = @(); routing = [ordered]@{ china_direct = $false; service_routes = @() } } | ConvertTo-Json -Compress
+    $profileContext = [ordered]@{ profile_id = 'primary'; include_routes = @('direct-a'); include_providers = @(); routing = [ordered]@{ rules = @() } } | ConvertTo-Json -Depth 8 -Compress
     $addProfile = & $agent execute -PrivateDirectory $stage -Operation add-profile -ContextJson $profileContext | ConvertFrom-Json
     Assert-True ($addProfile.success -and $addProfile.data.result.id -eq 'primary') 'Explicit Profile creation failed.'
     $contextAfterProfile = & $agent context -PrivateDirectory $stage | ConvertFrom-Json
     $primaryProfile = @($contextAfterProfile.data.profiles | Where-Object id -eq 'primary')[0]
-    Assert-True ($primaryProfile.routing.china_direct -eq $false -and @($primaryProfile.routing.service_routes).Count -eq 0) 'Sanitized context did not preserve explicit Profile routing.'
+    Assert-True (@($primaryProfile.routing.rules).Count -eq 0 -and -not $primaryProfile.routing.PSObject.Properties['china_direct'] -and -not $primaryProfile.routing.PSObject.Properties['service_routes']) 'Sanitized context did not preserve generic Profile routing.'
     $targetContext = [ordered]@{ target_id = 'desktop'; profile_id = 'primary'; renderer = 'mihomo'; mihomo_process_names = @('launcher.exe', 'com.example.app', 'Launcher.exe') } | ConvertTo-Json -Compress
     $addTarget = & $agent execute -PrivateDirectory $stage -Operation add-client-target -ContextJson $targetContext | ConvertFrom-Json
     Assert-True ($addTarget.success -and $addTarget.data.result.renderer -eq 'mihomo') 'Explicit ClientTarget creation failed.'
@@ -145,7 +146,7 @@ try {
 
     $context = & $agent context -PrivateDirectory $stage | ConvertFrom-Json
     $contextText = $context | ConvertTo-Json -Depth 20
-    Assert-True ($context.data.inventory_schema -eq 1 -and -not $context.data.PSObject.Properties['mode']) 'Sanitized context did not preserve schema state or still exposed a deprecated mode.'
+    Assert-True ($context.data.inventory_schema -eq 2 -and -not $context.data.PSObject.Properties['mode']) 'Sanitized context did not preserve schema state or still exposed a deprecated mode.'
     Assert-True (-not ($contextText -match '192\.0\.2\.10|fixture\.pem|2001:db8')) 'Agent context leaked private infrastructure data.'
     Assert-True ($context.data.counts.mihomo_process_names -eq 2) 'Sanitized context did not expose Mihomo process-name count.'
     Assert-True (@($context.data.client_targets | Where-Object id -eq 'desktop')[0].mihomo_process_name_count -eq 2) 'Sanitized ClientTarget did not expose Mihomo process-name count.'

@@ -48,9 +48,9 @@ Use `port_hopping` when a network persistently throttles or filters particular U
 
 Yes. A Mihomo ClientTarget can list plain executable or Android package names in `mihomo_process_names`. The generated `Applications` group lets the user select `DIRECT` or `Private Routes` for those processes.
 
-## How are Profile service routes and providers selected?
+## How are Profile routing rules and providers selected?
 
-A Profile stores `china_direct`, `openai` and `youtube` service bindings, included Routes, and optional Providers. Each service binding names an enabled Route in the Profile. Mihomo lists included Provider sets in both `Private Routes` and its explicit `GLOBAL` group. Karing uses the shared Profile routing rules.
+A Profile stores included Routes, optional Providers, and ordered generic routing rules. Rules may match a domain suffix, geosite category, or geoip category and select either direct handling or an enabled included Route. Mihomo lists included Provider sets in both `Private Routes` and its explicit `GLOBAL` group. Karing uses the same Profile routing rules.
 
 ## How does server replacement avoid interruption?
 

@@ -28,8 +28,8 @@ func Capabilities() []Capability {
 		capability("add-provider", "agent", true, "local-write", "Add an optional generic upstream Provider and keep its URL in local secret storage.", []ContextField{field("provider_id", "stable-id", true), field("url", "http-url", true)}, "store-provider-url-as-local-secret"),
 		capability("update-provider", "agent", true, "local-write", "Update an existing optional Provider without exposing its URL through agent status.", []ContextField{target("provider-id", true)}, "update-local-provider"),
 		capability("remove-provider", "agent", true, "local-write", "Remove an unreferenced Provider and its local URL secret.", []ContextField{target("provider-id", true)}, "remove-local-provider-and-secret"),
-		capability("add-profile", "agent", true, "local-write", "Add a reusable Profile with explicit China and service routing.", []ContextField{field("profile_id", "stable-id", true), field("routing", "profile-routing", false), field("include_routes", "route-id-list", false), field("include_providers", "provider-id-list", false)}, "update-local-profile"),
-		capability("update-profile", "agent", true, "local-write", "Update a Profile routing and provider selection without changing renderer identity.", []ContextField{target("profile-id", true), field("routing", "profile-routing", false), field("include_routes", "route-id-list", false), field("include_providers", "provider-id-list", false)}, "update-local-profile"),
+		capability("add-profile", "agent", true, "local-write", "Add a reusable Profile with ordered generic routing rules.", []ContextField{field("profile_id", "stable-id", true), field("routing", "ordered-profile-routing-rules", false), field("include_routes", "route-id-list", false), field("include_providers", "provider-id-list", false)}, "update-local-profile"),
+		capability("update-profile", "agent", true, "local-write", "Update a Profile routing and provider selection without changing renderer identity.", []ContextField{target("profile-id", true), field("routing", "ordered-profile-routing-rules", false), field("include_routes", "route-id-list", false), field("include_providers", "provider-id-list", false)}, "update-local-profile"),
 		capability("remove-profile", "agent", true, "local-write", "Remove a Profile only when no ClientTarget references it.", []ContextField{target("profile-id", true)}, "remove-local-profile"),
 		capability("add-client-target", "agent", true, "local-write", "Add a renderer-backed ClientTarget that references a reusable Profile.", []ContextField{field("target_id", "stable-id", true), field("profile_id", "profile-id", true), field("renderer", "mihomo|karing|shadowrocket|hysteria2", true), {Name: "mihomo_process_names", Type: "process-name-list-0-to-32", Required: false, When: "renderer is mihomo"}, {Name: "route_id", Type: "route-id", Required: false, When: "renderer is hysteria2"}, {Name: "listen", Type: "loopback-listener", Required: false, When: "renderer is hysteria2"}, {Name: "ingress_family", Type: "auto|ipv4|ipv6", Required: false, When: "renderer is hysteria2"}}, "update-local-client-target"),
 		capability("update-client-target", "agent", true, "local-write", "Update a ClientTarget's Profile, delivery, or renderer-specific settings.", []ContextField{target("client-target-id", true), field("profile_id", "profile-id", false), field("delivery", "file|subscription", false), {Name: "mihomo_process_names", Type: "process-name-list-0-to-32", Required: false, When: "current renderer is mihomo"}, {Name: "route_id", Type: "route-id", Required: false, When: "current renderer is hysteria2"}, {Name: "listen", Type: "loopback-listener", Required: false, When: "current renderer is hysteria2"}, {Name: "ingress_family", Type: "auto|ipv4|ipv6", Required: false, When: "current renderer is hysteria2"}}, "update-local-client-target"),
@@ -50,13 +50,11 @@ func capability(id, executor string, mutation bool, authorization, description s
 	}
 	return Capability{ID: id, State: "supported", Executor: executor, Mutation: mutation, AuthorizationClass: authorization, Description: description, RequiredContext: required, Effects: effects}
 }
-
 func secretPromptCapability(id, description string, required []ContextField, effects ...string) Capability {
 	c := capability(id, "local-assisted", true, "local-write", description, required, effects...)
 	c.RequiresLocalSecretPrompt = true
 	return c
 }
-
 func CapabilityByID(id string) (Capability, error) {
 	for _, c := range Capabilities() {
 		if c.ID == id {
@@ -68,14 +66,20 @@ func CapabilityByID(id string) (Capability, error) {
 
 func DriverCapabilities() map[string]any {
 	return map[string]any{
-		"schema_version":        1,
-		"product_version":       routesteward.Version(),
-		"compute":               []any{map[string]any{"id": "byo-ssh-ubuntu-24.04-amd64", "state": "supported", "provisioning": "bring-your-own", "transport": "ssh", "package_manager": "apt", "architecture": "amd64", "operating_system": "ubuntu-24.04", "host_ownership": "dedicated"}},
-		"ingress":               []any{map[string]any{"id": "hysteria2", "state": "supported", "version": hysteriaProtocolVersion, "transport": "udp", "address_families": []string{"ipv4", "ipv6"}, "credential_model": "local-canonical-pinned-tls", "reliability": []string{"salamander-obfuscation", "optional-port-hopping"}}},
-		"links":                 []any{map[string]any{"id": "wireguard-single-hop", "state": "supported", "hops": 1, "address_family": "ipv4"}},
-		"providers":             []any{map[string]any{"id": "mihomo-http-provider", "state": "supported", "optional": true, "schemes": []string{"https", "http"}, "health_check": false}},
-		"health_checks":         []any{map[string]any{"id": "hysteria2-client-traffic", "state": "supported", "routes": []string{"direct", "relay"}, "on_demand": true, "external_endpoints": []string{"cloudflare-trace", "ipify"}, "packet_loss": "unsupported"}},
-		"renderers":             []any{map[string]any{"id": "mihomo", "state": "supported", "compatibility_baseline": mihomoCompatibilityBaseline, "clients": []string{"Clash Verge-compatible Mihomo clients"}, "profile_routing": []string{"GEOSITE,openai", "GEOSITE,youtube", "optional GEOSITE,CN direct"}, "global_selector": "GLOBAL", "provider_group_semantics": []string{"proxies", "use"}, "process_routing": map[string]any{"field": "mihomo_process_names", "rule": "PROCESS-NAME", "mode": "find-process-mode strict", "policy_group": "Applications", "process_name_limit": maxMihomoProcessNames, "rule_position": "after-private-direct-before-profile-routing"}}, map[string]any{"id": "karing", "state": "supported", "compatibility_baseline": karingCompatibilityBaseline, "delivery": []string{"private-clash-yaml"}, "platforms": []string{"windows", "macos", "linux", "ios", "android", "tvos"}, "tls_identity": "sha256-certificate-pinning"}, map[string]any{"id": "shadowrocket", "state": "supported", "delivery": []string{"node-import", "private-subscription"}}, map[string]any{"id": "hysteria2", "state": "supported", "delivery": []string{"private-json"}, "local_modes": []string{"http", "socks5"}, "runtime": "verified-official-client"}},
+		"schema_version":  1,
+		"product_version": routesteward.Version(),
+		"compute":         []any{map[string]any{"id": "byo-ssh-ubuntu-24.04-amd64", "state": "supported", "provisioning": "bring-your-own", "transport": "ssh", "package_manager": "apt", "architecture": "amd64", "operating_system": "ubuntu-24.04", "host_ownership": "dedicated"}},
+		"ingress":         []any{map[string]any{"id": "hysteria2", "state": "supported", "version": hysteriaProtocolVersion, "transport": "udp", "address_families": []string{"ipv4", "ipv6"}, "credential_model": "local-canonical-pinned-tls", "reliability": []string{"salamander-obfuscation", "optional-port-hopping"}}},
+		"links":           []any{map[string]any{"id": "wireguard-single-hop", "state": "supported", "hops": 1, "address_family": "ipv4"}},
+		"providers":       []any{map[string]any{"id": "mihomo-http-provider", "state": "supported", "optional": true, "schemes": []string{"https", "http"}, "health_check": false}},
+		"profile_routing": map[string]any{"state": "supported", "ordered": true, "match_types": []string{"domain_suffix", "geosite", "geoip"}, "action_types": []string{"direct", "route"}, "route_target": "enabled-included-route-id", "fallback": "Private Routes", "renderers": []string{"mihomo", "karing"}},
+		"health_checks":   []any{map[string]any{"id": "hysteria2-client-traffic", "state": "supported", "routes": []string{"direct", "relay"}, "on_demand": true, "external_endpoints": []string{"cloudflare-trace", "ipify"}, "packet_loss": "unsupported"}},
+		"renderers": []any{
+			map[string]any{"id": "mihomo", "state": "supported", "compatibility_baseline": mihomoCompatibilityBaseline, "clients": []string{"Clash Verge-compatible Mihomo clients"}, "global_selector": "GLOBAL", "provider_group_semantics": []string{"proxies", "use"}, "process_routing": map[string]any{"field": "mihomo_process_names", "rule": "PROCESS-NAME", "mode": "find-process-mode strict", "policy_group": "Applications", "process_name_limit": maxMihomoProcessNames, "rule_position": "after-private-direct-before-profile-routing"}},
+			map[string]any{"id": "karing", "state": "supported", "compatibility_baseline": karingCompatibilityBaseline, "delivery": []string{"private-clash-yaml"}, "platforms": []string{"windows", "macos", "linux", "ios", "android", "tvos"}, "tls_identity": "sha256-certificate-pinning"},
+			map[string]any{"id": "shadowrocket", "state": "supported", "delivery": []string{"node-import", "private-subscription"}},
+			map[string]any{"id": "hysteria2", "state": "supported", "delivery": []string{"private-json"}, "local_modes": []string{"http", "socks5"}, "runtime": "verified-official-client"},
+		},
 		"client_proxy":          []any{map[string]any{"id": "hysteria2-loopback", "state": "supported", "command": "proxy", "check": "real-http-exit-identity", "listen_scope": "loopback-only"}},
 		"subscription_delivery": []any{map[string]any{"id": "cloudflare-worker", "state": "supported", "optional": true, "role": "private-config-delivery-only"}},
 	}
@@ -96,11 +100,16 @@ func SanitizedContext(inv *Inventory) map[string]any {
 	profiles := make([]map[string]any, 0, len(inv.Profiles))
 	for _, p := range inv.Profiles {
 		routing := effectiveProfileRouting(p)
-		serviceRoutes := make([]map[string]string, 0, len(routing.ServiceRoutes))
-		for _, binding := range routing.ServiceRoutes {
-			serviceRoutes = append(serviceRoutes, map[string]string{"service": binding.Service, "route": binding.Route})
+		rules := make([]map[string]any, 0, len(routing.Rules))
+		for _, rule := range routing.Rules {
+			match := map[string]string{"type": rule.Match.Type, "value": rule.Match.Value}
+			action := map[string]string{"type": rule.Action.Type}
+			if rule.Action.Route != "" {
+				action["route"] = rule.Action.Route
+			}
+			rules = append(rules, map[string]any{"match": match, "action": action})
 		}
-		profiles = append(profiles, map[string]any{"id": p.ID, "routing": map[string]any{"china_direct": routing.ChinaDirect, "service_routes": serviceRoutes}})
+		profiles = append(profiles, map[string]any{"id": p.ID, "routing": map[string]any{"rules": rules}})
 	}
 	targets := make([]map[string]any, 0, len(inv.ClientTargets))
 	processNameCount := 0
@@ -116,14 +125,7 @@ func SanitizedContext(inv *Inventory) map[string]any {
 	for _, c := range Capabilities() {
 		operations = append(operations, map[string]string{"id": c.ID, "state": c.State, "authorization_class": c.AuthorizationClass})
 	}
-	return map[string]any{
-		"schema_version":       1,
-		"inventory_schema":     inv.Schema,
-		"counts":               map[string]int{"servers": len(inv.Servers), "links": len(inv.Links), "routes": len(inv.Routes), "enabled_routes": enabledRoutes, "providers": len(inv.Providers), "enabled_providers": enabledProviders, "profiles": len(inv.Profiles), "client_targets": len(inv.ClientTargets), "mihomo_process_names": processNameCount},
-		"profiles":             profiles,
-		"client_targets":       targets,
-		"supported_operations": operations,
-	}
+	return map[string]any{"schema_version": 1, "inventory_schema": inv.Schema, "counts": map[string]int{"servers": len(inv.Servers), "links": len(inv.Links), "routes": len(inv.Routes), "enabled_routes": enabledRoutes, "providers": len(inv.Providers), "enabled_providers": enabledProviders, "profiles": len(inv.Profiles), "client_targets": len(inv.ClientTargets), "mihomo_process_names": processNameCount}, "profiles": profiles, "client_targets": targets, "supported_operations": operations}
 }
 
 func sortedUnique(values []string) []string {
@@ -138,7 +140,6 @@ func sortedUnique(values []string) []string {
 	sort.Strings(out)
 	return out
 }
-
 func stringField(context map[string]any, name string) string {
 	if context == nil {
 		return ""
@@ -153,7 +154,6 @@ func stringField(context map[string]any, name string) string {
 	}
 	return strings.TrimSpace(s)
 }
-
 func hasField(context map[string]any, name string) bool {
 	if context == nil {
 		return false
@@ -161,7 +161,6 @@ func hasField(context map[string]any, name string) bool {
 	_, ok := context[name]
 	return ok
 }
-
 func stringSliceField(context map[string]any, name string, fallback []string) []string {
 	if context == nil {
 		return append([]string(nil), fallback...)
@@ -185,7 +184,6 @@ func stringSliceField(context map[string]any, name string, fallback []string) []
 	}
 	return out
 }
-
 func boolField(context map[string]any, name string, fallback bool) bool {
 	if context == nil {
 		return fallback
@@ -200,7 +198,6 @@ func boolField(context map[string]any, name string, fallback bool) bool {
 	}
 	return value
 }
-
 func intField(context map[string]any, name string, fallback int) int {
 	if context == nil {
 		return fallback

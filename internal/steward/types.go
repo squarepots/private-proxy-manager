@@ -2,7 +2,11 @@ package steward
 
 import "encoding/json"
 
-const InventorySchema = 1
+const (
+	InventorySchema   = 2
+	SecretIndexSchema = 1
+	ObservedSchema    = 1
+)
 
 type Envelope struct {
 	SchemaVersion int    `json:"schema_version"`
@@ -20,7 +24,7 @@ type Inventory struct {
 	Links         []Link         `json:"links"`
 	Routes        []Route        `json:"routes"`
 	Providers     []Provider     `json:"providers"`
-	Policies      []Policy       `json:"policies"`
+	Policies      []Policy       `json:"-"`
 	Profiles      []Profile      `json:"profiles"`
 	ClientTargets []ClientTarget `json:"client_targets"`
 }
@@ -138,14 +142,14 @@ type Provider struct {
 }
 
 type Policy struct {
-	ID          string `json:"id"`
-	Description string `json:"description"`
-	DNSMode     string `json:"dns_mode"`
+	ID          string `json:"-"`
+	Description string `json:"-"`
+	DNSMode     string `json:"-"`
 }
 
 type Profile struct {
 	ID               string          `json:"id"`
-	Policy           string          `json:"policy,omitempty"`
+	Policy           string          `json:"-"`
 	IncludeRoutes    []string        `json:"include_routes"`
 	IncludeProviders []string        `json:"include_providers"`
 	Routing          *ProfileRouting `json:"routing,omitempty"`

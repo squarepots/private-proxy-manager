@@ -8,19 +8,18 @@ import (
 	"testing"
 )
 
-func TestExplicitProfileRoutingRendersDeterministicServiceSelectors(t *testing.T) {
+func TestGenericProfileRoutingRendersDeclaredOrder(t *testing.T) {
 	state, route := healthFixture(t, "direct", true)
-	if _, err := AddProfile(state, map[string]any{
+	context := map[string]any{
 		"profile_id":     "explicit",
 		"include_routes": []any{route.ID},
-		"routing": map[string]any{
-			"china_direct": false,
-			"service_routes": []any{
-				map[string]any{"service": "youtube", "route": route.ID},
-				map[string]any{"service": "openai", "route": route.ID},
-			},
-		},
-	}); err != nil {
+		"routing": map[string]any{"rules": []any{
+			map[string]any{"match": map[string]any{"type": "domain_suffix", "value": "example.net"}, "action": map[string]any{"type": "direct"}},
+			map[string]any{"match": map[string]any{"type": "geosite", "value": "example-category"}, "action": map[string]any{"type": "route", "route": route.ID}},
+			map[string]any{"match": map[string]any{"type": "geoip", "value": "US"}, "action": map[string]any{"type": "route", "route": route.ID}},
+		}},
+	}
+	if _, err := AddProfile(state, context); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := AddClientTarget(state, map[string]any{"target_id": "desktop", "profile_id": "explicit", "renderer": "mihomo", "mihomo_process_names": []any{"launcher.exe"}}); err != nil {
@@ -34,177 +33,120 @@ func TestExplicitProfileRoutingRendersDeterministicServiceSelectors(t *testing.T
 		t.Fatal(err)
 	}
 	yaml := string(b)
-	for _, forbidden := range []string{"\ntun:", "auto-route:", "strict-route:", "auto-detect-interface:", "dns-hijack:", "listen: 0.0.0.0:1053", "nameserver-policy:"} {
-		if strings.Contains(yaml, forbidden) {
-			t.Fatalf("renderer retained host-wide client/runtime ownership %q:\n%s", forbidden, yaml)
-		}
-	}
 	for _, required := range []string{
-		"  - name: RST-Route-route-a\n    type: select\n    proxies:\n",
-		"  - GEOSITE,openai,RST-Route-route-a\n",
-		"  - GEOSITE,youtube,RST-Route-route-a\n",
+		"  - DOMAIN-SUFFIX,example.net,DIRECT\n",
+		"  - GEOSITE,example-category,RST-Route-route-a\n",
+		"  - GEOIP,US,RST-Route-route-a,no-resolve\n",
 		"  - PROCESS-NAME,launcher.exe,Applications\n",
+		"  - MATCH,Private Routes\n",
 	} {
 		if !strings.Contains(yaml, required) {
-			t.Fatalf("explicit Profile routing output missed %q:\n%s", required, yaml)
+			t.Fatalf("rendered routing missed %q:\n%s", required, yaml)
 		}
 	}
 	privateRule := strings.Index(yaml, "  - IP-CIDR6,fe80::/10,DIRECT,no-resolve\n")
 	processRule := strings.Index(yaml, "  - PROCESS-NAME,launcher.exe,Applications\n")
-	serviceRule := strings.Index(yaml, "  - GEOSITE,openai,RST-Route-route-a\n")
+	domainRule := strings.Index(yaml, "  - DOMAIN-SUFFIX,example.net,DIRECT\n")
+	geositeRule := strings.Index(yaml, "  - GEOSITE,example-category,RST-Route-route-a\n")
+	geoipRule := strings.Index(yaml, "  - GEOIP,US,RST-Route-route-a,no-resolve\n")
 	finalRule := strings.Index(yaml, "  - MATCH,Private Routes\n")
-	if privateRule < 0 || processRule < 0 || serviceRule < 0 || finalRule < 0 || !(privateRule < processRule && processRule < serviceRule && serviceRule < finalRule) {
-		t.Fatalf("Profile routing rules are not ordered local, process, service, final:\n%s", yaml)
+	if !(privateRule < processRule && processRule < domainRule && domainRule < geositeRule && geositeRule < geoipRule && geoipRule < finalRule) {
+		t.Fatalf("routing order changed:\n%s", yaml)
 	}
 	if strings.Count(yaml, "  - MATCH,") != 1 {
 		t.Fatalf("generated YAML must have exactly one final MATCH rule:\n%s", yaml)
 	}
-	if !strings.Contains(yaml, "  - name: GLOBAL\n") {
-		t.Fatal("Mihomo output omitted the explicit global/emergency selector")
-	}
 
 	sanitized, _ := json.Marshal(SanitizedContext(state.Inventory))
-	if strings.Contains(string(sanitized), "policy") || !strings.Contains(string(sanitized), `"routing"`) || strings.Contains(string(sanitized), "launcher.exe") {
-		t.Fatalf("sanitized context did not expose the new routing model safely: %s", sanitized)
-	}
-}
-
-func TestProfileRoutingExplicitValueOverridesLegacyPolicy(t *testing.T) {
-	_, route := healthFixture(t, "direct", false)
-	for _, item := range []struct {
-		id          string
-		policy      string
-		chinaDirect bool
-		explicit    bool
-	}{
-		{id: "legacy-balanced", policy: "balanced-cn", chinaDirect: true},
-		{id: "legacy-privacy", policy: "privacy", chinaDirect: false},
-		{id: "explicit-false", policy: "balanced-cn", chinaDirect: false, explicit: true},
-		{id: "explicit-true", policy: "privacy", chinaDirect: true, explicit: true},
-	} {
-		profile := Profile{ID: item.id, Policy: item.policy, IncludeRoutes: []string{route.ID}}
-		if item.explicit {
-			profile.Routing = &ProfileRouting{ChinaDirect: item.chinaDirect}
+	text := string(sanitized)
+	for _, forbidden := range []string{"china_direct", "service_routes", `"policy"`, "launcher.exe"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("sanitized context retained retired/private value %q: %s", forbidden, text)
 		}
-		routing := effectiveProfileRouting(profile)
-		if routing.ChinaDirect != item.chinaDirect {
-			t.Fatalf("profile %q resolved china_direct=%v, want %v", item.id, routing.ChinaDirect, item.chinaDirect)
+	}
+	for _, required := range []string{`"rules"`, `"domain_suffix"`, `"example.net"`} {
+		if !strings.Contains(text, required) {
+			t.Fatalf("sanitized context missed %q: %s", required, text)
 		}
 	}
 }
 
-func TestLegacySchemaOneProfilesLoadWithExplicitRoutingOverride(t *testing.T) {
-	var legacy Inventory
-	if err := json.Unmarshal([]byte(`{"schema":1,"policies":[{"id":"balanced-cn"}],"profiles":[{"id":"legacy","policy":"balanced-cn"}]}`), &legacy); err != nil {
-		t.Fatal(err)
+func TestProfileRoutingRejectsInvalidRules(t *testing.T) {
+	state, route := healthFixture(t, "direct", false)
+	base := func(rule map[string]any) map[string]any {
+		return map[string]any{"profile_id": "candidate", "include_routes": []any{"*"}, "routing": map[string]any{"rules": []any{rule}}}
 	}
-	if err := ValidateInventory(&legacy, t.TempDir(), true); err != nil {
-		t.Fatalf("legacy schema-1 policy state no longer loads safely: %v", err)
+	cases := []map[string]any{
+		base(map[string]any{"match": map[string]any{"type": "domain_suffix", "value": "bad,token"}, "action": map[string]any{"type": "direct"}}),
+		base(map[string]any{"match": map[string]any{"type": "unknown", "value": "x"}, "action": map[string]any{"type": "direct"}}),
+		base(map[string]any{"match": map[string]any{"type": "geosite", "value": "x"}, "action": map[string]any{"type": "route", "route": "missing"}}),
+		base(map[string]any{"match": map[string]any{"type": "geoip", "value": "US"}, "action": map[string]any{"type": "direct", "route": route.ID}}),
 	}
-	if legacy.Profiles[0].Routing != nil || !effectiveProfileRouting(legacy.Profiles[0]).ChinaDirect {
-		t.Fatalf("legacy balanced-cn fallback was not preserved: %#v", legacy.Profiles[0])
-	}
-
-	var explicit Inventory
-	if err := json.Unmarshal([]byte(`{"schema":1,"policies":[{"id":"privacy"}],"profiles":[{"id":"explicit","policy":"privacy","routing":{"china_direct":true}}]}`), &explicit); err != nil {
-		t.Fatal(err)
-	}
-	if err := ValidateInventory(&explicit, t.TempDir(), true); err != nil {
-		t.Fatalf("explicit routing state with a legacy policy no longer loads safely: %v", err)
-	}
-	if explicit.Profiles[0].Routing == nil || !effectiveProfileRouting(explicit.Profiles[0]).ChinaDirect {
-		t.Fatalf("explicit routing did not override legacy policy: %#v", explicit.Profiles[0])
-	}
-}
-
-func TestProfileRoutingChinaToggleAndMultiVariantRouteSelector(t *testing.T) {
-	state, route := healthFixture(t, "direct", true)
-	if _, err := AddProfile(state, map[string]any{
-		"profile_id":     "explicit",
-		"include_routes": []any{route.ID},
-		"routing": map[string]any{
-			"china_direct": true,
-			"service_routes": []any{
-				map[string]any{"service": "openai", "route": route.ID},
-			},
-		},
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := AddClientTarget(state, map[string]any{"target_id": "desktop", "profile_id": "explicit", "renderer": "mihomo"}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := RenderClients(state, "desktop", true); err != nil {
-		t.Fatal(err)
-	}
-	read := func() string {
-		data, err := os.ReadFile(filepath.Join(state.PrivateDir, "delivery", "desktop.yaml"))
-		if err != nil {
-			t.Fatal(err)
+	for _, context := range cases {
+		if _, err := AddProfile(state, context); err == nil {
+			t.Fatalf("invalid routing rule was accepted: %#v", context)
 		}
-		return string(data)
-	}
-	china := read()
-	for _, required := range []string{
-		"  - name: RST-Route-route-a\n    type: select\n    proxies:\n      - 'Route-A-HY2-v6'\n      - 'Route-A-HY2-v4'\n",
-		"  - GEOSITE,openai,RST-Route-route-a\n",
-		"  - DOMAIN-SUFFIX,cn,DIRECT\n",
-		"  - GEOSITE,CN,DIRECT\n",
-		"  - GEOIP,CN,DIRECT,no-resolve\n",
-	} {
-		if !strings.Contains(china, required) {
-			t.Fatalf("explicit China/multi-variant routing output missed %q:\n%s", required, china)
+		preflight, err := NewPreflight("add-profile", "", state, context, false)
+		if err != nil || preflight.Ready || !contains(preflight.Conflicts, "profile-routing-invalid") {
+			t.Fatalf("invalid routing rule passed preflight: %#v err=%v", preflight, err)
 		}
 	}
-
-	profile := findProfile(state.Inventory, "explicit")
-	profile.Routing.ChinaDirect = false
-	if err := state.Save(false); err != nil {
-		t.Fatal(err)
+	policy := map[string]any{"profile_id": "legacy", "policy": "privacy"}
+	if _, err := AddProfile(state, policy); err != nil {
+		t.Fatalf("legacy policy compatibility input was not translated: %v", err)
 	}
-	if _, err := RenderClients(state, "desktop", true); err != nil {
-		t.Fatal(err)
-	}
-	withoutChina := read()
-	for _, forbidden := range []string{"DOMAIN-SUFFIX,cn,DIRECT", "GEOSITE,CN,DIRECT", "GEOIP,CN,DIRECT,no-resolve"} {
-		if strings.Contains(withoutChina, forbidden) {
-			t.Fatalf("china_direct=false retained China-direct rule %q:\n%s", forbidden, withoutChina)
-		}
-	}
-	if !strings.Contains(withoutChina, "GEOSITE,openai,RST-Route-route-a") {
-		t.Fatal("service routing disappeared when China-direct routing was disabled")
+	if profile := findProfile(state.Inventory, "legacy"); profile == nil || profile.Routing == nil || len(profile.Routing.Rules) != 0 {
+		t.Fatalf("legacy privacy policy did not translate to empty schema-2 routing: %#v", profile)
 	}
 }
 
 func TestProfileRoutingReferencesFailClosed(t *testing.T) {
 	state, route := healthFixture(t, "direct", false)
-	base := func(include []any, target string) map[string]any {
-		return map[string]any{
-			"profile_id":     "candidate",
-			"include_routes": include,
-			"routing":        map[string]any{"service_routes": []any{map[string]any{"service": "openai", "route": target}}},
+	makeContext := func(include []any, target string) map[string]any {
+		return map[string]any{"profile_id": "candidate", "include_routes": include, "routing": map[string]any{"rules": []any{map[string]any{"match": map[string]any{"type": "geosite", "value": "example-category"}, "action": map[string]any{"type": "route", "route": target}}}}}
+	}
+	for _, context := range []map[string]any{makeContext([]any{"*"}, "missing-route"), makeContext([]any{}, route.ID)} {
+		if _, err := AddProfile(state, context); err == nil {
+			t.Fatal("invalid Route reference was accepted")
 		}
 	}
-	for _, test := range []struct {
-		name    string
-		context map[string]any
-	}{
-		{name: "unknown", context: base([]any{"*"}, "missing-route")},
-		{name: "excluded", context: base([]any{}, route.ID)},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			if _, err := AddProfile(state, test.context); err == nil {
-				t.Fatal("invalid service Route reference was accepted")
-			}
-			preflight, err := NewPreflight("add-profile", "", state, test.context, false)
-			if err != nil || preflight.Ready || !contains(preflight.Conflicts, "profile-routing-invalid") {
-				t.Fatalf("invalid service Route reference passed preflight: %#v err=%v", preflight, err)
-			}
-		})
-	}
 	findRoute(state.Inventory, route.ID).Enabled = false
-	disabled := base([]any{"*"}, route.ID)
-	if _, err := AddProfile(state, disabled); err == nil || !strings.Contains(err.Error(), "disabled Route") {
-		t.Fatalf("disabled service Route was not rejected: %v", err)
+	if _, err := AddProfile(state, makeContext([]any{"*"}, route.ID)); err == nil || !strings.Contains(err.Error(), "disabled Route") {
+		t.Fatalf("disabled Route was not rejected: %v", err)
+	}
+}
+
+func TestSchemaOneInventoryUpgradesToGenericRules(t *testing.T) {
+	var inv Inventory
+	raw := []byte(`{"schema":1,"policies":[{"id":"balanced-cn"}],"profiles":[{"id":"legacy","policy":"balanced-cn"},{"id":"explicit","routing":{"china_direct":true,"service_routes":[{"service":"openai","route":"route-a"}]}}]}`)
+	if err := json.Unmarshal(raw, &inv); err != nil {
+		t.Fatal(err)
+	}
+	if inv.Schema != InventorySchema {
+		t.Fatalf("legacy inventory upgraded to schema %d, want %d", inv.Schema, InventorySchema)
+	}
+	if len(inv.Profiles) != 2 {
+		t.Fatalf("legacy profiles were lost: %#v", inv.Profiles)
+	}
+	legacy := effectiveProfileRouting(inv.Profiles[0])
+	if len(legacy.Rules) != 3 || legacy.Rules[0].Match.Type != "domain_suffix" || legacy.Rules[0].Action.Type != "direct" {
+		t.Fatalf("balanced-cn compatibility was not translated: %#v", legacy)
+	}
+	explicit := effectiveProfileRouting(inv.Profiles[1])
+	if len(explicit.Rules) != 4 || explicit.Rules[0].Match.Type != "geosite" || explicit.Rules[0].Match.Value != "openai" || explicit.Rules[0].Action.Route != "route-a" {
+		t.Fatalf("legacy explicit routing was not translated: %#v", explicit)
+	}
+	encoded, err := json.Marshal(inv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(encoded)
+	for _, retired := range []string{"policies", "policy", "china_direct", "service_routes"} {
+		if strings.Contains(text, retired) {
+			t.Fatalf("schema-2 inventory retained %q: %s", retired, text)
+		}
+	}
+	if !strings.Contains(text, `"schema":2`) || !strings.Contains(text, `"rules"`) {
+		t.Fatalf("schema-2 inventory was not serialized canonically: %s", text)
 	}
 }

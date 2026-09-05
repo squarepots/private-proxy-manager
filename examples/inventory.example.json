@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "metadata": {
     "id": "route-steward",
     "created_at": "2026-01-01T00:00:00Z",
@@ -118,15 +118,22 @@
     }
   ],
   "providers": [],
-  "policies": [],
   "profiles": [
     {
       "id": "primary",
       "include_routes": ["*"],
       "include_providers": [],
       "routing": {
-        "china_direct": false,
-        "service_routes": []
+        "rules": [
+          {
+            "match": { "type": "domain_suffix", "value": "example.net" },
+            "action": { "type": "direct" }
+          },
+          {
+            "match": { "type": "geosite", "value": "example-category" },
+            "action": { "type": "route", "route": "direct-a" }
+          }
+        ]
       }
     }
   ],

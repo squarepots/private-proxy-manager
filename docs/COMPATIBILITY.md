@@ -33,10 +33,10 @@ Inventory schema `1` stores:
 - Link with `driver=wireguard`;
 - Route with `ingress.driver=hysteria2`;
 - optional Provider with `source_type=mihomo-http`;
-- Profile for reusable Route, Provider, and explicit China/service routing selection;
+- Profile for reusable Route, Provider, and ordered generic routing selection;
 - ClientTarget for renderer and delivery identity.
 
-Older schema-1 Profiles may contain `privacy` or `balanced-cn`. RST reads those values for compatibility; new and updated Profiles use explicit routing. Recovery accepts schema 1 and resets observed evidence.
+Older schema-1 Profiles may contain `privacy`, `balanced-cn`, China-direct state, or historical service bindings. RST translates those values into schema-2 routing rules on load; new state uses only generic rules. Recovery accepts schema-1 archives, restores canonical schema 2, and resets observed evidence.
 
 ## Clients and rendering
 
@@ -47,7 +47,7 @@ Older schema-1 Profiles may contain `privacy` or `balanced-cn`. RST reads those 
 | Shadowrocket offline | Private node-import HTML generated without external page resources |
 | Shadowrocket subscription | Optional isolated Cloudflare Worker delivery for one ClientTarget |
 | Hysteria2 headless | Private official-client JSON plus foreground loopback HTTP/SOCKS5 runtime for one selected Route |
-| Profile routing | `routing.china_direct` plus `openai` and `youtube` service bindings to enabled included Route IDs |
+| Profile routing | Ordered `domain_suffix`, `geosite`, and `geoip` matches with `direct` or enabled included Route actions |
 
 A ClientTarget selects the renderer and delivery method. Its Profile selects Routes, optional Providers, and routing. The generated Mihomo/Karing YAML leaves TUN, system proxy, host routing, and active-profile settings to the client application.
 

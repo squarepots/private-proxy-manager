@@ -219,26 +219,32 @@ func renderClash(state *State, profile Profile, target ClientTarget, outputPath,
 		}
 	}
 	dns := "dns:\n  enable: true\n  ipv6: true\n  enhanced-mode: fake-ip\n  fake-ip-range: 198.18.0.1/16\n  use-system-hosts: false\n  respect-rules: true\n  default-nameserver:\n    - https://1.1.1.1/dns-query\n    - https://8.8.8.8/dns-query\n  proxy-server-nameserver:\n    - https://1.1.1.1/dns-query\n    - https://8.8.8.8/dns-query\n  nameserver:\n    - 'https://1.1.1.1/dns-query#Private Routes'\n    - 'https://8.8.8.8/dns-query#Private Routes'\n"
-	var serviceGroups, serviceRules strings.Builder
+	var routeGroups, profileRules strings.Builder
 	createdGroups := map[string]bool{}
-	for _, binding := range routing.ServiceRoutes {
-		groupName := profileRouteGroupName(binding.Route)
-		if !createdGroups[groupName] {
-			serviceGroups.WriteString("  - name: " + groupName + "\n    type: select\n    proxies:\n")
-			for _, node := range nodes {
-				if node.RouteID == binding.Route {
-					fmt.Fprintf(&serviceGroups, "      - %s\n", yamlQuote(node.Name))
+	for _, rule := range routing.Rules {
+		targetName := "DIRECT"
+		if rule.Action.Type == "route" {
+			targetName = profileRouteGroupName(rule.Action.Route)
+			if !createdGroups[targetName] {
+				routeGroups.WriteString("  - name: " + targetName + "\n    type: select\n    proxies:\n")
+				for _, node := range nodes {
+					if node.RouteID == rule.Action.Route {
+						fmt.Fprintf(&routeGroups, "      - %s\n", yamlQuote(node.Name))
+					}
 				}
+				createdGroups[targetName] = true
 			}
-			createdGroups[groupName] = true
 		}
-		fmt.Fprintf(&serviceRules, "  - GEOSITE,%s,%s\n", binding.Service, groupName)
+		switch rule.Match.Type {
+		case "domain_suffix":
+			fmt.Fprintf(&profileRules, "  - DOMAIN-SUFFIX,%s,%s\n", rule.Match.Value, targetName)
+		case "geosite":
+			fmt.Fprintf(&profileRules, "  - GEOSITE,%s,%s\n", rule.Match.Value, targetName)
+		case "geoip":
+			fmt.Fprintf(&profileRules, "  - GEOIP,%s,%s,no-resolve\n", rule.Match.Value, targetName)
+		}
 	}
-	chinaRules := ""
-	if routing.ChinaDirect {
-		chinaRules = "  - DOMAIN-SUFFIX,cn,DIRECT\n  - GEOSITE,CN,DIRECT\n  - GEOIP,CN,DIRECT,no-resolve\n"
-	}
-	text := "# route-steward: agent-native\n# Private file: contains live proxy credentials.\nmode: rule\n" + processMode + "ipv6: true\nprofile:\n  store-selected: true\n  store-fake-ip: true\n\n" + dns + "\nproxies:\n" + strings.Join(bodies, "\n") + "\n\n" + providerBlock.String() + "proxy-groups:\n  - name: Private Routes\n    type: select\n    proxies:\n" + nodeLines.String() + providerUse.String() + globalGroup.String() + serviceGroups.String() + processGroup.String() + "rules:\n  - DOMAIN,localhost,DIRECT\n  - DOMAIN-SUFFIX,local,DIRECT\n  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve\n  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve\n  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve\n  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve\n  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve\n  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve\n  - IP-CIDR6,::1/128,DIRECT,no-resolve\n  - IP-CIDR6,fc00::/7,DIRECT,no-resolve\n  - IP-CIDR6,fe80::/10,DIRECT,no-resolve\n" + processRules.String() + serviceRules.String() + chinaRules + "  - MATCH,Private Routes\n"
+	text := "# route-steward: agent-native\n# Private file: contains live proxy credentials.\nmode: rule\n" + processMode + "ipv6: true\nprofile:\n  store-selected: true\n  store-fake-ip: true\n\n" + dns + "\nproxies:\n" + strings.Join(bodies, "\n") + "\n\n" + providerBlock.String() + "proxy-groups:\n  - name: Private Routes\n    type: select\n    proxies:\n" + nodeLines.String() + providerUse.String() + globalGroup.String() + routeGroups.String() + processGroup.String() + "rules:\n  - DOMAIN,localhost,DIRECT\n  - DOMAIN-SUFFIX,local,DIRECT\n  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve\n  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve\n  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve\n  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve\n  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve\n  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve\n  - IP-CIDR6,::1/128,DIRECT,no-resolve\n  - IP-CIDR6,fc00::/7,DIRECT,no-resolve\n  - IP-CIDR6,fe80::/10,DIRECT,no-resolve\n" + processRules.String() + profileRules.String() + "  - MATCH,Private Routes\n"
 	if err := writeFileAtomic(outputPath, []byte(text), 0o600); err != nil {
 		return RenderOutput{}, err
 	}

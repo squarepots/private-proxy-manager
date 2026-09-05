@@ -23,3 +23,7 @@ Never place real addresses, credentials, subscription URLs/tokens, SSH material,
 SSH/VPS providers see the network and account metadata inherent to their role. An optional Cloudflare subscription Worker can see request metadata such as source IP, time, and User-Agent. An on-demand `health` check sends small requests through the managed proxy to ipify's IPv4/IPv6 address endpoints and Cloudflare's `/cdn-cgi/trace` endpoint; headless `proxy --check` contacts the ipify IPv4 endpoint. Those services see the Route's exit IP and request metadata. Destination services see the exit IP and normal application-layer metadata. Route Steward provides no anonymity guarantee.
 
 Health stores bounded status, time, latency, and match results in the local private observed state. Exact public IP values are omitted from normal agent output and are returned only when the operator explicitly requests them.
+
+## Profile routing values
+
+Profile routing match values are desired state. Sanitized context may return their domain suffix, geosite, or geoip values to the operating AI runtime so it can inspect and modify routing intent. Credentials, Provider URLs, server addresses, and generated client secrets remain excluded by the existing sanitization boundary.

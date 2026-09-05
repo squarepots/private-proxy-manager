@@ -105,7 +105,7 @@ A generic Provider is optional. Its URL is stored only in local secret storage. 
 
 ### Profile / ClientTarget
 
-Profiles store Route and Provider selection plus `routing.china_direct` and service bindings. New Profiles default to no China-direct rules or service bindings. The supported services are `openai` and `youtube`, and each binding names an enabled Route in the Profile. ClientTargets store renderer and delivery settings. References block unsafe Profile, Provider, and subscription-backed ClientTarget removal.
+Profiles store Route and Provider selection plus ordered generic routing rules. A rule matches a domain suffix, geosite category, or geoip category and selects either direct handling or an enabled Route included by the Profile. ClientTargets store renderer and delivery settings. References block unsafe Profile, Provider, and subscription-backed ClientTarget removal.
 
 ## Deployment ownership
 
@@ -144,7 +144,7 @@ Current renderers:
 - `shadowrocket` — offline node import or target-scoped private subscription import;
 - `hysteria2` — official-client JSON for one explicitly selected managed Route, with HTTP and SOCKS5 sharing one loopback listener.
 
-A Provider is optional. New Profiles set `china_direct=false` and start with no service bindings. Older schema-1 Profiles use the legacy fallback: `balanced-cn` enables China-direct rules, while `privacy` or blank omits them. Explicit routing takes precedence.
+A Provider is optional. New Profiles start with no routing rules. Schema-1 Profiles are upgraded in memory: historical explicit service bindings become geosite Route rules, `balanced-cn` becomes its equivalent direct rules, and `privacy` or blank becomes an empty rule set. A successful desired-state write persists canonical schema 2.
 
 Mihomo process routing uses `ClientTarget.mihomo_process_names` with plain executable or package names. Generated YAML sets strict process matching, adds an `Applications` group with `DIRECT` and `Private Routes`, and places `PROCESS-NAME` rules after private-address rules and before Profile service and China rules. Its explicit `GLOBAL` group contains managed nodes, `DIRECT`, `REJECT`, and included Provider sets. Sanitized context reports only the number of configured process names. Client applications control TUN, system proxy, host routing, and DNS capture.
 

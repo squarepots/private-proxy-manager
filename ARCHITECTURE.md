@@ -107,7 +107,7 @@ A renderer resolves a ClientTarget, its Profile, the selected Routes, and option
 
 Hopping Routes use Hysteria's multi-port endpoint in every renderer. The headless client uses a 30-second UDP hop interval.
 
-Output filenames derive from ClientTarget IDs. Profiles store `routing.china_direct` and `service_routes` bindings to enabled Route IDs. Legacy schema-1 Profiles use the `balanced-cn` or `privacy` fallback until explicit routing is saved.
+Output filenames derive from ClientTarget IDs. Profiles store ordered `routing.rules`. A rule matches `domain_suffix`, `geosite`, or `geoip` and sends matching traffic either directly or through an enabled Route included by the Profile. Schema-1 policy, China-direct, and service bindings are translated when old state is loaded and are not canonical schema-2 fields.
 
 Successful rendering records a hash-only manifest. Missing or outdated output becomes `client-render-stale`.
 

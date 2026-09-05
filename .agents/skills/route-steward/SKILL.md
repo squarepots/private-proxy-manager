@@ -30,7 +30,7 @@ Representative calls are in [references/operations.md](references/operations.md)
 - `Link`: one WireGuard hop between two Servers
 - `Route`: direct or relay network path with Hysteria2 ingress
 - `Provider`: optional Mihomo HTTP node source stored as a local secret
-- `Profile`: reusable Route and Provider selection with China/service routing
+- `Profile`: reusable Route and Provider selection with ordered generic routing rules
 - `ClientTarget`: renderer and delivery identity that references a Profile
 
 Capability discovery defines the currently implemented operations, drivers, and renderers. See `docs/COMPATIBILITY.md` for the readable support matrix.
