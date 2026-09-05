@@ -35,7 +35,7 @@ func newRecoveryMetadata() recoveryMetadata {
 		Product:         "route-steward",
 		ProductVersion:  routesteward.Version(),
 		Repository:      "https://github.com/squarepots/route-steward",
-		InventorySchema: 1,
+		InventorySchema: InventorySchema,
 		RecoveryModel:   "agent-native-local-state",
 	}
 }
@@ -67,7 +67,7 @@ func CreateRecoveryArchive(state *State, sevenZipPath string) (string, error) {
 	copyOne := func(source, relative string) error {
 		return copyRegularFile(source, filepath.Join(stage, filepath.FromSlash(relative)))
 	}
-	if err := copyOne(state.InventoryPath, "private/inventory.json"); err != nil {
+	if err := writeJSONAtomic(filepath.Join(stage, "private", "inventory.json"), state.Inventory); err != nil {
 		return "", err
 	}
 	observed := filepath.Join(state.PrivateDir, "observed.json")
@@ -214,14 +214,14 @@ func RestoreExtractedRecovery(sourceRoot, target string) (result map[string]any,
 	if err := readJSON(filepath.Join(sourceRoot, "RECOVERY-METADATA.json"), &metadata); err != nil {
 		return nil, errors.New("recovery archive lacks compatible metadata")
 	}
-	if metadata.Product != "route-steward" || metadata.InventorySchema != 1 {
+	if metadata.Product != "route-steward" || (metadata.InventorySchema != 1 && metadata.InventorySchema != InventorySchema) {
 		return nil, errors.New("recovery archive metadata is incompatible")
 	}
 	var inventory Inventory
 	if err := readJSON(filepath.Join(sourceRoot, "private", "inventory.json"), &inventory); err != nil {
 		return nil, errors.New("recovery archive lacks an inventory")
 	}
-	if inventory.Schema != 1 || inventory.Schema != metadata.InventorySchema {
+	if inventory.Schema != InventorySchema {
 		return nil, errors.New("recovered inventory schema is unsupported")
 	}
 	if !regularFile(filepath.Join(sourceRoot, "private", "secrets", "index.json")) {
@@ -362,7 +362,19 @@ func RestoreExtractedRecovery(sourceRoot, target string) (result map[string]any,
 		}
 	}
 	completed = true
-	return map[string]any{"restored": true, "inventory_schema": finalState.Inventory.Schema, "servers": len(finalState.Inventory.Servers), "links": len(finalState.Inventory.Links), "routes": len(finalState.Inventory.Routes), "providers": len(finalState.Inventory.Providers), "manifest_files_verified": verified, "observed_state_reset": true, "migration_state_restored": migrations != nil, "migration_revalidation_required": migrations != nil, "remote_changed": false}, nil
+	return map[string]any{
+		"restored":                        true,
+		"inventory_schema":                finalState.Inventory.Schema,
+		"servers":                         len(finalState.Inventory.Servers),
+		"links":                           len(finalState.Inventory.Links),
+		"routes":                          len(finalState.Inventory.Routes),
+		"providers":                       len(finalState.Inventory.Providers),
+		"manifest_files_verified":         verified,
+		"observed_state_reset":            true,
+		"migration_state_restored":        migrations != nil,
+		"migration_revalidation_required": migrations != nil,
+		"remote_changed":                  false,
+	}, nil
 }
 
 func verifyRecoveryManifest(root string) (int, error) {
@@ -464,6 +476,7 @@ func copyRegularFile(source, target string) error {
 	}
 	return writeFileAtomic(target, data, 0o600)
 }
+
 func copyTree(source, target string) error {
 	return filepath.WalkDir(source, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -480,6 +493,7 @@ func copyTree(source, target string) error {
 		return copyRegularFile(path, destination)
 	})
 }
+
 func protectTree(root string) error {
 	return filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -488,6 +502,7 @@ func protectTree(root string) error {
 		return protectPath(path, entry.IsDir())
 	})
 }
+
 func resolveSevenZip(requested string) (string, error) {
 	if requested != "" {
 		path, err := filepath.Abs(requested)
@@ -502,7 +517,10 @@ func resolveSevenZip(requested string) (string, error) {
 		}
 	}
 	if os.Getenv("ProgramFiles") != "" {
-		for _, path := range []string{filepath.Join(os.Getenv("ProgramFiles"), "7-Zip", "7z.exe"), filepath.Join(os.Getenv("ProgramFiles"), "NanaZip", "7z.exe")} {
+		for _, path := range []string{
+			filepath.Join(os.Getenv("ProgramFiles"), "7-Zip", "7z.exe"),
+			filepath.Join(os.Getenv("ProgramFiles"), "NanaZip", "7z.exe"),
+		} {
 			if regularFile(path) {
 				return path, nil
 			}

@@ -1,6 +1,6 @@
 # ClientTargets
 
-A `Profile` selects Routes, optional Providers, and China/service routing. A `ClientTarget` references a Profile and selects the renderer and delivery method. Multiple targets can reuse one Profile.
+A `Profile` selects Routes, optional Providers, and ordered generic routing rules. A `ClientTarget` references a Profile and selects the renderer and delivery method. Multiple targets can reuse one Profile.
 
 ## Renderers
 

@@ -1,5 +1,7 @@
 # Client research record
 
+> **Superseded routing model (2026-09-05):** country- and service-specific Profile fields described below are historical research for the 1.x line. Current Profile routing uses ordered generic match/action rules; schema-1 state is translated for compatibility.
+
 Research date: 2026-08-24. This record explains the selection of the first additional GUI client. Current support is listed by `route-steward capabilities` and `docs/COMPATIBILITY.md`.
 
 ## Coverage before this change

@@ -62,16 +62,16 @@ Use `context` and `drift` for normal inspection. Read raw private files only whe
 
 ## Inventory schema
 
-Inventory schema `1` contains:
+Inventory schema `2` contains:
 
 - **Server** declares `compute.driver=byo-ssh`.
 - **Link** declares `driver=wireguard`.
 - **Route** declares `ingress.driver=hysteria2`.
 - **Provider** declares `source_type=mihomo-http` and a local `source_secret_ref`.
-- **Profile** selects Routes, optional Providers, and explicit China/service routing.
+- **Profile** selects Routes, optional Providers, and ordered generic routing rules.
 - **ClientTarget** references a Profile and stores renderer/delivery settings. Renderer-specific fields such as Mihomo process names stay on the ClientTarget.
 
-Recovery accepts schema 1. `version.txt` stores product SemVer separately.
+Schema-1 inventory remains readable through deterministic compatibility translation. A subsequent desired-state write persists schema 2. `version.txt` stores product SemVer separately.
 
 ## Capability discovery
 
@@ -81,7 +81,7 @@ Run `route-steward capabilities` for operations, drivers, renderers, required co
 
 ## Bootstrap
 
-Bootstrap creates empty schema-1 inventory, secret index, observed state, and output directories. It is idempotent for a complete private root and rejects partial initialization.
+Bootstrap creates empty schema-2 inventory plus schema-1 secret index and observed state, then creates the output directories. It is idempotent for a complete private root and rejects partial initialization.
 
 ## Structured desired-state operations
 
@@ -105,7 +105,7 @@ A generic Provider is optional. Its URL is stored only in local secret storage. 
 
 ### Profile / ClientTarget
 
-Profiles store Route and Provider selection plus `routing.china_direct` and service bindings. New Profiles default to no China-direct rules or service bindings. The supported services are `openai` and `youtube`, and each binding names an enabled Route in the Profile. ClientTargets store renderer and delivery settings. References block unsafe Profile, Provider, and subscription-backed ClientTarget removal.
+Profiles store Route and Provider selection plus ordered generic routing rules. A rule matches a domain suffix, geosite category, or geoip category and selects either direct handling or an enabled Route included by the Profile. ClientTargets store renderer and delivery settings. References block unsafe Profile, Provider, and subscription-backed ClientTarget removal.
 
 ## Deployment ownership
 
@@ -144,9 +144,9 @@ Current renderers:
 - `shadowrocket` — offline node import or target-scoped private subscription import;
 - `hysteria2` — official-client JSON for one explicitly selected managed Route, with HTTP and SOCKS5 sharing one loopback listener.
 
-A Provider is optional. New Profiles set `china_direct=false` and start with no service bindings. Older schema-1 Profiles use the legacy fallback: `balanced-cn` enables China-direct rules, while `privacy` or blank omits them. Explicit routing takes precedence.
+A Provider is optional. New Profiles start with no routing rules. Schema-1 Profiles are upgraded in memory: historical explicit service bindings become geosite Route rules, `balanced-cn` becomes its equivalent direct rules, and `privacy` or blank becomes an empty rule set. A successful desired-state write persists canonical schema 2.
 
-Mihomo process routing uses `ClientTarget.mihomo_process_names` with plain executable or package names. Generated YAML sets strict process matching, adds an `Applications` group with `DIRECT` and `Private Routes`, and places `PROCESS-NAME` rules after private-address rules and before Profile service and China rules. Its explicit `GLOBAL` group contains managed nodes, `DIRECT`, `REJECT`, and included Provider sets. Sanitized context reports only the number of configured process names. Client applications control TUN, system proxy, host routing, and DNS capture.
+Mihomo process routing uses `ClientTarget.mihomo_process_names` with plain executable or package names. Generated YAML sets strict process matching, adds an `Applications` group with `DIRECT` and `Private Routes`, and places `PROCESS-NAME` rules after private-address rules and before ordered Profile routing rules. Its explicit `GLOBAL` group contains managed nodes, `DIRECT`, `REJECT`, and included Provider sets. Sanitized context reports only the number of configured process names. Client applications control TUN, system proxy, host routing, and DNS capture.
 
 The headless renderer defaults to `127.0.0.1:1080` and `auto` ingress selection (IPv4, then IPv6). It accepts only IP-literal loopback listeners. Separate concurrent targets need separate ports.
 
@@ -183,9 +183,9 @@ Migration records each stage in private state:
 
 ## Backup and recovery
 
-Backup creates an encrypted archive of schema-1 private state, active migration checkpoints, and required SSH material. The password is entered through a local 7-Zip prompt.
+Backup creates an encrypted archive containing canonical schema-2 inventory, active migration checkpoints, required SSH material, and auxiliary private state. The password is entered through a local 7-Zip prompt.
 
-Recovery restores to a clean private root, verifies the SHA-256 manifest, rejects unsafe paths and symlinks, relocates SSH material, validates inventory, and resets observed evidence. Restored migrations are marked `recovery-revalidation-required` and repeat deployment and health checks.
+Recovery restores to a clean private root, verifies the SHA-256 manifest, rejects unsafe paths and symlinks, translates supported schema-1 inventory when needed, relocates SSH material, validates current inventory, and resets observed evidence. Restored migrations are marked `recovery-revalidation-required` and repeat deployment and health checks.
 
 ## Contributor/debug interfaces
 

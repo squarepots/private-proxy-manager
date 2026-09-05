@@ -20,8 +20,8 @@ func TestGoControlPlaneLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !created || state.Inventory.Schema != 1 {
-		t.Fatal("bootstrap did not create schema 1 state")
+	if !created || state.Inventory.Schema != InventorySchema {
+		t.Fatal("bootstrap did not create the current inventory schema")
 	}
 	if len(state.Inventory.Servers) != 0 || len(state.Inventory.Profiles) != 0 || len(state.Inventory.ClientTargets) != 0 {
 		t.Fatal("bootstrap made user-specific assumptions")
@@ -250,7 +250,7 @@ func TestSchemaOneOptionalDefaultsArePreservedOnFirstRead(t *testing.T) {
 		t.Fatal("missing schema-1 include_routes no longer defaults to wildcard")
 	}
 	var explicit Inventory
-	if err := json.Unmarshal([]byte(`{"links":[{"enabled":false}],"routes":[{"enabled":false}],"providers":[{"enabled":false}],"profiles":[{"include_routes":[]}]}`), &explicit); err != nil {
+	if err := json.Unmarshal([]byte(`{"schema":2,"links":[{"enabled":false}],"routes":[{"enabled":false}],"providers":[{"enabled":false}],"profiles":[{"include_routes":[]}]}`), &explicit); err != nil {
 		t.Fatal(err)
 	}
 	if explicit.Links[0].Enabled || explicit.Routes[0].Enabled || explicit.Providers[0].Enabled || explicit.Profiles[0].IncludeRoutes == nil || len(explicit.Profiles[0].IncludeRoutes) != 0 {
@@ -450,8 +450,8 @@ func TestPublishedSchema1FixtureRemainsUsable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("published schema-1 fixture did not load: %v", err)
 	}
-	if state.Inventory.Schema != 1 || len(state.Inventory.Servers) != 2 || len(state.Inventory.Routes) != 2 || len(state.Inventory.ClientTargets) != 2 {
-		t.Fatal("published schema-1 fixture changed shape")
+	if state.Inventory.Schema != InventorySchema || len(state.Inventory.Servers) != 2 || len(state.Inventory.Routes) != 2 || len(state.Inventory.ClientTargets) != 2 {
+		t.Fatal("published schema-1 fixture did not upgrade to the current shape")
 	}
 	if err := state.Save(false); err != nil {
 		t.Fatalf("published schema-1 fixture could not be saved: %v", err)
@@ -463,8 +463,8 @@ func TestPublishedSchema1FixtureRemainsUsable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytesContains(saved, []byte(`"model_version"`)) || !bytesContains(saved, []byte(`"schema": 1`)) {
-		t.Fatal("schema-1 fixture gained a second compatibility axis")
+	if bytesContains(saved, []byte(`"model_version"`)) || !bytesContains(saved, []byte(`"schema": 2`)) || bytesContains(saved, []byte(`"policies"`)) || bytesContains(saved, []byte(`"policy"`)) {
+		t.Fatal("upgraded schema-1 fixture did not persist canonical schema-2 state")
 	}
 }
 

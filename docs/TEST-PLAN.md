@@ -335,3 +335,7 @@ Before marking a PR ready:
   fully replace CI.
 - Live network validation requires dedicated test hosts and current operator
   authorization, and should stay outside default CI.
+
+## Schema-2 Profile routing
+
+Validation covers ordered generic Profile rules (`domain_suffix`, `geosite`, `geoip`), direct and Route actions, invalid matcher/action input, included/enabled Route references, deterministic renderer order, schema-1 in-memory translation, canonical schema-2 persistence, and schema-1 recovery archive restoration.
