@@ -27,7 +27,7 @@ Initial setup changes host-wide settings. See [Operations](../OPERATIONS.md#remo
 
 ## Desired state
 
-Inventory schema `1` stores:
+Inventory schema `2` stores:
 
 - Server with `compute.driver=byo-ssh`;
 - Link with `driver=wireguard`;
@@ -42,7 +42,7 @@ Older schema-1 Profiles may contain `privacy`, `balanced-cn`, China-direct state
 
 | Capability | Supported behavior |
 | --- | --- |
-| Mihomo | Private YAML output for Mihomo/Clash Verge-compatible clients, with explicit `GLOBAL`/emergency selection, Provider `use` composition, Profile service routing, and optional target-scoped `PROCESS-NAME` routing; compatibility baseline Mihomo 1.19.27 |
+| Mihomo | Private YAML output for Mihomo/Clash Verge-compatible clients, with explicit `GLOBAL`/emergency selection, Provider `use` composition, ordered Profile routing, and optional target-scoped `PROCESS-NAME` routing; compatibility baseline Mihomo 1.19.27 |
 | Karing | Private Clash YAML imported from a local file; compatibility baseline 1.2.23.2606; Windows, macOS, Linux, iOS, Android, and tvOS |
 | Shadowrocket offline | Private node-import HTML generated without external page resources |
 | Shadowrocket subscription | Optional isolated Cloudflare Worker delivery for one ClientTarget |
@@ -77,7 +77,7 @@ Audit covers RST services and configuration, firewall and network state, WireGua
 
 `health` supports direct and relay Routes and checks a real client handshake, Internet and DNS access, exit identity, supported address families, request latency, and relay state. It is an on-demand test; packet loss is currently unsupported. `proxy --check` performs a corresponding traffic test for one headless target.
 
-`migrate-route` supports direct Route replacement and either endpoint of a relay. It tests replacement traffic before switching affected ClientTargets and preserves the old capacity. Recovery verifies the encrypted archive, relocates SSH material, validates schema-1 state, and resets observed evidence.
+`migrate-route` supports direct Route replacement and either endpoint of a relay. It tests replacement traffic before switching affected ClientTargets and preserves the old capacity. Recovery verifies the encrypted archive, relocates SSH material, translates supported schema-1 inventory when necessary, validates current state, and resets observed evidence.
 
 ## Optional Cloudflare delivery
 
